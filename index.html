@@ -41,6 +41,11 @@
         <div class="games-list" id="gamesList"></div>
       </section>
 
+      <section class="panel game-detail-panel" data-panel="game-detail" aria-label="Детали матча">
+        <div class="detail-toolbar"><button class="back-button" id="gameDetailBack" type="button">‹ <span>К результатам</span></button><span class="pill">MATCH CENTER</span></div>
+        <div id="gameDetailContent"></div>
+      </section>
+
       <section class="panel" data-panel="standings" aria-labelledby="standingsTitle">
         <div class="section-heading"><div><p class="eyebrow accent">2025 / 26 SEASON</p><h2 id="standingsTitle">Турнирная</h2></div><span class="pill">NHL</span></div>
         <div class="segmented" role="tablist" aria-label="Разделы таблицы"><button class="segment is-selected" data-standings-tab="division">Дивизионы</button><button class="segment" data-standings-tab="conference">Конференции</button></div>
@@ -49,7 +54,7 @@
 
       <section class="panel" data-panel="stats" aria-labelledby="statsTitle">
         <div class="section-heading"><div><p class="eyebrow accent">LEAGUE LEADERS</p><h2 id="statsTitle">Статистика</h2></div><span class="pill">2025 / 26</span></div>
-        <div class="stats-tabs segmented" role="tablist" aria-label="Статистика игроков"><button class="segment is-selected" data-stats-tab="scorers">Бомбардиры</button><button class="segment" data-stats-tab="rookies">Новички</button></div>
+        <div class="stats-tabs segmented" role="tablist" aria-label="Статистика игроков"><button class="segment is-selected" data-stats-tab="scorers">Бомбардиры</button><button class="segment" data-stats-tab="rookies">Новички</button><button class="segment" data-stats-tab="goalies">Вратари</button></div>
         <div id="statsList" class="leader-list"></div>
       </section>
 
