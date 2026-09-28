@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c111b">
+  <meta name="description" content="NHL Diggest — результаты, турнирная таблица и статистика NHL в Telegram Mini App">
+  <title>NHL Diggest</title>
+  <link rel="stylesheet" href="css/app.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true"><span>🏒</span></div>
+      <div class="brand-copy">
+        <p class="eyebrow">TELEGRAM MINI APP</p>
+        <h1>NHL <strong>Diggest</strong></h1>
+      </div>
+      <button class="icon-button" id="profileButton" aria-label="Профиль">◉</button>
+    </header>
+
+    <main class="content" id="appContent">
+      <section class="panel is-active" data-panel="results" aria-labelledby="resultsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow accent">NHL / 2026</p>
+            <h2 id="resultsTitle">Результаты</h2>
+          </div>
+          <button class="round-button" id="refreshButton" aria-label="Обновить результаты">↻</button>
+        </div>
+        <div class="day-switcher" aria-label="Выбор дня">
+          <button class="day-arrow" id="prevDay" aria-label="Предыдущий день">‹</button>
+          <div class="selected-day"><span id="dayLabel">Сегодня</span><small id="dateLabel">28 сентября, Пн</small></div>
+          <button class="day-arrow" id="nextDay" aria-label="Следующий день">›</button>
+        </div>
+        <div class="result-summary"><span id="gameCount">6 игр</span><span class="live-dot"></span><span>регулярный сезон</span></div>
+        <div class="games-list" id="gamesList"></div>
+      </section>
+
+      <section class="panel" data-panel="standings" aria-labelledby="standingsTitle">
+        <div class="section-heading"><div><p class="eyebrow accent">2025 / 26 SEASON</p><h2 id="standingsTitle">Турнирная</h2></div><span class="pill">NHL</span></div>
+        <div class="segmented" role="tablist" aria-label="Разделы таблицы"><button class="segment is-selected" data-standings-tab="division">Дивизионы</button><button class="segment" data-standings-tab="conference">Конференции</button></div>
+        <div id="standingsList" class="standings-list"></div>
+      </section>
+
+      <section class="panel" data-panel="stats" aria-labelledby="statsTitle">
+        <div class="section-heading"><div><p class="eyebrow accent">LEAGUE LEADERS</p><h2 id="statsTitle">Статистика</h2></div><span class="pill">2025 / 26</span></div>
+        <div class="stats-tabs segmented" role="tablist" aria-label="Статистика игроков"><button class="segment is-selected" data-stats-tab="scorers">Бомбардиры</button><button class="segment" data-stats-tab="rookies">Новички</button></div>
+        <div id="statsList" class="leader-list"></div>
+      </section>
+
+      <section class="panel" data-panel="settings" aria-labelledby="settingsTitle">
+        <div class="section-heading"><div><p class="eyebrow accent">PERSONALIZE</p><h2 id="settingsTitle">Настройки</h2></div><span class="settings-avatar">G</span></div>
+        <div class="settings-card profile-card"><div class="profile-icon">G</div><div><strong>NHL fan</strong><span>Настройки Mini App</span></div><span class="chevron">›</span></div>
+        <div class="settings-group"><p class="group-label">ОБЩИЕ</p><div class="settings-card"><div class="setting-copy"><strong>Язык интерфейса</strong><span>Русский</span></div><span class="chevron">›</span></div><div class="settings-card"><div class="setting-copy"><strong>Тёмная тема</strong><span>Всегда включена</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div></div>
+        <div class="settings-group"><p class="group-label">УВЕДОМЛЕНИЯ</p><div class="settings-card"><div class="setting-copy"><strong>Мои команды</strong><span>Новости и результаты</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div><div class="settings-card"><div class="setting-copy"><strong>Ежедневный дайджест</strong><span>09:00 по Москве</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div></div>
+        <p class="settings-note">Настройки сохранятся в вашем Telegram-профиле.<br>Сейчас это демонстрационный режим.</p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Основная навигация">
+      <button class="nav-item is-active" data-nav="results"><span class="nav-icon">▣</span><span>Результаты</span></button>
+      <button class="nav-item" data-nav="standings"><span class="nav-icon">☷</span><span>Турнирная</span></button>
+      <button class="nav-item" data-nav="stats"><span class="nav-icon">⌁</span><span>Статистика</span></button>
+      <button class="nav-item" data-nav="settings"><span class="nav-icon">⚙</span><span>Настройки</span></button>
+    </nav>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite">Обновлено</div>
+</body>
+</html>
