@@ -159,3 +159,182 @@
 :root[data-theme="light"] .goal-play{background:linear-gradient(145deg,#eef4fa,#dce6f0);border-color:#9eb4c8;color:var(--accent)}
 :root[data-theme="light"] .goal-play.is-open,
 :root[data-theme="light"] .goal-play:hover{background:#d5e3f0;border-color:var(--accent)}
+
+/* Team / player detail + match recap + clickable entities */
+.team-hit, .player-hit, .standing-row.team-hit, .leader-card.player-hit, .roster-row, .detail-team.team-hit, .player-team-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  width: 100%;
+  padding: 0;
+}
+.team .team-hit {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  width: auto;
+}
+.team.away .team-hit { flex-direction: row-reverse; text-align: right; }
+.team-hit:hover .team-name,
+.team-hit:focus-visible .team-name,
+.detail-team.team-hit:hover strong,
+.player-name.is-clickable:hover,
+.player-hit:hover .player-copy strong {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.detail-team.team-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+.player-name.is-clickable { cursor: pointer; }
+.standing-row.team-hit {
+  display: grid;
+  grid-template-columns: 23px 1fr 35px 35px;
+  gap: 6px;
+  align-items: center;
+  padding: 11px 13px;
+  border-top: 1px solid #253243;
+  color: var(--muted);
+  font-size: 11px;
+  width: 100%;
+}
+.leader-card.player-hit { width: 100%; text-align: left; }
+
+.team-hero, .player-hero {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, #172639, #101a27);
+  border-radius: 19px;
+  padding: 16px 14px;
+  margin-bottom: 8px;
+}
+.team-hero-logo { width: 72px; height: 72px; object-fit: contain; flex: 0 0 72px; }
+.team-hero-copy, .player-hero-copy { min-width: 0; flex: 1; }
+.team-hero-copy h2, .player-hero-copy h2 { font-size: 22px; margin: 4px 0 8px; letter-spacing: -.6px; line-height: 1.1; }
+.team-meta-line { margin: 0 0 4px; color: var(--muted); font-size: 11px; }
+.team-record { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+.team-record strong { font-size: 18px; color: var(--accent); }
+.team-record span { color: var(--muted); font-size: 11px; }
+
+.player-hero-photo {
+  width: 84px; height: 84px; flex: 0 0 84px;
+  border-radius: 18px; overflow: hidden;
+  background: linear-gradient(145deg, #375f85, #192b40);
+  display: grid; place-items: center;
+  font-size: 22px; font-weight: 800; color: #cbe6ff;
+}
+.player-hero-photo img { width: 100%; height: 100%; object-fit: cover; }
+.player-team-link {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 6px; color: var(--muted); font-size: 12px; width: auto;
+}
+.player-team-link img { width: 22px; height: 22px; object-fit: contain; }
+
+.roster-group, .team-schedule, .info-grid {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  overflow: hidden;
+  background: #111a27;
+}
+.roster-heading {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; background: #162333; font-size: 11px; font-weight: 800;
+}
+.roster-heading span { color: var(--muted); font-size: 10px; }
+.roster-row {
+  display: grid; grid-template-columns: 36px 1fr 18px; gap: 8px; align-items: center;
+  padding: 11px 12px; border-top: 1px solid #253243; width: 100%;
+}
+.roster-num { color: var(--dim); font-weight: 800; font-size: 12px; text-align: center; }
+.roster-copy strong { display: block; font-size: 12px; }
+.roster-copy span { color: var(--muted); font-size: 10px; }
+
+.schedule-row {
+  display: grid; grid-template-columns: 58px 1fr auto; gap: 8px; align-items: center;
+  padding: 11px 12px; border-top: 1px solid #253243; font-size: 11px;
+}
+.schedule-row:first-child { border-top: 0; }
+.schedule-date { color: var(--muted); font-size: 10px; }
+.schedule-copy strong { display: block; font-size: 12px; }
+.schedule-copy small { color: var(--muted); font-size: 9px; }
+.schedule-result { color: var(--accent); font-weight: 800; font-size: 12px; white-space: nowrap; }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.stat-chip {
+  border: 1px solid var(--line);
+  background: #111a27;
+  border-radius: 14px;
+  padding: 12px 10px;
+  text-align: center;
+}
+.stat-chip strong { display: block; font-size: 16px; color: var(--accent); }
+.stat-chip span { display: block; color: var(--text); font-size: 10px; font-weight: 800; margin-top: 4px; }
+.stat-chip small { display: block; color: var(--muted); font-size: 9px; margin-top: 2px; }
+
+.info-row {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 11px 12px; border-top: 1px solid #253243; font-size: 11px;
+}
+.info-row:first-child { border-top: 0; }
+.info-row span { color: var(--muted); }
+.info-row strong { color: var(--text); text-align: right; }
+
+.recap-frame {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  overflow: hidden;
+  background: #0a1018;
+}
+.recap-video {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  background: #000;
+}
+.recap-caption {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.recap-link {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: linear-gradient(145deg, #2a3d55, #1a2838);
+  color: var(--accent);
+  border-radius: 14px;
+  padding: 14px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+:root[data-theme="light"] .team-hero,
+:root[data-theme="light"] .player-hero { background: linear-gradient(135deg, #f5f9fc, #e9f0f6); }
+:root[data-theme="light"] .roster-group,
+:root[data-theme="light"] .team-schedule,
+:root[data-theme="light"] .info-grid,
+:root[data-theme="light"] .stat-chip { background: #ffffff; }
+:root[data-theme="light"] .roster-heading { background: #edf3f8; }
+:root[data-theme="light"] .roster-row,
+:root[data-theme="light"] .schedule-row,
+:root[data-theme="light"] .info-row,
+:root[data-theme="light"] .standing-row.team-hit { border-top-color: #e1e7ee; }
+:root[data-theme="light"] .recap-link { background: linear-gradient(145deg, #eef4fa, #dce6f0); border-color: #9eb4c8; }
+:root[data-theme="light"] .player-hero-photo { background: linear-gradient(145deg, #d7e6f5, #b7cbe0); color: #1d3a57; }

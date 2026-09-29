@@ -25,7 +25,7 @@
   // NHL and ESPN do not expose nationality in exactly the same shape. Keep the
   // check in one place so every player surface (including game box scores) uses
   // the same country-code and birth-country rules.
-  const RUSSIAN_COUNTRY_RE = /(?:^|[\s_./-])(RUS|RU|RUSSIA|RUSSIAN|РОССИЯ)(?:$|[\s_./-])/i;
+  const RUSSIAN_COUNTRY_RE = /(?:^|[\s_./-])(RUS|RU|RUSSIA|RUSSIAN|РОССИЯ|USSR|CCCP|СССР)(?:$|[\s_./-])/i;
   const RUSSIAN_NAME_FALLBACKS = new Set([
     'alexander ovechkin', 'alex ovechkin', 'artemi panarin', 'nikita kucherov',
     'evgeni malkin', 'yevgeni malkin', 'evgeny malkin', 'andrei svechnikov',
@@ -72,6 +72,7 @@
     return [
       player.nationality, player.countryCode, player.birthCountry, player.birthPlace,
       player.birthplace, player.country, player.citizenship, player.flag,
+      player.displayBirthPlace, player.birthPlaceDisplay,
       player.birth?.country, player.birth?.countryCode, player.birth?.place
     ].some(countryValueIsRussian);
   }
@@ -198,6 +199,8 @@
       period: periodLabel(game, status),
       venue: loc(game.venue?.default) || loc(game.venue),
       startTimeUTC: game.startTimeUTC || '',
+      threeMinRecap: game.threeMinRecap || '',
+      condensedGame: game.condensedGame || '',
       away: mapNhlTeam(game.awayTeam),
       home: mapNhlTeam(game.homeTeam)
     };
@@ -409,6 +412,7 @@
     const name = playerName(row.firstName, row.lastName) || loc(row.name);
     return {
       name,
+      nhlId: row.id || row.playerId || null,
       team: loc(row.teamName) || loc(row.teamAbbrev),
       abbrev: loc(row.teamAbbrev).toUpperCase(),
       position: row.position || '',
@@ -498,6 +502,7 @@
       const value = await coreStat(athlete.id, statName);
       return {
         name: athlete.displayName,
+        espnId: athlete.id || null,
         team: athlete.teamShortName || athlete.teamName || '',
         abbrev: '',
         position: (athlete.position || {}).abbreviation || '',
@@ -521,6 +526,7 @@
     const pick = (bucket, index) => (buckets[bucket]?.totals || [])[index];
     return {
       name: athlete.displayName,
+      espnId: athlete.id || null,
       team: athlete.teamShortName || athlete.teamName || '',
       position: (athlete.position || {}).abbreviation || '',
       headshot: athlete.headshot?.href || '',
@@ -567,6 +573,7 @@
             const raw = leader.displayValue ?? leader.value;
             players.push({
               name: athlete.displayName || '—',
+              espnId: athlete.id || null,
               team: team.abbreviation || team.shortDisplayName || '',
               position: 'G',
               value: board.format ? board.format(raw) : raw,
@@ -668,14 +675,22 @@
             fetchJson(`${NHL()}/v1/gamecenter/${game.id}/landing`),
             fetchJson(`${NHL()}/v1/gamecenter/${game.id}/boxscore`)
           ]);
-          return { source: 'nhl', ...normalizeNhlDetail(landing, box, game) };
+          const detail = { source: 'nhl', ...normalizeNhlDetail(landing, box, game) };
+          detail.recap = extractNhlGameRecap(game, landing);
+          if (!detail.recap?.embed) {
+            const espnRecap = await findEspnRecapForGame(game);
+            if (espnRecap) detail.recap = espnRecap;
+          }
+          return detail;
         } catch (error) {
           console.warn('[NHL Diggest] NHL game detail failed', error);
         }
       }
       try {
         const summary = await fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/summary?event=${game.id}`);
-        return { source: 'espn', ...normalizeEspnDetail(summary, game) };
+        const detail = { source: 'espn', ...normalizeEspnDetail(summary, game) };
+        detail.recap = extractEspnGameRecap(summary.videos || []) || extractNhlGameRecap(game);
+        return detail;
       } catch (error) {
         console.warn('[NHL Diggest] ESPN game detail failed', error);
         return null;
@@ -790,9 +805,11 @@
           time: goal.timeInPeriod || '',
           team: loc(goal.teamAbbrev).toUpperCase(),
           scorer,
+          scorerId: goal.playerId || goal.nhlPlayerId || null,
           scorerRussian: isRussianPlayer({ ...goal, name: scorer }),
           assists: (goal.assists || []).map(assist => ({
             name: playerName(assist.firstName, assist.lastName),
+            nhlId: assist.playerId || null,
             isRussian: isRussianPlayer({ ...assist, name: playerName(assist.firstName, assist.lastName) })
           })).filter(assist => assist.name),
           strength: goal.strength || ''
@@ -839,6 +856,7 @@
           skaters.push({
             team: team.short,
             name: loc(player.name),
+            nhlId: player.playerId || null,
             isRussian: isRussianPlayer({ ...player, name: loc(player.name) }),
             goals: player.goals ?? 0,
             assists: player.assists ?? 0,
@@ -851,6 +869,7 @@
         goalies.push({
           team: team.short,
           name: loc(goalie.name),
+          nhlId: goalie.playerId || null,
           isRussian: isRussianPlayer({ ...goalie, name: loc(goalie.name) }),
           saves: goalie.saveShotsAgainst || `${goalie.saves ?? '—'}/${goalie.shotsAgainst ?? '—'}`,
           sv: goalie.savePctg != null ? formatSv(goalie.savePctg) : '',
@@ -877,6 +896,7 @@
       const scorer = participants.find(item => item.type === 'scorer') || participants[0];
       const assists = participants.filter(item => item.type === 'assist').map(item => ({
         name: item.athlete?.displayName || '',
+        espnId: item.athlete?.id || null,
         isRussian: isRussianPlayer(item.athlete || {})
       })).filter(item => item.name);
       const text = play.text || '';
@@ -886,6 +906,8 @@
         time: play.clock?.displayValue || '',
         team: teamId,
         scorer: scorer?.athlete?.displayName || text.split(' Goal')[0] || text,
+        scorerId: scorer?.athlete?.id || null,
+        scorerEspn: true,
         scorerRussian: isRussianPlayer(scorer?.athlete || scorer?.athlete?.displayName || ''),
         assists,
         strength: /power play|power-play|\bpp\b/i.test(text) ? 'pp' : /short/i.test(text) ? 'sh' : ''
@@ -926,6 +948,7 @@
             goalies.push({
               team: short,
               name: athlete.athlete?.displayName || '',
+              espnId: athlete.athlete?.id || null,
               isRussian: isRussianPlayer(athlete.athlete || {}),
               saves: stats[index('saves')] && stats[index('shotsAgainst')]
                 ? `${stats[index('saves')]}/${stats[index('shotsAgainst')]}`
@@ -947,6 +970,7 @@
           skaters.push({
             team: short,
             name: athlete.athlete?.displayName || '',
+            espnId: athlete.athlete?.id || null,
             isRussian: isRussianPlayer(athlete.athlete || {}),
             goals,
             assists,
@@ -1059,6 +1083,7 @@
       position: (athlete.position || {}).abbreviation || '',
       headshot: athlete.headshot?.href || '',
       athleteId: athlete.id || '',
+      espnId: athlete.id || null,
       isRussian: isRussianPlayer(athlete),
       raw: leader.displayValue ?? leader.value
     };
@@ -1151,6 +1176,486 @@
     });
   }
 
+  // --- Team + Player screens (NHL first, ESPN CORS fallback) ---
+
+  function espnTeamSlug(abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    return ESPN_SLUG[key] || key.toLowerCase();
+  }
+
+  function pickRecordSummary(record) {
+    const items = record?.items || record || [];
+    const list = Array.isArray(items) ? items : [];
+    const total = list.find(item => item.type === 'total') || list[0] || {};
+    const stats = Object.fromEntries((total.stats || []).map(stat => [stat.name, stat.value]));
+    return {
+      summary: total.summary || '',
+      wins: Number(stats.wins || 0),
+      losses: Number(stats.losses || 0),
+      ot: Number(stats.otLosses ?? stats.overtimeLosses ?? 0),
+      points: Number(stats.points || 0),
+      gp: Number(stats.gamesPlayed || 0)
+    };
+  }
+
+  function mapRosterPlayer(raw, source) {
+    if (source === 'nhl') {
+      const name = playerName(raw.firstName, raw.lastName);
+      return {
+        name,
+        nhlId: raw.id || null,
+        number: raw.sweaterNumber ?? '',
+        position: raw.positionCode || '',
+        shoots: raw.shootsCatches || '',
+        height: raw.heightInCentimeters ? `${raw.heightInCentimeters} см` : '',
+        weight: raw.weightInKilograms ? `${raw.weightInKilograms} кг` : '',
+        headshot: raw.headshot || '',
+        birthCountry: raw.birthCountry || '',
+        isRussian: isRussianPlayer({ ...raw, name })
+      };
+    }
+    const name = raw.displayName || `${raw.firstName || ''} ${raw.lastName || ''}`.trim();
+    const birthCountry = raw.birthCountry?.abbreviation || raw.birthCountry || raw.birthPlace?.country || '';
+    return {
+      name,
+      espnId: raw.id || null,
+      number: raw.jersey ?? '',
+      position: (raw.position || {}).abbreviation || '',
+      shoots: raw.hand?.abbreviation || '',
+      height: raw.displayHeight || '',
+      weight: raw.displayWeight || '',
+      headshot: raw.headshot?.href || raw.headshot || '',
+      birthCountry,
+      isRussian: isRussianPlayer({ ...raw, name, birthCountry, birthPlace: raw.birthPlace, displayBirthPlace: raw.displayBirthPlace })
+    };
+  }
+
+  function mapTeamScheduleGame(game, abbrev, source) {
+    if (source === 'nhl') {
+      const mapped = mapNhlGame(game);
+      mapped.threeMinRecap = game.threeMinRecap || '';
+      mapped.condensedGame = game.condensedGame || '';
+      const isHome = mapped.home.short === abbrev;
+      mapped.opponent = isHome ? mapped.away : mapped.home;
+      mapped.isHome = isHome;
+      mapped.resultLabel = mapped.status === 'Final'
+        ? `${mapped.away.score ?? 0}:${mapped.home.score ?? 0}`
+        : mapped.time;
+      return mapped;
+    }
+    const mapped = mapEspnEvent(game);
+    const isHome = mapped.home.short === abbrev;
+    mapped.opponent = isHome ? mapped.away : mapped.home;
+    mapped.isHome = isHome;
+    mapped.resultLabel = mapped.status === 'Final'
+      ? `${mapped.away.score ?? 0}:${mapped.home.score ?? 0}`
+      : mapped.time;
+    return mapped;
+  }
+
+  function splitSchedule(games, limit = 6) {
+    const upcoming = games.filter(g => g.status === 'FUT' || g.status === 'Live').slice(0, limit);
+    const recent = games.filter(g => g.status === 'Final').slice(-limit).reverse();
+    return { upcoming, recent };
+  }
+
+  function teamStatsFromEspnCategories(categories) {
+    const flat = {};
+    (categories || []).forEach(cat => {
+      (cat.stats || []).forEach(stat => {
+        flat[stat.name] = stat.displayValue ?? stat.value;
+      });
+    });
+    const picks = [
+      { key: 'games', label: 'Игры', abbr: 'GP' },
+      { key: 'wins', label: 'Победы', abbr: 'W' },
+      { key: 'losses', label: 'Поражения', abbr: 'L' },
+      { key: 'overtimeLosses', label: 'OTL', abbr: 'OTL' },
+      { key: 'goals', label: 'Голы', abbr: 'G' },
+      { key: 'goalsAgainst', label: 'Пропущено', abbr: 'GA' },
+      { key: 'points', label: 'Очки', abbr: 'PTS' },
+      { key: 'powerPlayGoals', label: 'Голы в бол.', abbr: 'PPG' },
+      { key: 'shotsTotal', label: 'Броски', abbr: 'SOG' },
+      { key: 'shootingPct', label: '% бросков', abbr: 'S%' },
+      { key: 'faceoffPercent', label: 'Вбрасывания %', abbr: 'FO%' },
+      { key: 'penaltyMinutes', label: 'Штрафы', abbr: 'PIM' },
+      { key: 'avgGoalsAgainst', label: 'GAA', abbr: 'GAA' },
+      { key: 'savePct', label: 'SV%', abbr: 'SV%' }
+    ];
+    return picks
+      .filter(item => flat[item.key] != null && flat[item.key] !== '')
+      .map(item => ({ ...item, value: flat[item.key] }));
+  }
+
+  function teamStatsFromNhlClub(payload) {
+    const skaters = payload?.skaters || [];
+    const goalies = payload?.goalies || [];
+    if (!skaters.length && !goalies.length) return [];
+    const sum = (key) => skaters.reduce((acc, row) => acc + Number(row[key] || 0), 0);
+    const gp = Math.max(0, ...skaters.map(row => Number(row.gamesPlayed || 0)));
+    const goals = sum('goals');
+    const assists = sum('assists');
+    const points = sum('points');
+    const pim = sum('penaltyMinutes');
+    const shots = sum('shots');
+    const gaa = goalies.length
+      ? (goalies.reduce((acc, g) => acc + Number(g.goalsAgainstAverage ?? g.gaa ?? 0), 0) / goalies.length)
+      : null;
+    const sv = goalies.length
+      ? (goalies.reduce((acc, g) => acc + Number(g.savePctg ?? g.savePercentage ?? 0), 0) / goalies.length)
+      : null;
+    const rows = [
+      { key: 'games', label: 'Игры*', abbr: 'GP', value: gp || '—' },
+      { key: 'goals', label: 'Голы', abbr: 'G', value: goals },
+      { key: 'assists', label: 'Передачи', abbr: 'A', value: assists },
+      { key: 'points', label: 'Очки', abbr: 'PTS', value: points },
+      { key: 'shots', label: 'Броски', abbr: 'SOG', value: shots },
+      { key: 'pim', label: 'Штрафы', abbr: 'PIM', value: pim }
+    ];
+    if (gaa != null && gaa > 0) rows.push({ key: 'gaa', label: 'GAA (ср.)', abbr: 'GAA', value: formatGaa(gaa) });
+    if (sv != null && sv > 0) rows.push({ key: 'sv', label: 'SV% (ср.)', abbr: 'SV%', value: formatSv(sv) });
+    return rows;
+  }
+
+  async function resolveEspnDivisionConference(groups) {
+    let division = '';
+    let conference = '';
+    if (!groups) return { division, conference };
+    if (groups.name) division = String(groups.name).replace(/ Division$/i, '');
+    const parentRef = (groups.parent?.$ref || '').replace('http://', 'https://');
+    if (groups.parent?.name) {
+      conference = String(groups.parent.name).replace(/ Conference$/i, '');
+    } else if (parentRef) {
+      try {
+        const parent = await fetchJson(parentRef);
+        conference = String(parent.name || '').replace(/ Conference$/i, '');
+        if (!division && parent.isConference === false) division = String(parent.name || '').replace(/ Division$/i, '');
+      } catch { /* optional */ }
+    }
+    return { division, conference };
+  }
+
+  async function loadTeamNhl(abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    const [rosterPayload, schedulePayload, clubStats, standingsPayload] = await Promise.all([
+      fetchJson(`${NHL()}/v1/roster/${key}/current`),
+      fetchJson(`${NHL()}/v1/club-schedule-season/${key}/now`),
+      fetchJson(`${NHL()}/v1/club-stats/${key}/now`).catch(() => null),
+      fetchJson(`${NHL()}/v1/standings/now`).catch(() => null)
+    ]);
+    const standing = (standingsPayload?.standings || []).find(row => loc(row.teamAbbrev).toUpperCase() === key) || {};
+    const roster = [
+      ...(rosterPayload.forwards || []).map(p => mapRosterPlayer(p, 'nhl')),
+      ...(rosterPayload.defensemen || []).map(p => mapRosterPlayer(p, 'nhl')),
+      ...(rosterPayload.goalies || []).map(p => mapRosterPlayer(p, 'nhl'))
+    ];
+    const games = (schedulePayload.games || []).map(g => mapTeamScheduleGame(g, key, 'nhl'));
+    const schedule = splitSchedule(games);
+    let stats = teamStatsFromNhlClub(clubStats);
+    let statsNote = clubStats ? 'club-stats · now' : '';
+    if (!stats.length || (Number(stats[0]?.value) === 0 && stats.length < 3)) {
+      try {
+        const prev = await fetchJson(`${NHL()}/v1/club-stats/${key}/${window.NHL_PREV_SEASON || '20252026'}/2`);
+        stats = teamStatsFromNhlClub(prev);
+        statsNote = 'регулярный 2025/26';
+      } catch { /* keep empty */ }
+    }
+    const homeGame = (schedulePayload.games || []).find(g => loc(g.homeTeam?.abbrev).toUpperCase() === key);
+    const arena = loc(homeGame?.venue) || '';
+    const city = loc(standing.placeName) || loc(standing.teamPlaceName) || key;
+    const name = loc(standing.teamName) || `${city} ${loc(standing.teamCommonName) || key}`;
+    const nick = loc(standing.teamCommonName) || key;
+    const wins = Number(standing.wins || 0);
+    const losses = Number(standing.losses || 0);
+    const ot = Number(standing.otLosses || 0);
+    const points = Number(standing.points || 0);
+    const gp = Number(standing.gamesPlayed || 0);
+    return {
+      source: 'nhl',
+      abbrev: key,
+      name,
+      nick,
+      city,
+      logo: logoFor(key),
+      arena,
+      conference: standing.conferenceName || '',
+      division: standing.divisionName || '',
+      record: {
+        summary: gp ? `${wins}-${losses}-${ot}` : '',
+        wins, losses, ot, points, gp
+      },
+      standingSummary: standing.divisionName ? `${standing.divisionName}` : '',
+      roster,
+      schedule,
+      stats,
+      statsNote,
+      note: 'NHL api-web'
+    };
+  }
+
+  async function loadTeamEspn(abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    const slug = espnTeamSlug(key);
+    const [teamPayload, rosterPayload, schedulePayload, statsPayload] = await Promise.all([
+      fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/teams/${slug}`),
+      fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/teams/${slug}/roster`),
+      fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/teams/${slug}/schedule`),
+      fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/teams/${slug}/statistics`).catch(() => null)
+    ]);
+    const team = teamPayload.team || {};
+    const { division, conference } = await resolveEspnDivisionConference(team.groups);
+    const venue = team.franchise?.venue || team.venue || {};
+    const roster = [];
+    (rosterPayload.athletes || []).forEach(group => {
+      (group.items || []).forEach(player => roster.push(mapRosterPlayer(player, 'espn')));
+    });
+    const games = (schedulePayload.events || []).map(ev => mapTeamScheduleGame(ev, key, 'espn'));
+    const schedule = splitSchedule(games);
+    const categories = statsPayload?.results?.stats?.categories || [];
+    const stats = teamStatsFromEspnCategories(categories);
+    const record = pickRecordSummary(team.record);
+    return {
+      source: 'espn',
+      abbrev: key,
+      name: team.displayName || `${team.location || ''} ${team.name || key}`.trim(),
+      nick: team.shortDisplayName || team.name || key,
+      city: team.location || venue.address?.city || '',
+      logo: logoFor(key),
+      arena: venue.fullName || '',
+      conference,
+      division,
+      record,
+      standingSummary: team.standingSummary || '',
+      roster,
+      schedule,
+      stats,
+      statsNote: stats.length ? 'ESPN team statistics' : '',
+      note: 'ESPN'
+    };
+  }
+
+  async function loadTeam(abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    if (!key) return null;
+    return cached(`team:${key}`, async () => {
+      try {
+        return await loadTeamNhl(key);
+      } catch (nhlError) {
+        try {
+          return await loadTeamEspn(key);
+        } catch (espnError) {
+          console.warn('[NHL Diggest] team load failed', nhlError, espnError);
+          return null;
+        }
+      }
+    });
+  }
+
+  function statsPairsFromFeatured(block, isGoalie) {
+    if (!block) return [];
+    if (isGoalie) {
+      return [
+        { abbr: 'GP', label: 'Игры', value: block.gamesPlayed ?? '—' },
+        { abbr: 'W', label: 'Победы', value: block.wins ?? '—' },
+        { abbr: 'L', label: 'Поражения', value: block.losses ?? '—' },
+        { abbr: 'OTL', label: 'OTL', value: block.otLosses ?? '—' },
+        { abbr: 'GAA', label: 'GAA', value: block.goalsAgainstAvg != null ? formatGaa(block.goalsAgainstAvg) : '—' },
+        { abbr: 'SV%', label: 'SV%', value: block.savePctg != null ? formatSv(block.savePctg) : '—' },
+        { abbr: 'SO', label: 'Сухие', value: block.shutouts ?? '—' }
+      ];
+    }
+    return [
+      { abbr: 'GP', label: 'Игры', value: block.gamesPlayed ?? '—' },
+      { abbr: 'G', label: 'Голы', value: block.goals ?? '—' },
+      { abbr: 'A', label: 'Передачи', value: block.assists ?? '—' },
+      { abbr: 'PTS', label: 'Очки', value: block.points ?? '—' },
+      { abbr: '+/−', label: '+/−', value: block.plusMinus ?? '—' },
+      { abbr: 'PIM', label: 'Штрафы', value: block.pim ?? '—' },
+      { abbr: 'SOG', label: 'Броски', value: block.shots ?? '—' },
+      { abbr: 'PPG', label: 'Голы в бол.', value: block.powerPlayGoals ?? '—' }
+    ];
+  }
+
+  function statsPairsFromEspnSplit(names, labels, values) {
+    const rows = [];
+    (names || []).forEach((name, index) => {
+      rows.push({
+        abbr: labels?.[index] || name,
+        label: name,
+        value: values?.[index] ?? '—'
+      });
+    });
+    const prefer = new Set(['games', 'goals', 'assists', 'points', 'plusMinus', 'penaltyMinutes', 'shotsTotal', 'powerPlayGoals', 'timeOnIcePerGame', 'wins', 'losses', 'avgGoalsAgainst', 'savePct', 'shutouts', 'goalsAgainstAverage', 'savePctg']);
+    const filtered = rows.filter(row => prefer.has(row.label) || prefer.has(String(row.abbr).toLowerCase()));
+    return (filtered.length ? filtered : rows).slice(0, 12).map(row => {
+      const labelMap = {
+        games: 'Игры', goals: 'Голы', assists: 'Передачи', points: 'Очки', plusMinus: '+/−',
+        penaltyMinutes: 'Штрафы', shotsTotal: 'Броски', powerPlayGoals: 'Голы в бол.',
+        timeOnIcePerGame: 'ТОИ/и', wins: 'Победы', losses: 'Поражения',
+        avgGoalsAgainst: 'GAA', savePct: 'SV%', shutouts: 'Сухие'
+      };
+      return { ...row, label: labelMap[row.label] || row.abbr || row.label };
+    });
+  }
+
+  async function loadPlayerNhl(nhlId) {
+    const landing = await fetchJson(`${NHL()}/v1/player/${nhlId}/landing`);
+    const name = playerName(landing.firstName, landing.lastName);
+    const position = landing.position || '';
+    const isGoalie = String(position).toUpperCase() === 'G';
+    const featured = landing.featuredStats?.regularSeason || {};
+    const seasonStats = statsPairsFromFeatured(featured.subSeason, isGoalie);
+    const careerStats = statsPairsFromFeatured(
+      featured.career || landing.careerTotals?.regularSeason,
+      isGoalie
+    );
+    const draft = landing.draftDetails || {};
+    return {
+      source: 'nhl',
+      nhlId: landing.playerId || nhlId,
+      espnId: null,
+      name,
+      number: landing.sweaterNumber ?? '',
+      position,
+      team: loc(landing.fullTeamName) || loc(landing.teamCommonName) || '',
+      abbrev: loc(landing.currentTeamAbbrev).toUpperCase(),
+      logo: logoFor(loc(landing.currentTeamAbbrev)),
+      headshot: landing.headshot || '',
+      height: landing.heightInCentimeters ? `${landing.heightInCentimeters} см` : '',
+      weight: landing.weightInKilograms ? `${landing.weightInKilograms} кг` : '',
+      shoots: landing.shootsCatches || '',
+      birthDate: landing.birthDate || '',
+      birthPlace: [loc(landing.birthCity), landing.birthCountry].filter(Boolean).join(', '),
+      birthCountry: landing.birthCountry || '',
+      draft: draft.year ? `${draft.year} · Rd ${draft.round} · #${draft.overallPick} (${draft.teamAbbrev || ''})` : '',
+      isRussian: isRussianPlayer({ ...landing, name }),
+      seasonStats,
+      careerStats,
+      seasonLabel: landing.featuredStats?.season
+        ? String(landing.featuredStats.season).replace(/(\d{4})(\d{4})/, '$1/$2')
+        : 'сезон',
+      note: 'NHL player landing'
+    };
+  }
+
+  async function loadPlayerEspn(espnId) {
+    const [bio, overview] = await Promise.all([
+      fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}`),
+      fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/overview`).catch(() => null)
+    ]);
+    const athlete = bio.athlete || {};
+    const name = athlete.displayName || athlete.fullName || '—';
+    const team = athlete.team || {};
+    const position = (athlete.position || {}).abbreviation || '';
+    const statistics = overview?.statistics || {};
+    const splits = statistics.splits || [];
+    const seasonSplit = splits.find(item => /regular/i.test(item.displayName || '')) || splits[0];
+    const careerSplit = splits.find(item => /career/i.test(item.displayName || ''));
+    const seasonStats = statsPairsFromEspnSplit(statistics.names, statistics.labels, seasonSplit?.stats);
+    const careerStats = statsPairsFromEspnSplit(statistics.names, statistics.labels, careerSplit?.stats);
+    return {
+      source: 'espn',
+      nhlId: null,
+      espnId: athlete.id || espnId,
+      name,
+      number: athlete.jersey || athlete.displayJersey || '',
+      position,
+      team: team.displayName || team.shortDisplayName || '',
+      abbrev: String(team.abbreviation || '').toUpperCase(),
+      logo: logoFor(team.abbreviation),
+      headshot: athlete.headshot?.href || '',
+      height: athlete.displayHeight || '',
+      weight: athlete.displayWeight || '',
+      shoots: athlete.hand?.abbreviation || athlete.hand?.displayValue || '',
+      birthDate: athlete.displayDOB || '',
+      birthPlace: athlete.displayBirthPlace || '',
+      birthCountry: '',
+      draft: athlete.displayDraft || '',
+      isRussian: isRussianPlayer({
+        ...athlete,
+        name,
+        displayBirthPlace: athlete.displayBirthPlace,
+        birthPlace: athlete.displayBirthPlace
+      }),
+      seasonStats,
+      careerStats,
+      seasonLabel: statistics.displayName || 'сезон',
+      note: 'ESPN athlete'
+    };
+  }
+
+  async function loadPlayer(ref = {}) {
+    const nhlId = ref.nhlId || (!ref.espnId && ref.id && String(ref.id).length >= 6 ? ref.id : null);
+    const espnId = ref.espnId || ref.athleteId || (ref.scorerEspn && ref.scorerId) || null;
+    const cacheKey = `player:${nhlId || ''}:${espnId || ''}:${ref.name || ''}`;
+    return cached(cacheKey, async () => {
+      if (nhlId) {
+        try { return await loadPlayerNhl(nhlId); } catch (error) {
+          console.warn('[NHL Diggest] NHL player failed', error);
+        }
+      }
+      if (espnId) {
+        try { return await loadPlayerEspn(espnId); } catch (error) {
+          console.warn('[NHL Diggest] ESPN player failed', error);
+        }
+      }
+      if (ref.name && ref.abbrev) {
+        try {
+          const team = await loadTeam(ref.abbrev);
+          const match = (team?.roster || []).find(p => normalizedName(p.name) === normalizedName(ref.name));
+          if (match?.nhlId) return await loadPlayerNhl(match.nhlId);
+          if (match?.espnId) return await loadPlayerEspn(match.espnId);
+        } catch (error) {
+          console.warn('[NHL Diggest] player roster resolve failed', error);
+        }
+      }
+      return null;
+    });
+  }
+
+  function extractEspnGameRecap(videos) {
+    const pool = videos || [];
+    const preferred = pool.find(video => /game highlights/i.test(video.headline || video.description || ''))
+      || pool.find(video => /recap|highlights/i.test(video.headline || ''));
+    if (!preferred) return null;
+    const href = espnVideoHref(preferred);
+    if (!href) return null;
+    return {
+      url: href,
+      embed: /\.mp4(\?|$)/i.test(href),
+      title: preferred.headline || 'Обзор матча',
+      source: 'espn'
+    };
+  }
+
+  function extractNhlGameRecap(game = {}, landing = {}) {
+    const path = game.threeMinRecap || landing.threeMinRecap || game.condensedGame || landing.condensedGame || '';
+    if (!path) return null;
+    const url = /^https?:/i.test(path) ? path : `https://www.nhl.com${path.startsWith('/') ? '' : '/'}${path}`;
+    return { url, embed: false, title: 'Обзор матча', source: 'nhl' };
+  }
+
+  async function findEspnRecapForGame(game) {
+    if (!game?.startTimeUTC && !game?.away?.short) return null;
+    try {
+      const dateKey = game.startTimeUTC
+        ? new Date(game.startTimeUTC).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+        : mskDateKey();
+      const events = await scoreEspn(dateKey);
+      const away = String(game.away?.short || '').toUpperCase();
+      const home = String(game.home?.short || '').toUpperCase();
+      const match = events.find(ev => ev.away.short === away && ev.home.short === home)
+        || events.find(ev => [ev.away.short, ev.home.short].includes(away) && [ev.away.short, ev.home.short].includes(home));
+      if (!match) return null;
+      const summary = await fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/summary?event=${match.id}`);
+      return extractEspnGameRecap(summary.videos || []);
+    } catch (error) {
+      console.warn('[NHL Diggest] ESPN recap lookup failed', error);
+      return null;
+    }
+  }
+
+
   window.NHL_LIVE = {
     mskDateKey,
     shiftDate,
@@ -1160,6 +1665,8 @@
     loadBoard,
     loadRookies,
     loadCareerBoard,
+    loadTeam,
+    loadPlayer,
     gameDetail,
     groupByPeriod,
     periodLabel: careerPeriodLabel,

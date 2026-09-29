@@ -1,6 +1,6 @@
 # NHL Diggest
 
-Статический фронтенд Mini App для **Telegram** и **Max**: результаты NHL, турнирная таблица, статистика игроков и пользовательские настройки. Один и тот же URL работает в обоих мессенджерах. Интерфейс по умолчанию на русском, названия команд и игроков — на английском.
+Статический фронтенд Mini App для **Telegram** и **Max**: результаты NHL, карточки команд и игроков, турнирная таблица, статистика и настройки. Один и тот же URL работает в обоих мессенджерах. Интерфейс по умолчанию на русском, названия команд и игроков — на английском.
 
 Live: <https://chuikoff.github.io/nhl-diggest-web/>
 
@@ -61,10 +61,12 @@ nhl.example.com
    - `/v1/score/{YYYY-MM-DD}`, `/v1/schedule/{YYYY-MM-DD}`
    - `/v1/standings/now` (если GP=0 — fallback на финал прошлого сезона `/v1/standings/2026-04-14`)
    - `/v1/gamecenter/{id}/landing` + `/boxscore`
+   - `/v1/roster/{ABB}/current`, `/v1/club-schedule-season/{ABB}/now`, `/v1/club-stats/{ABB}/now`
+   - `/v1/player/{id}/landing`
    - `/v1/skater-stats-leaders/{season}/{gameType}`, `/v1/goalie-stats-leaders/...`
 2. **ESPN** (если NHL недоступен из браузера) — CORS `Access-Control-Allow-Origin: *`:
-   - `site.api.espn.com` scoreboard / summary / standings
-   - `site.web.api.espn.com` statistics/byathlete
+   - `site.api.espn.com` scoreboard / summary / standings / teams/{slug}(+roster,schedule,statistics)
+   - `site.web.api.espn.com` statistics/byathlete · athletes/{id}(+overview)
    - `sports.core.api.espn.com` athlete statistics (hits / blocked shots / goalie metrics)
    - `sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/leaders` — **all-time / career** boards
 3. **Mock** (`js/mock-data.js`) — только если оба live-источника упали.
@@ -106,13 +108,35 @@ Endpoint (CORS `*`):
 - Athlete resolve: `.../athletes/{id}` (+ optional team `$ref`)
 - GAA/SV%: `.../athletes/{id}/statistics/0`
 
+### Команда и игрок
+
+Из **Результатов** / **карточки матча** (и турнирной) имена и логотипы команд кликабельны → экран команды:
+
+- инфо (город, арена, конференция/дивизион, рекорд)
+- состав (россияне подсвечены жёлтым)
+- расписание (ближайшие / недавние)
+- командная статистика
+
+Состав, лидеры статистики и имена в матче кликабельны → экран игрока (фото, био, сезон, карьера).
+
+Назад: кнопка «Назад», **swipe right-to-left** или **свайп от левого края** (как «к результатам»).
+
+Endpoints (NHL → ESPN fallback, CORS `*` у ESPN):
+
+| Что | NHL api-web | ESPN |
+| --- | --- | --- |
+| Команда | `/v1/roster/{ABB}/current`, `/v1/club-schedule-season/{ABB}/now`, `/v1/club-stats/{ABB}/now`, `/v1/standings/now` | `/apis/site/v2/sports/hockey/nhl/teams/{slug}`, `/roster`, `/schedule`, `/statistics` |
+| Игрок | `/v1/player/{id}/landing` | `site.web.api` `/apis/common/v3/sports/hockey/nhl/athletes/{id}` + `/overview` |
+
 ### Детали матча
 
 Голы и удаления группируются **по периодам** (P1 / P2 / P3 / OT / SO) из NHL landing `summary.scoring|penalties` или ESPN `summary.plays`.
 
 **Удаления (fix 2026-09-29):** ESPN penalty plays имеют `type.text` = инфракция (`Hooking`, `Interference`, …), а не слово `Penalty`. Детект идёт по `type.penaltyMinutes` / `type.penaltyType`. У NHL имя нарушителя лежит в `committedByPlayer.firstName/lastName` (не на корне penalty-объекта).
 
-**Клипы голов (experimental):** если есть URL — кнопка ▶ у гола. NHL: `highlightClipSharingUrl` (открытие во внешнем WebView). ESPN: mp4 из `summary.videos`, матч по имени скорera в headline; inline `<video>` при `.mp4`, иначе `openLink`. Soft-fail, если клипа нет.
+**Обзор матча:** ESPN `summary.videos` → ролик «Game Highlights» (inline `<video>` при `.mp4`). Для NHL-игр дополнительно ищем тот же recap по дате/командам на ESPN; иначе ссылка NHL `threeMinRecap` / `condensedGame` (nhl.com).
+
+**Клипы голов (experimental):** если есть URL — кнопка ▶ у гола. NHL: `highlightClipSharingUrl` (внешний WebView). ESPN: mp4 из `summary.videos` по имени скорera; inline `<video>` при `.mp4`, иначе `openLink`. Soft-fail, если клипа нет.
 
 Логотипы: ESPN CDN PNG (`a.espncdn.com/i/teamlogos/nhl/500/{slug}.png`), slug-исключения как в боте (`LAK→la`, `SJS→sj`, `UTA→utah`, …).
 

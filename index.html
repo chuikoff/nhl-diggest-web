@@ -67,8 +67,18 @@
       </section>
 
       <section class="panel game-detail-panel" data-panel="game-detail" aria-label="Детали матча">
-        <div class="detail-toolbar"><button class="back-button" id="gameDetailBack" type="button">‹ <span>К результатам</span></button><span class="pill">MATCH CENTER</span></div>
+        <div class="detail-toolbar"><button class="back-button" id="gameDetailBack" type="button" data-back>‹ <span>Назад</span></button><span class="pill">MATCH CENTER</span></div>
         <div id="gameDetailContent"></div>
+      </section>
+
+      <section class="panel team-detail-panel" data-panel="team-detail" aria-label="Команда">
+        <div class="detail-toolbar"><button class="back-button" id="teamDetailBack" type="button" data-back>‹ <span>Назад</span></button><span class="pill">TEAM</span></div>
+        <div id="teamDetailContent"></div>
+      </section>
+
+      <section class="panel player-detail-panel" data-panel="player-detail" aria-label="Игрок">
+        <div class="detail-toolbar"><button class="back-button" id="playerDetailBack" type="button" data-back>‹ <span>Назад</span></button><span class="pill">PLAYER</span></div>
+        <div id="playerDetailContent"></div>
       </section>
 
       <section class="panel" data-panel="standings" aria-labelledby="standingsTitle">
@@ -99,7 +109,7 @@
         <div class="settings-card profile-card"><div class="profile-icon">G</div><div><strong>NHL fan</strong><span>Настройки Mini App</span></div><span class="chevron">›</span></div>
         <div class="settings-group"><p class="group-label">ОБЩИЕ</p><div class="settings-card"><div class="setting-copy"><strong>Язык интерфейса</strong><span>Русский</span></div><span class="chevron">›</span></div><div class="settings-card"><div class="setting-copy"><strong>Тёмная тема</strong><span id="themeModeLabel">Включена</span></div><label class="toggle"><input id="themeToggle" type="checkbox" checked><span></span></label></div></div>
         <div class="settings-group"><p class="group-label">УВЕДОМЛЕНИЯ</p><div class="settings-card"><div class="setting-copy"><strong>Мои команды</strong><span>Новости и результаты</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div><div class="settings-card"><div class="setting-copy"><strong>Ежедневный дайджест</strong><span>09:00 по Москве</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div></div>
-        <p class="settings-note">Данные NHL: api-web.nhle.com (если CORS позволит) или ESPN.<br>Карьера: ESPN all-time leaders. TG + Max bridge сохранён.<br>Имена команд/игроков — на английском.</p>
+        <p class="settings-note">Данные NHL: api-web.nhle.com (если CORS позволит) или ESPN.<br>Команды и игроки: roster / schedule / stats. TG + Max bridge сохранён.<br>Имена команд/игроков — на английском.</p>
       </section>
     </main>
 
