@@ -192,6 +192,20 @@
       }
     };
 
+    const openBotLink = (url) => {
+      if (!url || typeof url !== 'string') return false;
+      try {
+        if (env === 'telegram' && typeof window.Telegram?.WebApp?.openTelegramLink === 'function') {
+          window.Telegram.WebApp.openTelegramLink(url);
+          return true;
+        }
+        return openLink(url);
+      } catch (err) {
+        console.warn('[NHL Diggest] openBotLink failed', err);
+        return openLink(url);
+      }
+    };
+
     window.NHL_BRIDGE = {
       env,
       ready,
@@ -202,6 +216,7 @@
       getTheme: () => detectTheme(host) || initialTheme,
       applyTheme,
       openLink,
+      openBotLink,
       subscribeTheme: listener => { themeListeners.add(listener); return () => themeListeners.delete(listener); },
       telegram: window.Telegram?.WebApp || null,
       max: window.WebApp && typeof window.WebApp.ready === 'function' ? window.WebApp : null

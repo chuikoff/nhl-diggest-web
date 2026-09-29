@@ -18,3 +18,7 @@ window.ESPN_SEASON_CUR = 2026;  // 2025-26
 window.ESPN_SEASON_NEXT = 2027; // 2026-27 (in progress)
 
 window.NHL_TZ = 'Europe/Moscow';
+
+// Deep-link bots for match-start reminders (Mini App → bot start payload).
+window.NHL_TG_BOT = 'nhldig_bot';
+window.NHL_MAX_BOT = 'id463223580832_bot';

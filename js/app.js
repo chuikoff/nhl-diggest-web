@@ -414,16 +414,76 @@
     return blocks + extra || `<p class="empty-detail">Состав недоступен</p>`;
   }
 
-  function scheduleListMarkup(title, games, emptyText) {
+  const REMIND_STORAGE_KEY = 'nhl_diggest_reminders';
+
+  function loadReminderMap() {
+    try {
+      const raw = window.localStorage.getItem(REMIND_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveReminderMap(map) {
+    try { window.localStorage.setItem(REMIND_STORAGE_KEY, JSON.stringify(map || {})); } catch { /* private mode */ }
+  }
+
+  function isReminderOn(gameId) {
+    const map = loadReminderMap();
+    return Boolean(map[String(gameId)]);
+  }
+
+  function setReminderLocal(gameId, on, meta = {}) {
+    const map = loadReminderMap();
+    const key = String(gameId);
+    if (on) map[key] = { on: true, startTimeUTC: meta.startTimeUTC || '', away: meta.away || '', home: meta.home || '', updatedAt: Date.now() };
+    else delete map[key];
+    saveReminderMap(map);
+  }
+
+  function remindDeepLink(gameId, enable) {
+    const payload = `${enable ? 'remind' : 'unremind'}_${gameId}`;
+    if (bridge.isTelegram || (!bridge.isMax && !bridge.isBrowser)) {
+      const bot = window.NHL_TG_BOT || 'nhldig_bot';
+      return `https://t.me/${bot}?start=${encodeURIComponent(payload)}`;
+    }
+    if (bridge.isMax) {
+      const bot = window.NHL_MAX_BOT || 'id463223580832_bot';
+      return `https://max.ru/${bot}?start=${encodeURIComponent(payload)}`;
+    }
+    const bot = window.NHL_TG_BOT || 'nhldig_bot';
+    return `https://t.me/${bot}?start=${encodeURIComponent(payload)}`;
+  }
+
+  function openRemindBot(gameId, enable) {
+    const url = remindDeepLink(gameId, enable);
+    const opened = bridge.openBotLink?.(url);
+    if (!opened) openExternal(url);
+  }
+
+  function canRemindGame(game) {
+    if (!game?.id) return false;
+    return game.status === 'FUT' || game.status === 'Preseason';
+  }
+
+  function scheduleListMarkup(title, games, emptyText, { remindable = false } = {}) {
     if (!games?.length) return `<div class="detail-section"><div class="detail-section-title"><h3>${title}</h3></div><p class="empty-detail">${emptyText}</p></div>`;
     return `<div class="detail-section"><div class="detail-section-title"><h3>${title}</h3><span>${games.length}</span></div>
       <div class="team-schedule">${games.map(game => {
         const opp = game.opponent || {};
         const prefix = game.isHome ? 'vs' : '@';
-        return `<div class="schedule-row">
+        const showRemind = remindable && canRemindGame(game);
+        const on = showRemind && isReminderOn(game.id);
+        const remind = showRemind
+          ? `<button type="button" class="remind-btn${on ? ' is-on' : ''}" data-remind-game="${escapeAttr(String(game.id))}" data-remind-on="${on ? '1' : '0'}" data-remind-start="${escapeAttr(game.startTimeUTC || '')}" data-remind-away="${escapeAttr(game.away?.short || '')}" data-remind-home="${escapeAttr(game.home?.short || '')}" aria-pressed="${on ? 'true' : 'false'}">${on ? '🔔 Вкл' : '🔔'}</button>`
+          : '';
+        return `<div class="schedule-row${showRemind ? ' has-remind' : ''}">
           <span class="schedule-date">${formatShortDate(game.startTimeUTC || '')}</span>
           <div class="schedule-copy"><strong>${prefix} ${opp.short || opp.name || '—'}</strong><small>${statusLabel(game.status, game.preseason)}</small></div>
           <span class="schedule-result">${game.resultLabel || game.time || ''}</span>
+          ${remind}
         </div>`;
       }).join('')}</div></div>`;
   }
@@ -442,14 +502,15 @@
       return `<section class="detail-section career-history-section"><div class="detail-section-title"><h3>${title}</h3></div><p class="empty-detail">История по клубам недоступна</p></section>`;
     }
     const header = goalie
-      ? '<span>Клуб</span><span>Сезоны</span><span>GP</span><span>W-L-OTL</span><span>GAA</span><span>SV%</span><span>SO</span>'
-      : '<span>Клуб</span><span>Сезоны</span><span>GP</span><span>G</span><span>A</span><span>PTS</span>';
+      ? '<span>Клуб</span><span>GP</span><span>W-L-OTL</span><span>GAA</span><span>SV%</span><span>SO</span>'
+      : '<span>Клуб</span><span>GP</span><span>G</span><span>A</span><span>PTS</span>';
     const body = rows.map(row => {
-      const seasons = (row.seasons || []).map(escapeHtml).join(', ');
+      const chips = (row.seasons || []).map(s => `<span class="season-chip">${escapeHtml(s)}</span>`).join('');
+      const clubCell = `<div class="career-club-cell"><strong>${escapeHtml(row.club)}</strong>${chips ? `<div class="season-chips">${chips}</div>` : ''}</div>`;
       if (goalie) {
-        return `<div class="career-history-row"><strong>${escapeHtml(row.club)}</strong><span>${seasons}</span><span>${row.gp ?? '—'}</span><span>${row.wins ?? 0}-${row.losses ?? 0}-${row.otLosses ?? 0}</span><span>${row.gaa ?? '—'}</span><span>${row.sv ?? '—'}</span><span>${row.shutouts ?? 0}</span></div>`;
+        return `<div class="career-history-row">${clubCell}<span>${row.gp ?? '—'}</span><span>${row.wins ?? 0}-${row.losses ?? 0}-${row.otLosses ?? 0}</span><span>${row.gaa ?? '—'}</span><span>${row.sv ?? '—'}</span><span>${row.shutouts ?? 0}</span></div>`;
       }
-      return `<div class="career-history-row"><strong>${escapeHtml(row.club)}</strong><span>${seasons}</span><span>${row.gp ?? '—'}</span><span>${row.goals ?? 0}</span><span>${row.assists ?? 0}</span><span>${row.points ?? 0}</span></div>`;
+      return `<div class="career-history-row">${clubCell}<span>${row.gp ?? '—'}</span><span>${row.goals ?? 0}</span><span>${row.assists ?? 0}</span><span>${row.points ?? 0}</span></div>`;
     }).join('');
     return `<section class="detail-section career-history-section"><div class="detail-section-title"><h3>${title}</h3><span>регулярный сезон</span></div><div class="career-history-table${goalie ? ' goalie-history' : ''}"><div class="career-history-head">${header}</div>${body}</div></section>`;
   }
@@ -481,7 +542,7 @@
       </div>
       <p class="panel-note">${team.note || team.source || ''}${team.statsNote ? ` · ${team.statsNote}` : ''}</p>
       <section class="detail-section"><div class="detail-section-title"><h3>Состав</h3><span>${team.roster?.length || 0}</span></div>${rosterGroupMarkup((team.roster || []).map(p => ({ ...p, abbrev: team.abbrev })))}</section>
-      ${scheduleListMarkup('Ближайшие', team.schedule?.upcoming || [], 'Нет ближайших матчей')}
+      ${scheduleListMarkup('Ближайшие', team.schedule?.upcoming || [], 'Нет ближайших матчей', { remindable: true })}
       ${scheduleListMarkup('Недавние', team.schedule?.recent || [], 'Нет завершённых матчей')}
       ${statsGridMarkup('Командная статистика', team.stats || [], team.statsNote || '')}
     `;
@@ -804,6 +865,27 @@
   });
 
   function detailClickHandler(event) {
+    const remindBtn = event.target.closest?.('[data-remind-game]');
+    if (remindBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      const gameId = remindBtn.getAttribute('data-remind-game');
+      if (!gameId) return;
+      const currentlyOn = remindBtn.getAttribute('data-remind-on') === '1';
+      const nextOn = !currentlyOn;
+      setReminderLocal(gameId, nextOn, {
+        startTimeUTC: remindBtn.getAttribute('data-remind-start') || '',
+        away: remindBtn.getAttribute('data-remind-away') || '',
+        home: remindBtn.getAttribute('data-remind-home') || ''
+      });
+      remindBtn.classList.toggle('is-on', nextOn);
+      remindBtn.setAttribute('data-remind-on', nextOn ? '1' : '0');
+      remindBtn.setAttribute('aria-pressed', nextOn ? 'true' : 'false');
+      remindBtn.textContent = nextOn ? '🔔 Вкл' : '🔔';
+      openRemindBot(gameId, nextOn);
+      toast(nextOn ? 'Напоминание: откройте бота для подтверждения' : 'Напоминание снято — подтвердите в боте');
+      return;
+    }
     const openUrl = event.target.closest?.('[data-open-url]');
     if (openUrl) {
       event.preventDefault();
