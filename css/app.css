@@ -620,6 +620,13 @@ h2 { font-size: 29px; }
   border: 1px solid rgba(120, 140, 160, .35);
   display: block;
 }
+/* Hidden when emoji is present; kept in DOM as soft fallback for sparse emoji fonts. */
+.player-flag-img-fallback {
+  display: none;
+}
+.player-flag:not(:has(.player-flag-emoji)) .player-flag-img-fallback {
+  display: block;
+}
 
 /* Grouped trophies (national + club); individual awards stay separate */
 .trophy-groups {

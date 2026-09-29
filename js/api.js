@@ -78,19 +78,20 @@
   }
 
 
-  // --- National flags (birthCountry / nationality) ---
-  // NHL uses IOC/ISO-3166 alpha-3 style codes (RUS, CAN, DEU, …). ESPN often
-  // only has a free-text birth place, so we also parse country names.
+  // --- National flags (birthCountry / nationality / citizenship) ---
+  // NHL uses IOC/ISO-3166 alpha-3 (RUS, CAN, …). ESPN site.web often only has
+  // free-text "City, ON/AB/NS" or "Moscow, USSR"; core API has birthCountry +
+  // birthPlace.country. Harden with ISO map, province/state→country, city hints.
   const COUNTRY_ISO2 = {
-    RUS: 'ru', RU: 'ru', RUSSIA: 'ru', USSR: 'ru', CCCP: 'ru',
+    RUS: 'ru', RU: 'ru', RUSSIA: 'ru', USSR: 'ru', CCCP: 'ru', 'SOVIET UNION': 'ru',
     CAN: 'ca', CA: 'ca', CANADA: 'ca',
-    USA: 'us', US: 'us', 'UNITED STATES': 'us', 'UNITED STATES OF AMERICA': 'us',
+    USA: 'us', US: 'us', 'UNITED STATES': 'us', 'UNITED STATES OF AMERICA': 'us', 'U.S.A': 'us', 'U.S.A.': 'us',
     SWE: 'se', SE: 'se', SWEDEN: 'se',
     FIN: 'fi', FI: 'fi', FINLAND: 'fi',
-    CZE: 'cz', CZ: 'cz', 'CZECH REPUBLIC': 'cz', 'CZECHIA': 'cz',
+    CZE: 'cz', CZ: 'cz', 'CZECH REPUBLIC': 'cz', CZECHIA: 'cz', TCH: 'cz',
     SVK: 'sk', SK: 'sk', SLOVAKIA: 'sk',
-    CHE: 'ch', SUI: 'ch', SUIZA: 'ch', SWITZERLAND: 'ch', CH: 'ch',
-    DEU: 'de', GER: 'de', DE: 'de', GERMANY: 'de',
+    CHE: 'ch', SUI: 'ch', SWITZERLAND: 'ch', CH: 'ch',
+    DEU: 'de', GER: 'de', DE: 'de', GERMANY: 'de', FRG: 'de', GDR: 'de',
     LVA: 'lv', LAT: 'lv', LV: 'lv', LATVIA: 'lv',
     BLR: 'by', BY: 'by', BELARUS: 'by',
     UKR: 'ua', UA: 'ua', UKRAINE: 'ua',
@@ -98,7 +99,7 @@
     NOR: 'no', NO: 'no', NORWAY: 'no',
     AUT: 'at', AT: 'at', AUSTRIA: 'at',
     SVN: 'si', SLO: 'si', SI: 'si', SLOVENIA: 'si',
-    GBR: 'gb', GB: 'gb', 'UNITED KINGDOM': 'gb', 'GREAT BRITAIN': 'gb', ENGLAND: 'gb',
+    GBR: 'gb', GB: 'gb', 'UNITED KINGDOM': 'gb', 'GREAT BRITAIN': 'gb', ENGLAND: 'gb', SCOTLAND: 'gb', WALES: 'gb',
     AUS: 'au', AU: 'au', AUSTRALIA: 'au',
     FRA: 'fr', FR: 'fr', FRANCE: 'fr',
     POL: 'pl', PL: 'pl', POLAND: 'pl',
@@ -106,21 +107,72 @@
     KAZ: 'kz', KZ: 'kz', KAZAKHSTAN: 'kz',
     LTU: 'lt', LT: 'lt', LITHUANIA: 'lt',
     EST: 'ee', EE: 'ee', ESTONIA: 'ee',
-    NLD: 'nl', NED: 'nl', NL: 'nl', NETHERLANDS: 'nl',
+    NLD: 'nl', NED: 'nl', NL: 'nl', NETHERLANDS: 'nl', HOLLAND: 'nl',
     ITA: 'it', IT: 'it', ITALY: 'it',
     JPN: 'jp', JP: 'jp', JAPAN: 'jp',
-    KOR: 'kr', KR: 'kr', 'SOUTH KOREA': 'kr',
+    KOR: 'kr', KR: 'kr', 'SOUTH KOREA': 'kr', KOREA: 'kr',
     CHN: 'cn', CN: 'cn', CHINA: 'cn',
     BGR: 'bg', BUL: 'bg', BG: 'bg', BULGARIA: 'bg',
     HRV: 'hr', CRO: 'hr', HR: 'hr', CROATIA: 'hr',
-    SRB: 'rs', RS: 'rs', SERBIA: 'rs',
+    SRB: 'rs', RS: 'rs', SERBIA: 'rs', YUG: 'rs',
     BEL: 'be', BE: 'be', BELGIUM: 'be',
     IRL: 'ie', IE: 'ie', IRELAND: 'ie',
     NZL: 'nz', NZ: 'nz', 'NEW ZEALAND': 'nz',
     BRA: 'br', BR: 'br', BRAZIL: 'br',
     MEX: 'mx', MX: 'mx', MEXICO: 'mx',
     ISR: 'il', IL: 'il', ISRAEL: 'il',
-    OAR: 'ru', ROC: 'ru'
+    OAR: 'ru', ROC: 'ru',
+    SVKIA: 'sk',
+    LIE: 'li', LIECHTENSTEIN: 'li',
+    AND: 'ad', ANDORRA: 'ad',
+    ISL: 'is', IS: 'is', ICELAND: 'is',
+    GRE: 'gr', GRC: 'gr', GR: 'gr', GREECE: 'gr',
+    TUR: 'tr', TR: 'tr', TURKEY: 'tr', TURKIYE: 'tr',
+    RSA: 'za', ZAF: 'za', 'SOUTH AFRICA': 'za',
+    PHI: 'ph', PHL: 'ph', PH: 'ph', PHILIPPINES: 'ph',
+    TPE: 'tw', TWN: 'tw', TAIWAN: 'tw',
+    HKG: 'hk', HK: 'hk', 'HONG KONG': 'hk'
+  };
+
+  // ESPN displayBirthPlace often ends with a province/state code instead of a country.
+  const REGION_TO_ISO2 = {
+    // Canada
+    ON: 'ca', AB: 'ca', BC: 'ca', MB: 'ca', SK: 'ca', QC: 'ca', PQ: 'ca',
+    NS: 'ca', NB: 'ca', NL: 'ca', NF: 'ca', PE: 'ca', PEI: 'ca', NT: 'ca', NU: 'ca', YT: 'ca',
+    ONTARIO: 'ca', ALBERTA: 'ca', 'BRITISH COLUMBIA': 'ca', MANITOBA: 'ca', SASKATCHEWAN: 'ca',
+    QUEBEC: 'ca', QUÉBEC: 'ca', 'NOVA SCOTIA': 'ca', 'NEW BRUNSWICK': 'ca',
+    'NEWFOUNDLAND': 'ca', 'NEWFOUNDLAND AND LABRADOR': 'ca', 'PRINCE EDWARD ISLAND': 'ca',
+    // USA
+    AL: 'us', AK: 'us', AZ: 'us', AR: 'us', CA: 'us', CO: 'us', CT: 'us', DE: 'us', FL: 'us',
+    GA: 'us', HI: 'us', ID: 'us', IL: 'us', IN: 'us', IA: 'us', KS: 'us', KY: 'us', LA: 'us',
+    ME: 'us', MD: 'us', MA: 'us', MI: 'us', MN: 'us', MS: 'us', MO: 'us', MT: 'us', NE: 'us',
+    NV: 'us', NH: 'us', NJ: 'us', NM: 'us', NY: 'us', NC: 'us', ND: 'us', OH: 'us', OK: 'us',
+    OR: 'us', PA: 'us', RI: 'us', SC: 'us', SD: 'us', TN: 'us', TX: 'us', UT: 'us', VT: 'us',
+    VA: 'us', WA: 'us', WV: 'us', WI: 'us', WY: 'us', DC: 'us',
+    // Note: CA is both Canada ISO2 and California — handled after country map / with context.
+    MINNESOTA: 'us', MICHIGAN: 'us', MASSACHUSETTS: 'us', 'NEW YORK': 'us', 'NEW JERSEY': 'us',
+    PENNSYLVANIA: 'us', ILLINOIS: 'us', WISCONSIN: 'us', 'NORTH DAKOTA': 'us', 'SOUTH DAKOTA': 'us',
+    COLORADO: 'us', FLORIDA: 'us', TEXAS: 'us', CALIFORNIA: 'us', 'RHODE ISLAND': 'us'
+  };
+
+  // Common hockey birth cities when country/region is missing from the string.
+  const CITY_TO_ISO2 = {
+    MOSCOW: 'ru', 'ST PETERSBURG': 'ru', 'SAINT PETERSBURG': 'ru', 'ST. PETERSBURG': 'ru',
+    MAGNITOGORSK: 'ru', YAROSLAVL: 'ru', CHELYABINSK: 'ru', KAZAN: 'ru', OMSK: 'ru',
+    UFA: 'ru', NOVOSIBIRSK: 'ru', SAMARA: 'ru', TOLYATTI: 'ru', TOGLIATTI: 'ru',
+    NIZHNEKAMSK: 'ru', CHEREPOVETS: 'ru', VOSKRESENSK: 'ru', PODOLSK: 'ru',
+    KHABAROVSK: 'ru', VLADIVOSTOK: 'ru', PERM: 'ru', EKATERINBURG: 'ru', YEKATERINBURG: 'ru',
+    NIZHNY: 'ru', 'NIZHNY NOVGOROD': 'ru', NOVOKUZNETSK: 'ru', TVER: 'ru',
+    TORONTO: 'ca', MONTREAL: 'ca', VANCOUVER: 'ca', CALGARY: 'ca', EDMONTON: 'ca',
+    OTTAWA: 'ca', WINNIPEG: 'ca', HALIFAX: 'ca', QUEBEC: 'ca', 'QUEBEC CITY': 'ca',
+    'RICHMOND HILL': 'ca', 'COLE HARBOUR': 'ca', LONDON: 'ca', WINDSOR: 'ca',
+    HELSINKI: 'fi', TAMPERE: 'fi', TURKU: 'fi', OULU: 'fi', ESPOO: 'fi',
+    STOCKHOLM: 'se', GOTHENBURG: 'se', GOTEBORG: 'se', 'GÖTEBORG': 'se', MALMO: 'se',
+    PRAGUE: 'cz', BRNO: 'cz', BRATISLAVA: 'sk',
+    RIGA: 'lv', MINSK: 'by', KIEV: 'ua', KYIV: 'ua',
+    BERN: 'ch', ZURICH: 'ch', 'ZÜRICH': 'ch', GENEVA: 'ch',
+    BERLIN: 'de', MUNICH: 'de', 'MÜNCHEN': 'de', COLOGNE: 'de',
+    BRNO: 'cz', PARDUBICE: 'cz',
   };
 
   const COUNTRY_LABEL_RU = {
@@ -131,22 +183,44 @@
     pl: 'Польша', hu: 'Венгрия', kz: 'Казахстан', lt: 'Литва', ee: 'Эстония',
     nl: 'Нидерланды', it: 'Италия', jp: 'Япония', kr: 'Южная Корея', cn: 'Китай',
     bg: 'Болгария', hr: 'Хорватия', rs: 'Сербия', be: 'Бельгия', ie: 'Ирландия',
-    nz: 'Новая Зеландия', br: 'Бразилия', mx: 'Мексика', il: 'Израиль'
+    nz: 'Новая Зеландия', br: 'Бразилия', mx: 'Мексика', il: 'Израиль',
+    li: 'Лихтенштейн', is: 'Исландия', gr: 'Греция', tr: 'Турция', za: 'ЮАР',
+    ph: 'Филиппины', tw: 'Тайвань', hk: 'Гонконг', ad: 'Андорра'
   };
+
+  function normalizeCountryKey(value) {
+    return String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[._]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
 
   function iso2FromCountryToken(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
-    const key = raw.toUpperCase().replace(/[._]/g, ' ').replace(/\s+/g, ' ').trim();
+    const key = normalizeCountryKey(raw);
     if (COUNTRY_ISO2[key]) return COUNTRY_ISO2[key];
-    if (/^[A-Z]{2}$/.test(key) && COUNTRY_ISO2[key]) return COUNTRY_ISO2[key];
-    // Free-text: "Moscow, Russia" / "Helsinki, Finland"
+    // Free-text: "Moscow, Russia" / "Helsinki, Finland" / "Richmond Hill, ON"
     const parts = key.split(',').map(part => part.trim()).filter(Boolean);
     for (let i = parts.length - 1; i >= 0; i -= 1) {
-      if (COUNTRY_ISO2[parts[i]]) return COUNTRY_ISO2[parts[i]];
+      const part = parts[i];
+      if (COUNTRY_ISO2[part]) return COUNTRY_ISO2[part];
+      // Prefer Canadian provinces over ambiguous US state codes when trailing token.
+      if (REGION_TO_ISO2[part] && part !== 'CA') return REGION_TO_ISO2[part];
+      // Trailing "CA" in "City, CA" is California (US) in ESPN style; "CAN" already handled.
+      if (part === 'CA' && parts.length > 1) return 'us';
     }
     for (const [name, iso2] of Object.entries(COUNTRY_ISO2)) {
       if (name.length > 3 && key.includes(name)) return iso2;
+    }
+    // City-only fallback (first segment or whole string)
+    const city = normalizeCountryKey(parts[0] || key);
+    if (CITY_TO_ISO2[city]) return CITY_TO_ISO2[city];
+    for (const [name, iso2] of Object.entries(CITY_TO_ISO2)) {
+      if (name.length > 4 && city.includes(name)) return iso2;
     }
     return '';
   }
@@ -158,21 +232,62 @@
     return String.fromCodePoint(...[...upper].map(ch => 127397 + ch.charCodeAt(0)));
   }
 
+  function extractCountryCandidates(player = {}) {
+    const out = [];
+    const push = (value) => {
+      if (value == null || value === '') return;
+      out.push(value);
+    };
+    push(player.birthCountry);
+    push(player.nationality);
+    push(player.countryCode);
+    push(player.country);
+    push(player.citizenship);
+    push(player.citizenOf);
+    push(player.displayBirthPlace);
+    push(player.birthPlace);
+    push(player.birthplace);
+    push(player.birthPlaceDisplay);
+    push(player.birthCity);
+    push(player.birth?.country);
+    push(player.birth?.countryCode);
+    push(player.birth?.place);
+    // Nested ESPN / NHL shapes
+    const bp = player.birthPlace;
+    if (bp && typeof bp === 'object') {
+      push(bp.country);
+      push(bp.countryCode);
+      push(bp.abbreviation);
+      push(bp.state);
+      push(bp.city);
+      if (bp.city || bp.state || bp.country) {
+        push([bp.city, bp.state, bp.country].filter(Boolean).join(', '));
+      }
+    }
+    const bc = player.birthCountry;
+    if (bc && typeof bc === 'object') {
+      push(bc.abbreviation);
+      push(bc.code);
+      push(bc.name);
+      push(bc.default);
+    }
+    return out;
+  }
+
   function resolvePlayerFlag(player = {}) {
-    const candidates = [
-      player.birthCountry, player.nationality, player.countryCode, player.country,
-      player.citizenship, player.displayBirthPlace, player.birthPlace,
-      player.birth?.country, player.birth?.countryCode
-    ];
     let iso2 = '';
-    for (const value of candidates) {
-      if (value == null || value === '') continue;
-      if (typeof value === 'object') {
-        iso2 = iso2FromCountryToken(value.abbreviation || value.code || value.default || value.name || loc(value));
+    for (const value of extractCountryCandidates(player)) {
+      if (typeof value === 'object' && value) {
+        iso2 = iso2FromCountryToken(
+          value.abbreviation || value.code || value.default || value.name || value.country || loc(value)
+        );
       } else {
         iso2 = iso2FromCountryToken(value);
       }
       if (iso2) break;
+    }
+    if (!iso2 && player?.name && RUSSIAN_NAME_FALLBACKS.has(normalizedName(player.name))) {
+      iso2 = 'ru';
     }
     if (!iso2) return null;
     const emoji = flagEmojiFromIso2(iso2);
@@ -185,8 +300,8 @@
   }
 
   // --- Trophies: club cups + national medals (individual awards stay separate) ---
-  const MEDAL_LABEL_RU = { gold: 'золото', silver: 'серебро', bronze: 'бронза' };
-  const MEDAL_RANK = { gold: 0, silver: 1, bronze: 2 };
+  const MEDAL_LABEL_RU = { gold: 'золото', silver: 'серебро', bronze: 'бронза', appearance: 'участие' };
+  const MEDAL_RANK = { gold: 0, silver: 1, bronze: 2, appearance: 3 };
 
   function calendarYearLabel(value) {
     const text = String(value ?? '').trim();
@@ -197,12 +312,8 @@
 
   function clubTrophyCanonical(name) {
     const n = String(name || '').toLowerCase().replace(/[“”"]/g, '"');
+    // Club trophies: NHL Stanley Cup only (KHL/AHL cups dropped — no reliable stats).
     if (/stanley\s*cup/.test(n)) return { key: 'stanley', name: 'Кубок Стэнли' };
-    if (/gagarin/.test(n)) return { key: 'gagarin', name: 'Кубок Гагарина' };
-    // AHL championship — not the NHL Calder Memorial Trophy (rookie award).
-    if (/\bcalder\s*cup\b/.test(n) && !/memorial/.test(n)) {
-      return { key: 'calder_cup', name: 'Кубок Колдера (AHL)' };
-    }
     return null;
   }
 
@@ -223,13 +334,15 @@
     return 'individual';
   }
 
-  // Curated national medals + non-NHL club cups for well-known players.
+  // Curated national medals/appearances + NHL All-Star supplements for well-known players.
   // Keyed by NHL playerId; optional `names` for ESPN-only lookups.
-  // Years are calendar years for national events; NHL season labels for cups when known.
+  // National years are calendar years; club/individual NHL seasons use labels like 2017/18.
+  // KHL (Gagarin) / AHL (Calder Cup) are intentionally omitted — no reliable API coverage.
   const CURATED_PLAYER_TROPHIES = {
     '8471214': { // Alexander Ovechkin
       names: ['alexander ovechkin', 'alex ovechkin'],
       national: [
+        { key: 'olympics', medal: 'appearance', seasons: ['2006', '2010', '2014'] },
         { key: 'wc', medal: 'gold', seasons: ['2008', '2012', '2014'] },
         { key: 'wc', medal: 'silver', seasons: ['2010', '2015'] },
         { key: 'wc', medal: 'bronze', seasons: ['2005', '2007', '2016', '2019'] },
@@ -238,11 +351,19 @@
         { key: 'u18', medal: 'silver', seasons: ['2002'] },
         { key: 'u18', medal: 'bronze', seasons: ['2003'] }
       ],
-      club: []
+      club: [
+        { key: 'stanley', seasons: ['2017/18'] }
+      ],
+      individual: [
+        { name: 'NHL First All-Star Team', seasons: ['2005/06', '2006/07', '2007/08', '2008/09', '2009/10', '2012/13', '2014/15', '2018/19'] },
+        { name: 'NHL Second All-Star Team', seasons: ['2010/11', '2012/13', '2013/14', '2015/16'] },
+        { name: 'NHL All-Star Game', seasons: ['2007', '2008', '2009', '2011', '2015', '2017', '2018', '2022', '2023'] }
+      ]
     },
     '8471215': { // Evgeni Malkin
       names: ['evgeni malkin', 'yevgeni malkin', 'evgeny malkin'],
       national: [
+        { key: 'olympics', medal: 'appearance', seasons: ['2006', '2010', '2014'] },
         { key: 'wc', medal: 'gold', seasons: ['2012', '2014'] },
         { key: 'wc', medal: 'silver', seasons: ['2010', '2015'] },
         { key: 'wc', medal: 'bronze', seasons: ['2005', '2007', '2019'] },
@@ -250,7 +371,10 @@
         { key: 'u18', medal: 'gold', seasons: ['2004'] },
         { key: 'u18', medal: 'bronze', seasons: ['2003'] }
       ],
-      club: []
+      club: [
+        { key: 'stanley', seasons: ['2008/09', '2015/16', '2016/17'] }
+      ],
+      individual: []
     },
     '8478864': { // Kirill Kaprizov
       names: ['kirill kaprizov'],
@@ -260,9 +384,8 @@
         { key: 'wjc', medal: 'silver', seasons: ['2016'] },
         { key: 'wjc', medal: 'bronze', seasons: ['2017'] }
       ],
-      club: [
-        { key: 'gagarin', seasons: ['2018/19'] }
-      ]
+      club: [],
+      individual: []
     },
     '8478550': { // Artemi Panarin
       names: ['artemi panarin'],
@@ -271,9 +394,8 @@
         { key: 'wc', medal: 'bronze', seasons: ['2016', '2017'] },
         { key: 'wjc', medal: 'gold', seasons: ['2011'] }
       ],
-      club: [
-        { key: 'gagarin', seasons: ['2014/15'] }
-      ]
+      club: [],
+      individual: []
     },
     '8476883': { // Andrei Vasilevskiy
       names: ['andrei vasilevskiy', 'andrey vasilevskiy'],
@@ -283,25 +405,31 @@
         { key: 'wjc', medal: 'bronze', seasons: ['2013', '2014'] }
       ],
       club: [
-        { key: 'gagarin', seasons: ['2010/11'] }
-      ]
+        { key: 'stanley', seasons: ['2019/20', '2020/21'] }
+      ],
+      individual: []
     },
     '8476453': { // Nikita Kucherov
       names: ['nikita kucherov'],
       national: [
+        { key: 'olympics', medal: 'appearance', seasons: ['2014'] },
         { key: 'wc', medal: 'gold', seasons: ['2014'] },
         { key: 'wc', medal: 'bronze', seasons: ['2017', '2019'] },
         { key: 'wjc', medal: 'bronze', seasons: ['2013'] },
         { key: 'u18', medal: 'bronze', seasons: ['2011'] }
       ],
-      club: []
+      club: [
+        { key: 'stanley', seasons: ['2019/20', '2020/21'] }
+      ],
+      individual: []
     },
     '8478048': { // Igor Shesterkin
       names: ['igor shesterkin', 'igor shestyorkin'],
       national: [
         { key: 'wjc', medal: 'silver', seasons: ['2015'] }
       ],
-      club: []
+      club: [],
+      individual: []
     },
     '8478009': { // Ilya Sorokin
       names: ['ilya sorokin'],
@@ -310,9 +438,8 @@
         { key: 'wc', medal: 'bronze', seasons: ['2019'] },
         { key: 'wjc', medal: 'bronze', seasons: ['2015'] }
       ],
-      club: [
-        { key: 'gagarin', seasons: ['2013/14'] }
-      ]
+      club: [],
+      individual: []
     },
     '8480830': { // Andrei Svechnikov
       names: ['andrei svechnikov'],
@@ -320,15 +447,20 @@
         { key: 'wjc', medal: 'bronze', seasons: ['2018'] },
         { key: 'u18', medal: 'bronze', seasons: ['2017'] }
       ],
-      club: []
+      club: [],
+      individual: []
     },
     '8479410': { // Mikhail Sergachev
       names: ['mikhail sergachev', 'mikhail sergachyov'],
       national: [
+        { key: 'olympics', medal: 'appearance', seasons: ['2022'] },
         { key: 'wjc', medal: 'silver', seasons: ['2016'] },
         { key: 'u18', medal: 'bronze', seasons: ['2015'] }
       ],
-      club: []
+      club: [
+        { key: 'stanley', seasons: ['2019/20', '2020/21'] }
+      ],
+      individual: []
     },
     '8484387': { // Matvei Michkov
       names: ['matvei michkov'],
@@ -336,7 +468,8 @@
         { key: 'wjc', medal: 'silver', seasons: ['2023'] },
         { key: 'u18', medal: 'silver', seasons: ['2021'] }
       ],
-      club: []
+      club: [],
+      individual: []
     }
   };
 
@@ -348,9 +481,7 @@
   };
 
   const CLUB_KEY_META = {
-    stanley: { name: 'Кубок Стэнли' },
-    gagarin: { name: 'Кубок Гагарина' },
-    calder_cup: { name: 'Кубок Колдера (AHL)' }
+    stanley: { name: 'Кубок Стэнли' }
   };
 
   function curatedEntryForPlayer(nhlId, name) {
@@ -414,7 +545,7 @@
           if (ka !== kb) return ka - kb;
           return (MEDAL_RANK[a.medal] ?? 9) - (MEDAL_RANK[b.medal] ?? 9);
         }
-        const order = { stanley: 0, gagarin: 1, calder_cup: 2 };
+        const order = { stanley: 0 };
         const ka = order[a.key] ?? 9;
         const kb = order[b.key] ?? 9;
         if (ka !== kb) return ka - kb;
@@ -449,8 +580,9 @@
     const club = [];
     const national = [];
     entries.forEach(entry => {
-      const name = awardName(entry?.name || entry?.trophy);
-      if (!name) return;
+      const rawName = awardName(entry?.name || entry?.trophy);
+      if (!rawName) return;
+      const name = canonicalAwardName(rawName) || rawName;
       const seasons = entry.seasons || [];
       const bucket = awardBucket(name);
       if (bucket === 'club') {
@@ -486,11 +618,16 @@
     const { individual } = splitAwardEntries(entries);
     const byName = new Map();
     individual.forEach(entry => {
-      const name = awardName(entry?.name || entry?.trophy);
+      const name = canonicalAwardName(entry?.name || entry?.trophy);
       if (!name) return;
-      const seasons = (entry.seasons || []).map(season => awardSeasonLabel(
-        season?.seasonId ?? season?.season?.displayName ?? season?.season?.year ?? season
-      )).filter(Boolean);
+      const seasons = (entry.seasons || []).map(season => {
+        if (season && typeof season === 'object' && season.__rawSeason != null) {
+          return String(season.__rawSeason).trim();
+        }
+        return awardSeasonLabel(
+          season?.seasonId ?? season?.season?.displayName ?? season?.season?.year ?? season?.year ?? season
+        );
+      }).filter(Boolean);
       if (!byName.has(name)) byName.set(name, new Set());
       seasons.forEach(season => byName.get(name).add(season));
     });
@@ -500,7 +637,32 @@
         seasons: [...seasons].sort((a, b) => b.localeCompare(a))
       }))
       .filter(award => award.seasons.length)
-      .sort((a, b) => (b.seasons[0] || '').localeCompare(a.seasons[0] || '') || a.name.localeCompare(b.name));
+      .sort((a, b) => allStarSortKey(a.name) - allStarSortKey(b.name)
+        || (b.seasons[0] || '').localeCompare(a.seasons[0] || '')
+        || a.name.localeCompare(b.name));
+  }
+
+  function allStarSortKey(name) {
+    const n = String(name || '').toLowerCase();
+    if (/first/.test(n) && /all[-\s]?star/.test(n)) return 0;
+    if (/second/.test(n) && /all[-\s]?star/.test(n)) return 1;
+    if (/all[-\s]?star\s*game/.test(n)) return 2;
+    if (/all[-\s]?rookie/.test(n)) return 3;
+    return 8;
+  }
+
+  function canonicalAwardName(value) {
+    const name = awardName(value);
+    if (!name) return '';
+    const n = name.toLowerCase().replace(/[“”"]/g, '"');
+    if (/first/.test(n) && /all[-\s]?star/.test(n) && /team/.test(n)) return 'NHL First All-Star Team';
+    if (/second/.test(n) && /all[-\s]?star/.test(n) && /team/.test(n)) return 'NHL Second All-Star Team';
+    if (/all[-\s]?star/.test(n) && /game/.test(n) && !/team/.test(n) && !/skills|breakaway|shot/.test(n)) {
+      return 'NHL All-Star Game';
+    }
+    if (/all[-\s]?rookie/.test(n)) return 'NHL All-Rookie Team';
+    if (/maurice|rocket/.test(n) && /richard/.test(n)) return 'Maurice “Rocket” Richard Trophy';
+    return name;
   }
 
   function buildPlayerTrophies({ awardEntries = [], nhlId = '', name = '' } = {}) {
@@ -516,10 +678,21 @@
       expandCuratedList(curated.national, 'national').forEach(item => pushTrophy(nationalMap, item));
     }
 
+    const individualEntries = split.individual.map(item => ({ name: item.name, seasons: item.seasons }));
+    if (curated?.individual?.length) {
+      curated.individual.forEach(item => {
+        if (!item?.name) return;
+        individualEntries.push({
+          name: item.name,
+          seasons: (item.seasons || []).map(season => ({ __rawSeason: String(season) }))
+        });
+      });
+    }
+
     return {
       club: finalizeTrophyMap(clubMap),
       national: finalizeTrophyMap(nationalMap, { national: true }),
-      individual: normalizeAwards(split.individual.map(item => ({ name: item.name, seasons: item.seasons })))
+      individual: normalizeAwards(individualEntries)
     };
   }
 
@@ -1984,7 +2157,19 @@
     return match ? awardSeasonLabel(match[1]) : '';
   }
 
-  async function loadEspnAwards(espnId) {
+  function mapEspnOverviewAwards(overviewAwards = []) {
+    return (overviewAwards || [])
+      .map(award => ({
+        name: award?.name || award?.shortName || '',
+        seasons: award?.seasons || []
+      }))
+      .filter(entry => entry.name && entry.seasons.length);
+  }
+
+  async function loadEspnAwardEntries(espnId, overview = null) {
+    const fromOverview = mapEspnOverviewAwards(overview?.awards);
+    if (fromOverview.length) return fromOverview;
+
     const data = await fetchJson(`${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/athletes/${espnId}/awards`);
     const items = data?.items || [];
     const awards = await Promise.all(items.map(async item => {
@@ -1996,7 +2181,42 @@
       const season = espnAwardSeasonLabel(award, ref);
       return award?.name && season ? { name: award.name, seasons: [season] } : null;
     }));
-    return normalizeAwards(awards.filter(Boolean));
+    return awards.filter(Boolean);
+  }
+
+  async function loadEspnAwards(espnId) {
+    const entries = await loadEspnAwardEntries(espnId);
+    return normalizeAwards(entries);
+  }
+
+  async function resolveEspnIdByName(name) {
+    const q = String(name || '').trim();
+    if (!q) return null;
+    try {
+      const data = await fetchJson(`${ESPN_WEB()}/apis/common/v3/search?query=${encodeURIComponent(q)}&limit=8&type=player`);
+      const items = data?.items || [];
+      const needle = normalizedName(q);
+      const hit = items.find(item =>
+        /hockey|nhl/i.test(`${item.sport || ''} ${item.league || ''}`) &&
+        normalizedName(item.displayName || item.shortName) === needle
+      ) || items.find(item => /hockey|nhl/i.test(`${item.sport || ''} ${item.league || ''}`));
+      return hit?.id ? String(hit.id) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function loadEspnCoreBirth(espnId) {
+    try {
+      const core = await fetchJson(`${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/athletes/${espnId}?lang=en&region=us`);
+      return {
+        birthCountry: core?.birthCountry || null,
+        birthPlace: core?.birthPlace || null,
+        citizenship: core?.citizenship || core?.citizenOf || null
+      };
+    } catch {
+      return {};
+    }
   }
 
   function parseTimeOnIce(value) {
@@ -2177,10 +2397,37 @@
       isGoalie
     );
     const draft = landing.draftDetails || {};
+
+    // NHL landing omits All-Star Team / All-Star Game; merge ESPN overview awards when possible.
+    let espnId = null;
+    let espnAwardEntries = [];
+    try {
+      espnId = await resolveEspnIdByName(name);
+      if (espnId) {
+        const overview = await fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/overview`).catch(() => null);
+        espnAwardEntries = await loadEspnAwardEntries(espnId, overview).catch(() => []);
+      }
+    } catch (error) {
+      console.warn('[NHL Diggest] ESPN awards merge failed', error);
+    }
+
+    const rawAwards = [
+      ...(landing.awards || []).map(award => ({
+        name: award?.trophy?.default || award?.trophy?.en || award?.trophy,
+        seasons: award?.seasons || []
+      })),
+      ...espnAwardEntries
+    ];
+    const trophies = buildPlayerTrophies({
+      awardEntries: rawAwards,
+      nhlId: landing.playerId || nhlId,
+      name
+    });
+
     return {
       source: 'nhl',
       nhlId: landing.playerId || nhlId,
-      espnId: null,
+      espnId,
       name,
       number: landing.sweaterNumber ?? '',
       position,
@@ -2199,15 +2446,15 @@
       seasonStats,
       careerStats,
       careerHistory: buildCareerHistory(landing.seasonTotals, isGoalie),
-      ...(() => {
-        const rawAwards = (landing.awards || []).map(award => ({
-          name: award?.trophy?.default || award?.trophy?.en || award?.trophy,
-          seasons: award?.seasons || []
-        }));
-        const trophies = buildPlayerTrophies({ awardEntries: rawAwards, nhlId: landing.playerId || nhlId, name });
-        return { awards: trophies.individual, trophies: { national: trophies.national, club: trophies.club } };
-      })(),
-      flag: resolvePlayerFlag({ ...landing, birthCountry: landing.birthCountry || '', name }),
+      awards: trophies.individual,
+      trophies: { national: trophies.national, club: trophies.club },
+      flag: resolvePlayerFlag({
+        ...landing,
+        birthCountry: landing.birthCountry || '',
+        birthCity: loc(landing.birthCity),
+        birthPlace: [loc(landing.birthCity), landing.birthCountry].filter(Boolean).join(', '),
+        name
+      }),
       nationality: landing.birthCountry || '',
       seasonLabel: landing.featuredStats?.season
         ? String(landing.featuredStats.season).replace(/(\d{4})(\d{4})/, '$1/$2')
@@ -2217,12 +2464,13 @@
   }
 
   async function loadPlayerEspn(espnId) {
-    const [bio, overview, historyPayload, awards] = await Promise.all([
+    const [bio, overview, historyPayload, coreBirth] = await Promise.all([
       fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}`),
       fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/overview`).catch(() => null),
       fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/stats`).catch(() => null),
-      loadEspnAwards(espnId).catch(() => [])
+      loadEspnCoreBirth(espnId)
     ]);
+    const awardEntries = await loadEspnAwardEntries(espnId, overview).catch(() => []);
     const athlete = bio.athlete || {};
     const name = athlete.displayName || athlete.fullName || '—';
     const team = athlete.team || {};
@@ -2233,6 +2481,17 @@
     const careerSplit = splits.find(item => /career/i.test(item.displayName || ''));
     const seasonStats = statsPairsFromEspnSplit(statistics.names, statistics.labels, seasonSplit?.stats);
     const careerStats = statsPairsFromEspnSplit(statistics.names, statistics.labels, careerSplit?.stats);
+    const birthCountry = coreBirth.birthCountry?.abbreviation
+      || coreBirth.birthPlace?.country
+      || (() => {
+        const place = athlete.displayBirthPlace || '';
+        const parts = String(place).split(',').map(part => part.trim()).filter(Boolean);
+        return parts.length ? parts[parts.length - 1] : '';
+      })();
+    const birthPlace = athlete.displayBirthPlace
+      || [coreBirth.birthPlace?.city, coreBirth.birthPlace?.state, coreBirth.birthPlace?.country].filter(Boolean).join(', ')
+      || '';
+    const trophies = buildPlayerTrophies({ awardEntries, nhlId: '', name });
     return {
       source: 'espn',
       nhlId: null,
@@ -2248,42 +2507,31 @@
       weight: athlete.displayWeight || '',
       shoots: athlete.hand?.abbreviation || athlete.hand?.displayValue || '',
       birthDate: athlete.displayDOB || '',
-      birthPlace: athlete.displayBirthPlace || '',
-      birthCountry: (() => {
-        const place = athlete.displayBirthPlace || '';
-        const iso2 = iso2FromCountryToken(place);
-        // Prefer original trailing token when it looks like a country code/name.
-        const parts = String(place).split(',').map(part => part.trim()).filter(Boolean);
-        return parts.length ? parts[parts.length - 1] : (iso2 || '');
-      })(),
+      birthPlace,
+      birthCountry,
       draft: athlete.displayDraft || '',
       isRussian: isRussianPlayer({
         ...athlete,
         name,
-        displayBirthPlace: athlete.displayBirthPlace,
-        birthPlace: athlete.displayBirthPlace
+        displayBirthPlace: birthPlace,
+        birthPlace: coreBirth.birthPlace || birthPlace,
+        birthCountry,
+        citizenship: coreBirth.citizenship
       }),
       seasonStats,
       careerStats,
       careerHistory: buildEspnCareerHistory(historyPayload, position === 'G'),
-      ...(() => {
-        // loadEspnAwards returns normalized individual-only rows historically; rebuild from raw names.
-        const rawAwards = (awards || []).flatMap(award => (
-          (award.seasons || []).map(season => ({ name: award.name, seasons: [season] }))
-        ));
-        // Also re-fetch classification: awards here are already individual-normalized.
-        // Supplement with curated national/club by name.
-        const trophies = buildPlayerTrophies({ awardEntries: rawAwards, nhlId: '', name });
-        return { awards: trophies.individual, trophies: { national: trophies.national, club: trophies.club } };
-      })(),
+      awards: trophies.individual,
+      trophies: { national: trophies.national, club: trophies.club },
       flag: resolvePlayerFlag({
         ...athlete,
         name,
-        displayBirthPlace: athlete.displayBirthPlace,
-        birthPlace: athlete.displayBirthPlace,
-        birthCountry: athlete.displayBirthPlace
+        displayBirthPlace: birthPlace,
+        birthPlace: coreBirth.birthPlace || birthPlace,
+        birthCountry: coreBirth.birthCountry || birthCountry,
+        citizenship: coreBirth.citizenship
       }),
-      nationality: athlete.displayBirthPlace || '',
+      nationality: birthCountry || birthPlace || '',
       seasonLabel: statistics.displayName || 'сезон',
       note: 'ESPN athlete'
     };

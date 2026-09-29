@@ -119,10 +119,10 @@ Endpoint (CORS `*`):
 
 Состав, лидеры статистики и имена в матче кликабельны → экран игрока (фото, флаг страны по `birthCountry`/nationality, био, сезон, карьера).
 
-**Трофеи на карточке игрока:**
-- флаг страны (emoji, fallback flagcdn) по `birthCountry` / nationality / месту рождения
-- секция **Трофеи** с группами **Сборная** (Олимпиада / ЧМ / МЧМ U20 / U18) и **Клубные** (Кубок Стэнли из NHL awards; Кубок Гагарина / Кубок Колдера AHL — из API при наличии или curated fallback)
-- **Индивидуальные награды** отдельно (Hart, Richard, Calder Memorial, …)
+**Трофеи / награды / флаг на карточке игрока:**
+- флаг страны: emoji + flagcdn fallback; ISO/IOC коды, ESPN `birthCountry`/`citizenship`, провинции/штаты (`ON`→CA, `NY`→US), парсинг `birthCity` / `City, Country`
+- секция **Трофеи** → **Сборная** (Олимпиада: медали и участие; ЧМ / МЧМ U20 / U18) и **Клубные** (**только Кубок Стэнли** из NHL awards + curated; KHL/AHL убраны)
+- **Индивидуальные награды**: Hart, Richard, Calder Memorial, … плюс **NHL First/Second All-Star Team** и **All-Star Game** (ESPN overview merge + curated для ветеранов вроде Ovechkin — ESPN исторически отдаёт почти только Second Team)
 - пустые группы скрываются; если трофеев нет — мягкий empty state
 
 Назад: кнопка «Назад», **swipe right-to-left** или **свайп от левого края** (как «к результатам»).

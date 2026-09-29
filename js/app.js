@@ -519,12 +519,17 @@
     if (medal === 'gold') return '🥇';
     if (medal === 'silver') return '🥈';
     if (medal === 'bronze') return '🥉';
+    if (medal === 'appearance') return '🏒';
     return '';
   }
 
   function flagMarkup(flag) {
     if (!flag) return '';
     const label = escapeAttr(flag.label || flag.iso2 || '');
+    // Prefer emoji; keep flagcdn <img> as fallback when emoji fonts are missing.
+    if (flag.emoji && flag.img) {
+      return `<span class="player-flag" title="${label}" aria-label="${label}"><span class="player-flag-emoji" aria-hidden="true">${flag.emoji}</span><img class="player-flag-img player-flag-img-fallback" src="${escapeAttr(flag.img)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+    }
     if (flag.emoji) {
       return `<span class="player-flag" title="${label}" aria-label="${label}"><span class="player-flag-emoji" aria-hidden="true">${flag.emoji}</span></span>`;
     }
