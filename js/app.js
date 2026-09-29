@@ -41,7 +41,10 @@
     $('#standingsList').innerHTML = data.standings[type].map(group => `<div class="division-block">
       <div class="division-title"><span>${group.title}</span><span>${group.code}</span></div>
       <div class="standing-head"><span>#</span><span>Команда</span><span>И</span><span>О</span></div>
-      ${group.teams.map((team, index) => `<div class="standing-row"><span class="rank">${index + 1}</span><strong>${team[0]} <small>${team[1]}</small></strong><em>${team[2]}</em><em>${Number(team[2]) * 2 - (index % 2)}</em></div>`).join('')}
+      ${group.teams.map((team, index) => {
+        const gamesPlayed = team[2] + team[3] + team[4];
+        return `<div class="standing-row"><span class="rank">${index + 1}</span><strong>${team[0]} <small>${team[1]}</small></strong><em>${gamesPlayed}</em><em>${team[5]}</em></div>`;
+      }).join('')}
     </div>`).join('');
   }
 

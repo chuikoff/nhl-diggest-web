@@ -7,14 +7,56 @@ window.NHL_MOCK = {
     { id: 5, time: 'Завтра, 02:00', status: 'FUT', away: { name: 'Seattle', nick: 'Kraken', short: 'SEA', logo: './assets/logos/sea.svg', score: null }, home: { name: 'Calgary', nick: 'Flames', short: 'CGY', logo: './assets/logos/cgy.svg', score: null }, period: '' },
     { id: 6, time: 'Завтра, 05:30', status: 'Preseason', away: { name: 'Los Angeles', nick: 'Kings', short: 'LAK', logo: './assets/logos/lak.svg', score: null }, home: { name: 'San Jose', nick: 'Sharks', short: 'SJS', logo: './assets/logos/sjs.svg', score: null }, period: '' }
   ],
+  // Team tuple: [name, abbreviation, wins, losses, overtime losses, points].
+  // The values are preseason/demo placeholders, but cover every NHL club.
   standings: {
     division: [
-      { title: 'Atlantic Division', code: 'EAST', teams: [['Florida Panthers','FLA','6'],['Toronto Maple Leafs','TOR','5'],['Boston Bruins','BOS','4'],['Tampa Bay Lightning','TBL','4']] },
-      { title: 'Metropolitan Division', code: 'EAST', teams: [['Carolina Hurricanes','CAR','6'],['New Jersey Devils','NJD','5'],['New York Rangers','NYR','4'],['Pittsburgh Penguins','PIT','3']] }
+      { title: 'Atlantic Division', code: 'EAST', teams: [
+        ['Florida Panthers', 'FLA', 52, 23, 7, 111], ['Toronto Maple Leafs', 'TOR', 49, 25, 8, 106],
+        ['Tampa Bay Lightning', 'TBL', 46, 28, 8, 100], ['Boston Bruins', 'BOS', 45, 29, 8, 98],
+        ['Ottawa Senators', 'OTT', 39, 33, 10, 88], ['Detroit Red Wings', 'DET', 38, 35, 9, 85],
+        ['Buffalo Sabres', 'BUF', 35, 38, 9, 79], ['Montreal Canadiens', 'MTL', 32, 41, 9, 73]
+      ] },
+      { title: 'Metropolitan Division', code: 'EAST', teams: [
+        ['Carolina Hurricanes', 'CAR', 51, 24, 7, 109], ['New Jersey Devils', 'NJD', 48, 27, 7, 103],
+        ['New York Rangers', 'NYR', 46, 28, 8, 100], ['New York Islanders', 'NYI', 41, 33, 8, 90],
+        ['Pittsburgh Penguins', 'PIT', 39, 34, 9, 87], ['Washington Capitals', 'WSH', 38, 35, 9, 85],
+        ['Columbus Blue Jackets', 'CBJ', 33, 40, 9, 75], ['Philadelphia Flyers', 'PHI', 31, 42, 9, 71]
+      ] },
+      { title: 'Central Division', code: 'WEST', teams: [
+        ['Winnipeg Jets', 'WPG', 53, 22, 7, 113], ['Dallas Stars', 'DAL', 50, 24, 8, 108],
+        ['Colorado Avalanche', 'COL', 48, 27, 7, 103], ['Nashville Predators', 'NSH', 43, 31, 8, 94],
+        ['Minnesota Wild', 'MIN', 42, 32, 8, 92], ['St. Louis Blues', 'STL', 39, 35, 8, 86],
+        ['Utah Mammoth', 'UTA', 34, 40, 8, 76], ['Chicago Blackhawks', 'CHI', 28, 46, 8, 64]
+      ] },
+      { title: 'Pacific Division', code: 'WEST', teams: [
+        ['Vegas Golden Knights', 'VGK', 50, 25, 7, 107], ['Edmonton Oilers', 'EDM', 49, 26, 7, 105],
+        ['Vancouver Canucks', 'VAN', 45, 30, 7, 97], ['Los Angeles Kings', 'LAK', 44, 31, 7, 95],
+        ['Calgary Flames', 'CGY', 38, 36, 8, 84], ['Seattle Kraken', 'SEA', 36, 37, 9, 81],
+        ['Anaheim Ducks', 'ANA', 30, 44, 8, 68], ['San Jose Sharks', 'SJS', 24, 50, 8, 56]
+      ] }
     ],
     conference: [
-      { title: 'Eastern Conference', code: 'EAST', teams: [['Florida Panthers','FLA','6'],['Carolina Hurricanes','CAR','6'],['Toronto Maple Leafs','TOR','5'],['New Jersey Devils','NJD','5']] },
-      { title: 'Western Conference', code: 'WEST', teams: [['Edmonton Oilers','EDM','7'],['Colorado Avalanche','COL','6'],['Dallas Stars','DAL','5'],['Vancouver Canucks','VAN','4']] }
+      { title: 'Eastern Conference', code: 'EAST', teams: [
+        ['Florida Panthers', 'FLA', 52, 23, 7, 111], ['Carolina Hurricanes', 'CAR', 51, 24, 7, 109],
+        ['Toronto Maple Leafs', 'TOR', 49, 25, 8, 106], ['New Jersey Devils', 'NJD', 48, 27, 7, 103],
+        ['Tampa Bay Lightning', 'TBL', 46, 28, 8, 100], ['New York Rangers', 'NYR', 46, 28, 8, 100],
+        ['Boston Bruins', 'BOS', 45, 29, 8, 98], ['New York Islanders', 'NYI', 41, 33, 8, 90],
+        ['Ottawa Senators', 'OTT', 39, 33, 10, 88], ['Pittsburgh Penguins', 'PIT', 39, 34, 9, 87],
+        ['Detroit Red Wings', 'DET', 38, 35, 9, 85], ['Washington Capitals', 'WSH', 38, 35, 9, 85],
+        ['Buffalo Sabres', 'BUF', 35, 38, 9, 79], ['Columbus Blue Jackets', 'CBJ', 33, 40, 9, 75],
+        ['Montreal Canadiens', 'MTL', 32, 41, 9, 73], ['Philadelphia Flyers', 'PHI', 31, 42, 9, 71]
+      ] },
+      { title: 'Western Conference', code: 'WEST', teams: [
+        ['Winnipeg Jets', 'WPG', 53, 22, 7, 113], ['Dallas Stars', 'DAL', 50, 24, 8, 108],
+        ['Vegas Golden Knights', 'VGK', 50, 25, 7, 107], ['Edmonton Oilers', 'EDM', 49, 26, 7, 105],
+        ['Colorado Avalanche', 'COL', 48, 27, 7, 103], ['Vancouver Canucks', 'VAN', 45, 30, 7, 97],
+        ['Los Angeles Kings', 'LAK', 44, 31, 7, 95], ['Nashville Predators', 'NSH', 43, 31, 8, 94],
+        ['Minnesota Wild', 'MIN', 42, 32, 8, 92], ['St. Louis Blues', 'STL', 39, 35, 8, 86],
+        ['Calgary Flames', 'CGY', 38, 36, 8, 84], ['Seattle Kraken', 'SEA', 36, 37, 9, 81],
+        ['Utah Mammoth', 'UTA', 34, 40, 8, 76], ['Anaheim Ducks', 'ANA', 30, 44, 8, 68],
+        ['Chicago Blackhawks', 'CHI', 28, 46, 8, 64], ['San Jose Sharks', 'SJS', 24, 50, 8, 56]
+      ] }
     ]
   },
   stats: {
