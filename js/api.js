@@ -1498,6 +1498,183 @@
     });
   }
 
+
+  function seasonDisplayLabel(value) {
+    const text = String(value ?? '').trim();
+    if (!text) return '—';
+    const compact = text.match(/^(\d{4})(\d{4})$/);
+    if (compact) return `${compact[1]}/${compact[2].slice(-2)}`;
+    const short = text.match(/^(\d{2})[-–](\d{2})$/);
+    if (short) return `${short[1]}/${short[2]}`;
+    return text;
+  }
+
+  function parseTimeOnIce(value) {
+    const match = String(value || '').match(/^(\d+):(\d{2})$/);
+    if (!match) return 0;
+    return Number(match[1]) * 60 + Number(match[2]);
+  }
+
+  function buildCareerHistory(rows, isGoalie) {
+    const regular = (rows || []).filter(row => Number(row.gameTypeId) === 2);
+    if (!regular.length) return [];
+    // NHL's landing payload also contains junior, international and playoff
+    // rows. Prefer NHL regular-season clubs, while retaining a useful fallback
+    // for players who have not reached the NHL yet.
+    const nhlRows = regular.filter(row => String(row.leagueAbbrev || '').toUpperCase() === 'NHL');
+    const sourceRows = nhlRows.length ? nhlRows : regular;
+    const clubs = new Map();
+    sourceRows.forEach(row => {
+      const name = loc(row.teamName) || loc(row.teamCommonName) || '—';
+      const key = name.toLowerCase();
+      if (!clubs.has(key)) {
+        clubs.set(key, {
+          club: name,
+          seasons: new Set(),
+          gp: 0,
+          goals: 0,
+          assists: 0,
+          points: 0,
+          wins: 0,
+          losses: 0,
+          otLosses: 0,
+          goalsAgainst: 0,
+          shotsAgainst: 0,
+          shutouts: 0,
+          timeOnIce: 0,
+          gaaSamples: [],
+          svSamples: []
+        });
+      }
+      const club = clubs.get(key);
+      club.seasons.add(seasonDisplayLabel(row.season));
+      club.gp += Number(row.gamesPlayed || 0);
+      if (isGoalie) {
+        club.wins += Number(row.wins || 0);
+        club.losses += Number(row.losses || 0);
+        club.otLosses += Number(row.otLosses || 0);
+        club.goalsAgainst += Number(row.goalsAgainst || 0);
+        club.shotsAgainst += Number(row.shotsAgainst || 0);
+        club.shutouts += Number(row.shutouts || 0);
+        club.timeOnIce += parseTimeOnIce(row.timeOnIce);
+        if (row.goalsAgainstAvg != null) club.gaaSamples.push(Number(row.goalsAgainstAvg));
+        if (row.savePctg != null) club.svSamples.push(Number(row.savePctg));
+      } else {
+        club.goals += Number(row.goals || 0);
+        club.assists += Number(row.assists || 0);
+        club.points += Number(row.points || 0);
+      }
+    });
+    return [...clubs.values()]
+      .map(club => {
+        const seasons = [...club.seasons].sort((a, b) => a.localeCompare(b));
+        const latestSeason = seasons[seasons.length - 1] || '';
+        const result = { club: club.club, seasons, latestSeason, gp: club.gp };
+        if (isGoalie) {
+          const gaa = club.timeOnIce > 0
+            ? club.goalsAgainst / (club.timeOnIce / 3600)
+            : club.gaaSamples.length
+              ? club.gaaSamples.reduce((sum, value) => sum + value, 0) / club.gaaSamples.length
+              : null;
+          const sv = club.shotsAgainst > 0
+            ? (club.shotsAgainst - club.goalsAgainst) / club.shotsAgainst
+            : club.svSamples.length
+              ? club.svSamples.reduce((sum, value) => sum + value, 0) / club.svSamples.length
+              : null;
+          Object.assign(result, {
+            wins: club.wins,
+            losses: club.losses,
+            otLosses: club.otLosses,
+            gaa: gaa != null ? formatGaa(gaa) : '—',
+            sv: sv != null ? formatSv(sv) : '—',
+            shutouts: club.shutouts
+          });
+        } else {
+          Object.assign(result, { goals: club.goals, assists: club.assists, points: club.points });
+        }
+        return result;
+      })
+      .sort((a, b) => b.latestSeason.localeCompare(a.latestSeason) || a.club.localeCompare(b.club));
+  }
+
+  function buildEspnCareerHistory(payload, isGoalie) {
+    if (!payload?.categories?.length) return [];
+    const glossary = payload.glossary || [];
+    const clubs = new Map();
+    payload.categories.forEach(category => {
+      (category.statistics || []).forEach(entry => {
+        const team = payload.teams?.[entry.teamSlug] || {};
+        const name = team.displayName || team.shortDisplayName || entry.teamSlug || '—';
+        const key = String(entry.teamId || entry.teamSlug || name).toLowerCase();
+        if (!clubs.has(key)) {
+          clubs.set(key, {
+            club: name,
+            seasons: new Set(),
+            gp: 0,
+            goals: 0,
+            assists: 0,
+            points: 0,
+            wins: 0,
+            losses: 0,
+            otLosses: 0,
+            goalsAgainst: 0,
+            shotsAgainst: 0,
+            timeOnIce: 0,
+            gaa: [],
+            sv: [],
+            shutouts: 0
+          });
+        }
+        const club = clubs.get(key);
+        club.seasons.add(entry.season?.displayName || seasonDisplayLabel(entry.season?.year));
+        const labels = category.labels || glossary.map(item => item.abbreviation);
+        const values = Object.fromEntries(labels.map((label, index) => [label, entry.stats?.[index]]));
+        const number = value => Number(value || 0);
+        club.gp += number(values.GP);
+        if (isGoalie) {
+          club.wins += number(values.W ?? values.WINS);
+          club.losses += number(values.L);
+          club.otLosses += number(values.OTL);
+          club.goalsAgainst += number(values.GA);
+          club.shotsAgainst += number(values.SA);
+          club.timeOnIce += parseTimeOnIce(values['TOI/G']) * number(values.GP);
+          club.gaa.push(Number(values.GAA));
+          club.sv.push(Number(values['SV%'] ?? values.SV));
+          club.shutouts += number(values.SO);
+        } else {
+          club.goals += number(values.G);
+          club.assists += number(values.A);
+          club.points += number(values.PTS);
+        }
+      });
+    });
+    return [...clubs.values()].map(club => {
+      const seasons = [...club.seasons].sort((a, b) => a.localeCompare(b));
+      const result = { club: club.club, seasons, latestSeason: seasons[seasons.length - 1] || '', gp: club.gp };
+      if (isGoalie) {
+        const gaa = club.gaa.filter(Number.isFinite);
+        const sv = club.sv.filter(Number.isFinite);
+        const computedGaa = club.timeOnIce > 0
+          ? club.goalsAgainst / (club.timeOnIce / 3600)
+          : gaa.length ? gaa.reduce((sum, value) => sum + value, 0) / gaa.length : null;
+        const computedSv = club.shotsAgainst > 0
+          ? (club.shotsAgainst - club.goalsAgainst) / club.shotsAgainst
+          : sv.length ? sv.reduce((sum, value) => sum + value, 0) / sv.length : null;
+        Object.assign(result, {
+          wins: club.wins,
+          losses: club.losses,
+          otLosses: club.otLosses,
+          gaa: computedGaa != null ? formatGaa(computedGaa) : '—',
+          sv: computedSv != null ? formatSv(computedSv) : '—',
+          shutouts: club.shutouts
+        });
+      } else {
+        Object.assign(result, { goals: club.goals, assists: club.assists, points: club.points });
+      }
+      return result;
+    }).sort((a, b) => b.latestSeason.localeCompare(a.latestSeason) || a.club.localeCompare(b.club));
+  }
+
   async function loadPlayerNhl(nhlId) {
     const landing = await fetchJson(`${NHL()}/v1/player/${nhlId}/landing`);
     const name = playerName(landing.firstName, landing.lastName);
@@ -1531,6 +1708,7 @@
       isRussian: isRussianPlayer({ ...landing, name }),
       seasonStats,
       careerStats,
+      careerHistory: buildCareerHistory(landing.seasonTotals, isGoalie),
       seasonLabel: landing.featuredStats?.season
         ? String(landing.featuredStats.season).replace(/(\d{4})(\d{4})/, '$1/$2')
         : 'сезон',
@@ -1539,9 +1717,10 @@
   }
 
   async function loadPlayerEspn(espnId) {
-    const [bio, overview] = await Promise.all([
+    const [bio, overview, historyPayload] = await Promise.all([
       fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}`),
-      fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/overview`).catch(() => null)
+      fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/overview`).catch(() => null),
+      fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/stats`).catch(() => null)
     ]);
     const athlete = bio.athlete || {};
     const name = athlete.displayName || athlete.fullName || '—';
@@ -1579,6 +1758,7 @@
       }),
       seasonStats,
       careerStats,
+      careerHistory: buildEspnCareerHistory(historyPayload, position === 'G'),
       seasonLabel: statistics.displayName || 'сезон',
       note: 'ESPN athlete'
     };

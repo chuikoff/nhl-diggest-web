@@ -16,6 +16,12 @@
     return String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+  }
+
   function playerMarkup(player, fallbackName = '', attrs = {}) {
     const name = typeof player === 'string' ? player : (player?.name || fallbackName || '');
     const russian = typeof player === 'object' ? playerIsRussian(player) : playerIsRussian(name);
@@ -428,6 +434,26 @@
       <div class="stats-grid">${rows.map(row => `<div class="stat-chip"><strong>${row.value ?? '—'}</strong><span>${row.abbr || row.label}</span><small>${row.label || ''}</small></div>`).join('')}</div></div>`;
   }
 
+
+  function careerHistoryMarkup(history, goalie = false) {
+    const rows = history || [];
+    const title = goalie ? 'Карьера по клубам · вратарь' : 'Карьера по клубам';
+    if (!rows.length) {
+      return `<section class="detail-section career-history-section"><div class="detail-section-title"><h3>${title}</h3></div><p class="empty-detail">История по клубам недоступна</p></section>`;
+    }
+    const header = goalie
+      ? '<span>Клуб</span><span>Сезоны</span><span>GP</span><span>W-L-OTL</span><span>GAA</span><span>SV%</span><span>SO</span>'
+      : '<span>Клуб</span><span>Сезоны</span><span>GP</span><span>G</span><span>A</span><span>PTS</span>';
+    const body = rows.map(row => {
+      const seasons = (row.seasons || []).map(escapeHtml).join(', ');
+      if (goalie) {
+        return `<div class="career-history-row"><strong>${escapeHtml(row.club)}</strong><span>${seasons}</span><span>${row.gp ?? '—'}</span><span>${row.wins ?? 0}-${row.losses ?? 0}-${row.otLosses ?? 0}</span><span>${row.gaa ?? '—'}</span><span>${row.sv ?? '—'}</span><span>${row.shutouts ?? 0}</span></div>`;
+      }
+      return `<div class="career-history-row"><strong>${escapeHtml(row.club)}</strong><span>${seasons}</span><span>${row.gp ?? '—'}</span><span>${row.goals ?? 0}</span><span>${row.assists ?? 0}</span><span>${row.points ?? 0}</span></div>`;
+    }).join('');
+    return `<section class="detail-section career-history-section"><div class="detail-section-title"><h3>${title}</h3><span>регулярный сезон</span></div><div class="career-history-table${goalie ? ' goalie-history' : ''}"><div class="career-history-head">${header}</div>${body}</div></section>`;
+  }
+
   async function openTeamDetail(abbrev, seed = {}) {
     const key = String(abbrev || seed.short || '').toUpperCase();
     if (!key) return;
@@ -502,6 +528,7 @@
       </section>
       ${statsGridMarkup(`Сезон · ${player.seasonLabel || ''}`, player.seasonStats || [])}
       ${statsGridMarkup('Карьера', player.careerStats || [])}
+      ${careerHistoryMarkup(player.careerHistory, player.position === 'G')}
       <p class="panel-note">${player.note || player.source || ''}</p>
     `;
   }

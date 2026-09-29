@@ -338,3 +338,58 @@
 :root[data-theme="light"] .standing-row.team-hit { border-top-color: #e1e7ee; }
 :root[data-theme="light"] .recap-link { background: linear-gradient(145deg, #eef4fa, #dce6f0); border-color: #9eb4c8; }
 :root[data-theme="light"] .player-hero-photo { background: linear-gradient(145deg, #d7e6f5, #b7cbe0); color: #1d3a57; }
+
+/* Career history by club */
+.career-history-table {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #111a27;
+  -webkit-overflow-scrolling: touch;
+}
+.career-history-head,
+.career-history-row {
+  display: grid;
+  grid-template-columns: minmax(126px, 1.4fr) minmax(118px, 1.2fr) repeat(4, minmax(38px, .55fr));
+  gap: 7px;
+  min-width: 410px;
+  align-items: center;
+  padding: 9px 10px;
+  text-align: center;
+  font-size: 9px;
+}
+.career-history-table.goalie-history .career-history-head,
+.career-history-table.goalie-history .career-history-row {
+  grid-template-columns: minmax(126px, 1.25fr) minmax(118px, 1.1fr) repeat(5, minmax(38px, .5fr));
+  min-width: 500px;
+}
+.career-history-head {
+  color: var(--dim);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+.career-history-row {
+  border-top: 1px solid #253243;
+  color: var(--muted);
+}
+.career-history-row strong {
+  color: var(--text);
+  font-size: 10px;
+  text-align: left;
+}
+.career-history-row span:nth-child(2) {
+  text-align: left;
+  white-space: nowrap;
+}
+.career-history-row span:not(:nth-child(2)) { font-variant-numeric: tabular-nums; }
+.career-history-section .detail-section-title span { white-space: nowrap; }
+.career-history-section .career-history-head + .career-history-row span:last-child,
+.career-history-section .career-history-row span:last-child { color: var(--accent); font-weight: 800; }
+:root[data-theme="light"] .career-history-table { background: #ffffff; }
+:root[data-theme="light"] .career-history-row { border-top-color: #e1e7ee; }
+@media(max-width:370px) {
+  .career-history-head,
+  .career-history-row { font-size: 8px; }
+}
