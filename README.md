@@ -121,8 +121,8 @@ Endpoint (CORS `*`):
 
 **Трофеи / награды / флаг / контракт на карточке игрока:**
 - флаг страны: emoji + flagcdn fallback; ISO/IOC коды, ESPN `birthCountry`/`citizenship`, провинции/штаты (`ON`→CA, `NY`→US), парсинг `birthCity` / `City, Country`
-- секция **Трофеи** → **Сборная** (Олимпиада: медали и участие; ЧМ / МЧМ U20 / U18) и **Клубные** (Кубок Стэнли для **любого** победителя из NHL landing awards + `assets/nhl-trophies.json` по NHL records; **Кубок Гагарина** KHL; AHL Calder Cup убран). Curated — только sparse fallback (нац. медали / All-Star / Gagarin), не Russian-only Stanley
-- **Индивидуальные награды**: Hart, Richard, Calder… + First/Second All-Star / All-Star Game из ESPN для всех национальностей; curated All-Star только если API пуст
+- секция **Трофеи** → **Сборная** (Олимпиада / ЧМ / МЧМ U20 / U18 — медали и участие) из `assets/nhl-trophies.json` для **всех национальностей** (CAN/USA/SWE/FIN/CZE/DEU/… + RUS), не только curated-Russia; плюс sparse curated fallback. **Клубные**: Кубок Стэнли (NHL landing + index) и **Кубок Гагарина** KHL
+- **Индивидуальные награды**: Hart, Richard, Calder… из NHL/ESPN. **NHL First All-Star Team** всегда из historical index (Wikipedia / Hockey-Reference) — ESPN часто отдаёт только Second; Second тоже дополняется из index. Curated All-Star — только gap-fill по конкретному award name
 - **Контракт**: cap hit / дата подписания / до сезона — из NHL landing contract fields или ESPN core `/contracts` (soft empty, если API пуст)
 - пустые группы скрываются; если трофеев нет — мягкий empty state
 
@@ -154,4 +154,10 @@ Endpoints (NHL → ESPN fallback, CORS `*` у ESPN):
 
 Конфиг: `js/config.js` (`NHL_API_BASE`, сезоны). Логика: `js/api.js`. UI: `js/app.js`. TG+Max bridge без изменений (`js/bridge.js`).
 
-Переключатель темы сохраняется локально и учитывает тему Telegram/Max; остальные настройки пока UI-only.
+**Избранное (localStorage `nhl-diggest-favorites`):**
+- на карточке игрока и странице команды — кнопка ★ / ☆
+- в **Настройках** списки избранных команд и игроков с удалением (×); тап открывает карточку
+- избранные подсвечены золотым в результатах (матчи с любимой командой), турнирной, лидерах статистики, составе
+- синхронизация с Telegram/Max ботом — опционально позже
+
+Переключатель темы сохраняется локально и учитывает тему Telegram/Max.

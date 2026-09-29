@@ -35,7 +35,10 @@
       name ? `data-player-name="${escapeAttr(name)}"` : '',
       abbrev ? `data-team-abbrev="${escapeAttr(String(abbrev).toUpperCase())}"` : ''
     ].filter(Boolean).join(' ');
-    const cls = `player-name${russian ? ' russian-player' : ''}${clickable ? ' is-clickable' : ''}`;
+    const favorite = typeof player === 'object' && isFavoritePlayer({
+      nhlId, espnId, name
+    });
+    const cls = `player-name${russian ? ' russian-player' : ''}${favorite ? ' is-favorite' : ''}${clickable ? ' is-clickable' : ''}`;
     return `<span class="${cls}" ${clickable ? `${data} role="link" tabindex="0"` : ''}>${name}</span>`;
   }
 
@@ -45,6 +48,146 @@
 
   const bridge = window.NHL_BRIDGE || { env: 'browser', theme: 'dark' };
   const themeStorageKey = 'nhl-diggest-theme';
+  const FAV_STORAGE_KEY = 'nhl-diggest-favorites';
+
+  function loadFavorites() {
+    try {
+      const raw = JSON.parse(window.localStorage.getItem(FAV_STORAGE_KEY) || '{}');
+      return {
+        players: Array.isArray(raw.players) ? raw.players : [],
+        teams: Array.isArray(raw.teams) ? raw.teams : []
+      };
+    } catch {
+      return { players: [], teams: [] };
+    }
+  }
+
+  function saveFavorites(next) {
+    try {
+      window.localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify({
+        players: next.players || [],
+        teams: next.teams || []
+      }));
+    } catch { /* private mode */ }
+  }
+
+  function favPlayerKey(ref = {}) {
+    if (ref.nhlId) return `nhl:${ref.nhlId}`;
+    if (ref.espnId) return `espn:${ref.espnId}`;
+    const name = String(ref.name || '').trim().toLowerCase();
+    return name ? `name:${name}` : '';
+  }
+
+  function isFavoritePlayer(ref = {}) {
+    const key = favPlayerKey(ref);
+    if (!key) return false;
+    return loadFavorites().players.some(item => favPlayerKey(item) === key);
+  }
+
+  function isFavoriteTeam(abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    if (!key) return false;
+    return loadFavorites().teams.some(item => String(item.abbrev || '').toUpperCase() === key);
+  }
+
+  function toggleFavoritePlayer(ref = {}) {
+    const key = favPlayerKey(ref);
+    if (!key) return false;
+    const fav = loadFavorites();
+    const idx = fav.players.findIndex(item => favPlayerKey(item) === key);
+    if (idx >= 0) {
+      fav.players.splice(idx, 1);
+      saveFavorites(fav);
+      return false;
+    }
+    fav.players.unshift({
+      nhlId: ref.nhlId ? String(ref.nhlId) : '',
+      espnId: ref.espnId ? String(ref.espnId) : '',
+      name: ref.name || '',
+      abbrev: ref.abbrev || '',
+      team: ref.team || ''
+    });
+    saveFavorites(fav);
+    return true;
+  }
+
+  function toggleFavoriteTeam(ref = {}) {
+    const abbrev = String(ref.abbrev || '').toUpperCase();
+    if (!abbrev) return false;
+    const fav = loadFavorites();
+    const idx = fav.teams.findIndex(item => String(item.abbrev || '').toUpperCase() === abbrev);
+    if (idx >= 0) {
+      fav.teams.splice(idx, 1);
+      saveFavorites(fav);
+      return false;
+    }
+    fav.teams.unshift({
+      abbrev,
+      name: ref.name || abbrev,
+      logo: ref.logo || ''
+    });
+    saveFavorites(fav);
+    return true;
+  }
+
+  function removeFavoritePlayer(ref) {
+    const key = favPlayerKey(ref);
+    if (!key) return;
+    const fav = loadFavorites();
+    fav.players = fav.players.filter(item => favPlayerKey(item) !== key);
+    saveFavorites(fav);
+  }
+
+  function removeFavoriteTeam(abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    const fav = loadFavorites();
+    fav.teams = fav.teams.filter(item => String(item.abbrev || '').toUpperCase() !== key);
+    saveFavorites(fav);
+  }
+
+  function favToggleMarkup(kind, on, attrs = '') {
+    const label = on ? '★' : '☆';
+    const title = kind === 'team'
+      ? (on ? 'Убрать команду из избранного' : 'В избранные команды')
+      : (on ? 'Убрать игрока из избранного' : 'В избранные игроки');
+    return `<button type="button" class="fav-toggle${on ? ' is-on' : ''}" data-fav-kind="${kind}" ${attrs} aria-pressed="${on ? 'true' : 'false'}" title="${title}" aria-label="${title}">${label}</button>`;
+  }
+
+  function renderFavoritesSettings() {
+    const teamsNode = document.getElementById('favTeamsList');
+    const playersNode = document.getElementById('favPlayersList');
+    if (!teamsNode || !playersNode) return;
+    const fav = loadFavorites();
+    if (!fav.teams.length) {
+      teamsNode.innerHTML = `<div class="favorites-empty">Нет избранных команд — добавьте со страницы клуба.</div>`;
+    } else {
+      teamsNode.innerHTML = fav.teams.map(team => `
+        <div class="settings-card">
+          <button type="button" class="fav-open team-hit" data-team-abbrev="${escapeAttr(team.abbrev || '')}">
+            <strong>${escapeHtml(team.name || team.abbrev || '')}</strong>
+            <span>${escapeHtml(team.abbrev || '')}</span>
+          </button>
+          <button type="button" class="fav-remove" data-fav-remove-team="${escapeAttr(team.abbrev || '')}" aria-label="Удалить">×</button>
+        </div>`).join('');
+    }
+    if (!fav.players.length) {
+      playersNode.innerHTML = `<div class="favorites-empty">Нет избранных игроков — добавьте с карточки игрока.</div>`;
+    } else {
+      playersNode.innerHTML = fav.players.map(player => `
+        <div class="settings-card">
+          <button type="button" class="fav-open player-hit"
+            data-nhl-id="${escapeAttr(player.nhlId || '')}"
+            data-espn-id="${escapeAttr(player.espnId || '')}"
+            data-player-name="${escapeAttr(player.name || '')}"
+            data-team-abbrev="${escapeAttr(player.abbrev || '')}">
+            <strong>${escapeHtml(player.name || '')}</strong>
+            <span>${escapeHtml(player.team || player.abbrev || 'NHL')}</span>
+          </button>
+          <button type="button" class="fav-remove" data-fav-remove-player="${escapeAttr(favPlayerKey(player))}" aria-label="Удалить">×</button>
+        </div>`).join('');
+    }
+  }
+
   const state = {
     selectedDate: live?.mskDateKey?.() || mock.defaultDate || '2026-09-29',
     games: [],
@@ -145,8 +288,9 @@
 
   function teamMarkup(team, side) {
     const abbrev = escapeAttr(team.short || '');
+    const fav = isFavoriteTeam(team.short) ? ' is-favorite' : '';
     return `<div class="team ${side}">
-      <button type="button" class="team-hit" data-team-abbrev="${abbrev}" aria-label="Команда ${escapeAttr(team.name)}">
+      <button type="button" class="team-hit${fav}" data-team-abbrev="${abbrev}" aria-label="Команда ${escapeAttr(team.name)}">
         <div class="team-info"><span class="team-name">${team.name}</span><span class="team-nick">${team.nick}</span></div>
         <img class="logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
       </button>
@@ -155,7 +299,8 @@
 
   function detailTeamMarkup(team) {
     const abbrev = escapeAttr(team.short || '');
-    return `<button type="button" class="detail-team team-hit" data-team-abbrev="${abbrev}" aria-label="Команда ${escapeAttr(team.name)}">
+    const fav = isFavoriteTeam(team.short) ? ' is-favorite' : '';
+    return `<button type="button" class="detail-team team-hit${fav}" data-team-abbrev="${abbrev}" aria-label="Команда ${escapeAttr(team.name)}">
       <img class="detail-logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
       <strong>${team.name}</strong><span>${team.nick}</span>
     </button>`;
@@ -174,7 +319,8 @@
         ? `<span class="score time">${game.time}</span>`
         : `<span class="score">${game.away.score ?? 0}<span class="score-divider">:</span>${game.home.score ?? 0}</span>`;
       const statusClass = game.status === 'Live' ? 'live' : game.preseason ? 'preseason' : isFuture ? 'future' : 'final';
-      return `<article class="game-card" data-game-id="${game.id}" tabindex="0" role="button" aria-label="Открыть матч ${game.away.name} — ${game.home.name}">
+      const hasFavTeam = isFavoriteTeam(game.away?.short) || isFavoriteTeam(game.home?.short);
+      return `<article class="game-card${hasFavTeam ? ' has-favorite-team' : ''}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="Открыть матч ${game.away.name} — ${game.home.name}">
         <div class="game-meta"><span>${game.time}</span><span class="status ${statusClass}">${statusLabel(game.status, game.preseason)}</span></div>
         <div class="game-body">${teamMarkup(game.away, 'away')}<div class="game-score">${score}${game.period ? `<div class="period">${game.period}</div>` : ''}</div>${teamMarkup(game.home, 'home')}</div>
         <div class="game-open-label">Подробности <span>›</span></div>
@@ -207,7 +353,8 @@
         const row = standingsTuple(team);
         const gamesPlayed = Number(row[2]) + Number(row[3]) + Number(row[4]);
         const abbrev = escapeAttr(row[1] || '');
-        return `<button type="button" class="standing-row team-hit" data-team-abbrev="${abbrev}">
+        const favCls = isFavoriteTeam(row[1]) ? ' is-favorite' : '';
+        return `<button type="button" class="standing-row team-hit${favCls}" data-team-abbrev="${abbrev}">
           <span class="rank">${index + 1}</span><strong>${row[0]} <small>${row[1]}</small></strong><em>${gamesPlayed}</em><em>${row[5]}</em>
         </button>`;
       }).join('')}
@@ -239,7 +386,8 @@
 
   function leaderCardMarkup(player, index, boardId, goalie = false) {
     const initials = (player.name || '?').split(' ').map(part => part[0]).join('').slice(0, 2);
-    return `<button type="button" class="leader-card${goalie ? ' goalie-card' : ''} player-hit"
+    const favCls = isFavoritePlayer(player) ? ' is-favorite' : '';
+    return `<button type="button" class="leader-card${goalie ? ' goalie-card' : ''} player-hit${favCls}"
       data-nhl-id="${escapeAttr(player.nhlId || '')}"
       data-espn-id="${escapeAttr(player.espnId || player.athleteId || '')}"
       data-player-name="${escapeAttr(player.name || '')}"
@@ -389,7 +537,7 @@
       players.forEach(p => used.add(p));
       if (!players.length) return '';
       return `<div class="roster-group"><div class="roster-heading">${group.title}<span>${players.length}</span></div>
-        ${players.map(player => `<button type="button" class="roster-row player-hit"
+        ${players.map(player => `<button type="button" class="roster-row player-hit${isFavoritePlayer(player) ? ' is-favorite' : ''}"
           data-nhl-id="${escapeAttr(player.nhlId || '')}"
           data-espn-id="${escapeAttr(player.espnId || '')}"
           data-player-name="${escapeAttr(player.name || '')}"
@@ -402,7 +550,7 @@
     }).join('');
     const rest = roster.filter(p => !used.has(p));
     const extra = rest.length ? `<div class="roster-group"><div class="roster-heading">Состав<span>${rest.length}</span></div>
-      ${rest.map(player => `<button type="button" class="roster-row player-hit"
+      ${rest.map(player => `<button type="button" class="roster-row player-hit${isFavoritePlayer(player) ? ' is-favorite' : ''}"
         data-nhl-id="${escapeAttr(player.nhlId || '')}"
         data-espn-id="${escapeAttr(player.espnId || '')}"
         data-player-name="${escapeAttr(player.name || '')}"
@@ -632,6 +780,7 @@
     }
     const record = team.record || {};
     const recordText = record.summary || (record.gp ? `${record.wins}-${record.losses}-${record.ot}` : '—');
+    const teamFavOn = isFavoriteTeam(team.abbrev);
     content.innerHTML = `
       <div class="team-hero">
         <img class="team-hero-logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
@@ -641,6 +790,7 @@
           <p class="team-meta-line">${[team.city, team.arena].filter(Boolean).join(' · ') || 'NHL'}</p>
           <p class="team-meta-line">${[team.conference && `${team.conference} Conf.`, team.division && `${team.division} Div.`].filter(Boolean).join(' · ')}</p>
           <div class="team-record"><strong>${recordText}</strong><span>${record.points != null ? `${record.points} очков` : (team.standingSummary || '')}</span></div>
+          <div class="team-hero-actions">${favToggleMarkup('team', teamFavOn, `data-fav-team="${escapeAttr(team.abbrev || '')}" data-fav-team-name="${escapeAttr(team.name || '')}" data-fav-team-logo="${escapeAttr(team.logo || '')}"`)}</div>
         </div>
       </div>
       <p class="panel-note">${team.note || team.source || ''}${team.statsNote ? ` · ${team.statsNote}` : ''}</p>
@@ -679,15 +829,18 @@
     const countryLabel = flag
       ? `${flag.emoji ? flag.emoji + ' ' : ''}${flag.label || flag.iso2 || ''}`.trim()
       : (player.birthCountry || player.nationality || '');
+    const playerFavOn = isFavoritePlayer(player);
+    const playerFavCls = playerFavOn ? ' is-favorite' : '';
     content.innerHTML = `
       <div class="player-hero">
         <div class="player-hero-photo">${player.headshot ? `<img src="${escapeAttr(player.headshot)}" alt="" onerror="this.parentNode.textContent='${(player.name || '?').split(' ').map(p => p[0]).join('').slice(0, 2)}'">` : (player.name || '?').split(' ').map(p => p[0]).join('').slice(0, 2)}</div>
         <div class="player-hero-copy">
           <p class="eyebrow accent">${player.position || 'SK'}${player.number ? ` · #${player.number}` : ''}</p>
-          <h2 class="player-hero-name">${flagMarkup(flag)}<span class="player-name${russianClass}">${player.name}</span></h2>
-          <button type="button" class="player-team-link team-hit" data-team-abbrev="${escapeAttr(player.abbrev || '')}">
+          <h2 class="player-hero-name">${flagMarkup(flag)}<span class="player-name${russianClass}${playerFavCls}">${player.name}</span></h2>
+          <button type="button" class="player-team-link team-hit${isFavoriteTeam(player.abbrev) ? ' is-favorite' : ''}" data-team-abbrev="${escapeAttr(player.abbrev || '')}">
             ${player.logo ? `<img src="${escapeAttr(player.logo)}" alt="">` : ''}<span>${player.team || player.abbrev || 'NHL'}</span>
           </button>
+          <div class="player-hero-actions">${favToggleMarkup('player', playerFavOn, `data-fav-player="1" data-nhl-id="${escapeAttr(player.nhlId || '')}" data-espn-id="${escapeAttr(player.espnId || '')}" data-player-name="${escapeAttr(player.name || '')}" data-team-abbrev="${escapeAttr(player.abbrev || '')}" data-fav-team-name="${escapeAttr(player.team || '')}"`)}</div>
         </div>
       </div>
       <section class="detail-section"><div class="detail-section-title"><h3>Инфо</h3></div>
@@ -907,6 +1060,7 @@
     if (button.dataset.nav === 'stats') loadStatsLive();
     if (button.dataset.nav === 'alltime') loadAlltimeLive();
     if (button.dataset.nav === 'standings') loadStandingsLive();
+    if (button.dataset.nav === 'settings') renderFavoritesSettings();
   }));
 
   $$('.segment[data-standings-tab]').forEach(button => button.addEventListener('click', () => {
@@ -978,6 +1132,47 @@
   });
 
   function detailClickHandler(event) {
+    const favBtn = event.target.closest?.('.fav-toggle');
+    if (favBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      const kind = favBtn.getAttribute('data-fav-kind');
+      if (kind === 'team') {
+        const abbrev = favBtn.getAttribute('data-fav-team') || '';
+        const on = toggleFavoriteTeam({
+          abbrev,
+          name: favBtn.getAttribute('data-fav-team-name') || abbrev,
+          logo: favBtn.getAttribute('data-fav-team-logo') || ''
+        });
+        favBtn.classList.toggle('is-on', on);
+        favBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        favBtn.textContent = on ? '★' : '☆';
+        toast(on ? 'Команда в избранном' : 'Команда убрана из избранного');
+        renderFavoritesSettings();
+        // refresh list highlights if visible
+        if ($('.panel.is-active')?.dataset.panel === 'standings') {
+          renderStandings($('.segment[data-standings-tab].is-selected')?.dataset.standingsTab || 'division');
+        }
+        if ($('.panel.is-active')?.dataset.panel === 'results') renderGames();
+      } else {
+        const ref = {
+          nhlId: favBtn.getAttribute('data-nhl-id') || '',
+          espnId: favBtn.getAttribute('data-espn-id') || '',
+          name: favBtn.getAttribute('data-player-name') || '',
+          abbrev: favBtn.getAttribute('data-team-abbrev') || '',
+          team: favBtn.getAttribute('data-fav-team-name') || ''
+        };
+        const on = toggleFavoritePlayer(ref);
+        favBtn.classList.toggle('is-on', on);
+        favBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        favBtn.textContent = on ? '★' : '☆';
+        const nameNode = $('#playerDetailContent .player-hero-name .player-name');
+        nameNode?.classList.toggle('is-favorite', on);
+        toast(on ? 'Игрок в избранном' : 'Игрок убран из избранного');
+        renderFavoritesSettings();
+      }
+      return;
+    }
     const remindBtn = event.target.closest?.('[data-remind-game]');
     if (remindBtn) {
       event.preventDefault();
@@ -1032,7 +1227,7 @@
     live?.clearCache?.();
     loadGames(state.selectedDate, { toastOnDone: true });
   });
-  $('#profileButton').addEventListener('click', () => showPanel('settings'));
+  $('#profileButton').addEventListener('click', () => { showPanel('settings'); renderFavoritesSettings(); });
   $('#prevDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, -1), { toastOnDone: true }));
   $('#nextDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, 1), { toastOnDone: true }));
   $('#themeToggle').addEventListener('change', event => applyTheme(event.target.checked ? 'dark' : 'light', true));

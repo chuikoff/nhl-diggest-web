@@ -335,8 +335,9 @@
     return 'individual';
   }
 
-  // Curated NATIONAL medals + sparse All-Star / KHL Gagarin fallbacks only.
-  // Stanley Cup comes from live NHL landing awards and/or assets/nhl-trophies.json (all nationalities).
+  // Curated NATIONAL + sparse All-Star / KHL Gagarin fallbacks.
+  // Primary national + First All-Star coverage: assets/nhl-trophies.json (all nationalities).
+  // Stanley Cup: NHL landing awards and/or nhl-trophies.json.
   // Keyed by NHL playerId; optional `names` for ESPN-only lookups.
   // AHL Calder Cup omitted. KHL Gagarin Cup kept via curated + API name match.
   const CURATED_PLAYER_TROPHIES = {
@@ -695,7 +696,13 @@
           stanleyByPlayerId: {},
           stanleyByName: {},
           teamTrophiesByAbbrev: {},
-          retiredNumbersByAbbrev: {}
+          retiredNumbersByAbbrev: {},
+          firstAllStarByPlayerId: {},
+          firstAllStarByName: {},
+          secondAllStarByPlayerId: {},
+          secondAllStarByName: {},
+          nationalByPlayerId: {},
+          nationalByName: {}
         };
       }
       return trophyIndexCache;
@@ -714,6 +721,32 @@
     return fromName?.length ? fromName.slice() : [];
   }
 
+  function lookupIndexList(index, idMapKey, nameMapKey, nhlId, name) {
+    if (!index) return null;
+    const idKey = nhlId != null && nhlId !== '' ? String(nhlId) : '';
+    const fromId = idKey ? (index[idMapKey] || {})[idKey] : null;
+    if (fromId?.length) return fromId;
+    const needle = normalizedName(name);
+    if (!needle) return null;
+    const fromName = (index[nameMapKey] || {})[needle];
+    return fromName?.length ? fromName : null;
+  }
+
+  function lookupFirstAllStarSeasons(index, nhlId, name) {
+    const list = lookupIndexList(index, 'firstAllStarByPlayerId', 'firstAllStarByName', nhlId, name);
+    return list ? list.slice() : [];
+  }
+
+  function lookupSecondAllStarSeasons(index, nhlId, name) {
+    const list = lookupIndexList(index, 'secondAllStarByPlayerId', 'secondAllStarByName', nhlId, name);
+    return list ? list.slice() : [];
+  }
+
+  function lookupNationalEntries(index, nhlId, name) {
+    const list = lookupIndexList(index, 'nationalByPlayerId', 'nationalByName', nhlId, name);
+    return list ? list.map(item => ({ ...item, seasons: (item.seasons || []).slice() })) : [];
+  }
+
   function teamTrophiesForAbbrev(index, abbrev) {
     const key = String(abbrev || '').toUpperCase();
     return (index?.teamTrophiesByAbbrev || {})[key] || [];
@@ -724,7 +757,15 @@
     return (index?.retiredNumbersByAbbrev || {})[key] || [];
   }
 
-  function buildPlayerTrophies({ awardEntries = [], nhlId = '', name = '', stanleySeasons = [] } = {}) {
+  function buildPlayerTrophies({
+    awardEntries = [],
+    nhlId = '',
+    name = '',
+    stanleySeasons = [],
+    firstAllStarSeasons = [],
+    secondAllStarSeasons = [],
+    nationalEntries = []
+  } = {}) {
     const split = splitAwardEntries(awardEntries);
     const curated = curatedEntryForPlayer(nhlId, name);
     const clubMap = new Map();
@@ -745,22 +786,50 @@
       });
     }
 
-    // Curated: national medals always useful (APIs omit them); club only Gagarin;
-    // individual All-Star only when API left those empty.
+    // Multi-nationality national medals/appearances from trophy index (not Russia-only).
+    (nationalEntries || []).forEach(item => {
+      pushTrophy(nationalMap, {
+        key: item.key,
+        name: NATIONAL_KEY_META[item.key]?.name || item.key,
+        medal: item.medal || '',
+        seasons: item.seasons || [],
+        seasonMode: 'calendar'
+      });
+    });
+
+    // Curated: national medals + KHL Gagarin fallbacks (index wins on overlap via Set merge).
     if (curated) {
       expandCuratedList(curated.club, 'club').forEach(item => pushTrophy(clubMap, item));
       expandCuratedList(curated.national, 'national').forEach(item => pushTrophy(nationalMap, item));
     }
 
     const individualEntries = split.individual.map(item => ({ name: item.name, seasons: item.seasons }));
-    const hasAllStar = individualEntries.some(item => /all[-\s]?star/i.test(item.name || ''));
-    if (curated?.individual?.length && !hasAllStar) {
+
+    // Root cause fix: ESPN often returns only Second All-Star Team. Previously any
+    // All-Star presence skipped curated First Team entirely. Always merge First/Second
+    // from the historical index (Hockey-Reference / Wikipedia), then curated gaps.
+    function pushIndividualAward(awardName, seasons) {
+      if (!awardName || !seasons?.length) return;
+      individualEntries.push({
+        name: awardName,
+        seasons: seasons.map(season => ({ __rawSeason: String(season) }))
+      });
+    }
+    pushIndividualAward('NHL First All-Star Team', firstAllStarSeasons);
+    pushIndividualAward('NHL Second All-Star Team', secondAllStarSeasons);
+
+    if (curated?.individual?.length) {
       curated.individual.forEach(item => {
         if (!item?.name) return;
-        individualEntries.push({
-          name: item.name,
-          seasons: (item.seasons || []).map(season => ({ __rawSeason: String(season) }))
+        const canon = canonicalAwardName(item.name) || item.name;
+        const have = individualEntries.some(entry => {
+          const existing = canonicalAwardName(entry.name) || entry.name;
+          return existing === canon;
         });
+        // Fill curated award only when API/index did not already supply that exact award.
+        if (!have) {
+          pushIndividualAward(canon, item.seasons || []);
+        }
       });
     }
 
@@ -2615,12 +2684,16 @@
       ...espnAwardEntries
     ];
     const trophyIndex = await loadTrophyIndex();
-    const stanleySeasons = lookupStanleySeasons(trophyIndex, landing.playerId || nhlId, name);
+    const playerKey = landing.playerId || nhlId;
+    const stanleySeasons = lookupStanleySeasons(trophyIndex, playerKey, name);
     const trophies = buildPlayerTrophies({
       awardEntries: rawAwards,
-      nhlId: landing.playerId || nhlId,
+      nhlId: playerKey,
       name,
-      stanleySeasons
+      stanleySeasons,
+      firstAllStarSeasons: lookupFirstAllStarSeasons(trophyIndex, playerKey, name),
+      secondAllStarSeasons: lookupSecondAllStarSeasons(trophyIndex, playerKey, name),
+      nationalEntries: lookupNationalEntries(trophyIndex, playerKey, name)
     });
     let contract = mapNhlContract(landing);
     if (!contract && espnId) {
@@ -2701,7 +2774,10 @@
       awardEntries,
       nhlId: '',
       name,
-      stanleySeasons
+      stanleySeasons,
+      firstAllStarSeasons: lookupFirstAllStarSeasons(trophyIndex, '', name),
+      secondAllStarSeasons: lookupSecondAllStarSeasons(trophyIndex, '', name),
+      nationalEntries: lookupNationalEntries(trophyIndex, '', name)
     });
     const contract = await loadEspnContract(athlete.id || espnId).catch(() => null);
     return {
