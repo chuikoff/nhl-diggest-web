@@ -515,16 +515,59 @@
     return `<section class="detail-section career-history-section"><div class="detail-section-title"><h3>${title}</h3><span>регулярный сезон</span></div><div class="career-history-table${goalie ? ' goalie-history' : ''}"><div class="career-history-head">${header}</div>${body}</div></section>`;
   }
 
+  function medalEmoji(medal) {
+    if (medal === 'gold') return '🥇';
+    if (medal === 'silver') return '🥈';
+    if (medal === 'bronze') return '🥉';
+    return '';
+  }
+
+  function flagMarkup(flag) {
+    if (!flag) return '';
+    const label = escapeAttr(flag.label || flag.iso2 || '');
+    if (flag.emoji) {
+      return `<span class="player-flag" title="${label}" aria-label="${label}"><span class="player-flag-emoji" aria-hidden="true">${flag.emoji}</span></span>`;
+    }
+    if (flag.img) {
+      return `<span class="player-flag" title="${label}" aria-label="${label}"><img class="player-flag-img" src="${escapeAttr(flag.img)}" alt="${label}" loading="lazy" onerror="this.parentNode.remove()"></span>`;
+    }
+    return '';
+  }
+
+  function awardRowsMarkup(rows = []) {
+    return (rows || []).map(award => {
+      const seasons = (award.seasons || []).map(season => `<span class="award-year">${escapeHtml(season)}</span>`).join('');
+      const medal = medalEmoji(award.medal);
+      const medalBit = medal ? `<span class="trophy-medal" aria-hidden="true">${medal}</span>` : '';
+      const sub = award.medalLabel ? `<span class="trophy-sub">${escapeHtml(award.medalLabel)}</span>` : '';
+      const count = (award.seasons || []).length;
+      return `<div class="award-row"><div class="award-copy"><strong>${medalBit}${escapeHtml(award.name)}${sub ? ` · ${sub}` : ''}</strong><div class="award-years">${seasons}</div></div><span class="award-count">${count > 1 ? `${count}×` : '✓'}</span></div>`;
+    }).join('');
+  }
+
   function awardsMarkup(awards = []) {
     const rows = awards || [];
     if (!rows.length) {
       return `<section class="detail-section player-awards-section"><div class="detail-section-title"><h3>Индивидуальные награды</h3></div><p class="empty-detail">Данные о наградах пока недоступны</p></section>`;
     }
-    const body = rows.map(award => {
-      const seasons = (award.seasons || []).map(season => `<span class="award-year">${escapeHtml(season)}</span>`).join('');
-      return `<div class="award-row"><div class="award-copy"><strong>${escapeHtml(award.name)}</strong><div class="award-years">${seasons}</div></div><span class="award-count">${award.seasons.length > 1 ? `${award.seasons.length}×` : '✓'}</span></div>`;
-    }).join('');
-    return `<section class="detail-section player-awards-section"><div class="detail-section-title"><h3>Индивидуальные награды</h3><span>${rows.length}</span></div><div class="awards-list">${body}</div></section>`;
+    return `<section class="detail-section player-awards-section"><div class="detail-section-title"><h3>Индивидуальные награды</h3><span>${rows.length}</span></div><div class="awards-list">${awardRowsMarkup(rows)}</div></section>`;
+  }
+
+  function trophiesMarkup(trophies = {}) {
+    const national = trophies?.national || [];
+    const club = trophies?.club || [];
+    const total = national.length + club.length;
+    if (!total) {
+      return `<section class="detail-section player-trophies-section"><div class="detail-section-title"><h3>Трофеи</h3></div><p class="empty-detail">Пока нет данных о трофеях сборной и клуба</p></section>`;
+    }
+    const groups = [];
+    if (national.length) {
+      groups.push(`<div class="trophy-group"><div class="trophy-group-title">Сборная<span>${national.length}</span></div><div class="awards-list">${awardRowsMarkup(national)}</div></div>`);
+    }
+    if (club.length) {
+      groups.push(`<div class="trophy-group"><div class="trophy-group-title">Клубные<span>${club.length}</span></div><div class="awards-list">${awardRowsMarkup(club)}</div></div>`);
+    }
+    return `<section class="detail-section player-trophies-section"><div class="detail-section-title"><h3>Трофеи</h3><span>${total}</span></div><div class="trophy-groups">${groups.join('')}</div></section>`;
   }
 
   async function openTeamDetail(abbrev, seed = {}) {
@@ -581,12 +624,16 @@
       return;
     }
     const russianClass = player.isRussian ? ' russian-player' : '';
+    const flag = player.flag || live?.resolvePlayerFlag?.(player) || null;
+    const countryLabel = flag
+      ? `${flag.emoji ? flag.emoji + ' ' : ''}${flag.label || flag.iso2 || ''}`.trim()
+      : (player.birthCountry || player.nationality || '');
     content.innerHTML = `
       <div class="player-hero">
         <div class="player-hero-photo">${player.headshot ? `<img src="${escapeAttr(player.headshot)}" alt="" onerror="this.parentNode.textContent='${(player.name || '?').split(' ').map(p => p[0]).join('').slice(0, 2)}'">` : (player.name || '?').split(' ').map(p => p[0]).join('').slice(0, 2)}</div>
         <div class="player-hero-copy">
           <p class="eyebrow accent">${player.position || 'SK'}${player.number ? ` · #${player.number}` : ''}</p>
-          <h2><span class="player-name${russianClass}">${player.name}</span></h2>
+          <h2 class="player-hero-name">${flagMarkup(flag)}<span class="player-name${russianClass}">${player.name}</span></h2>
           <button type="button" class="player-team-link team-hit" data-team-abbrev="${escapeAttr(player.abbrev || '')}">
             ${player.logo ? `<img src="${escapeAttr(player.logo)}" alt="">` : ''}<span>${player.team || player.abbrev || 'NHL'}</span>
           </button>
@@ -594,7 +641,7 @@
       </div>
       <section class="detail-section"><div class="detail-section-title"><h3>Инфо</h3></div>
         <div class="info-grid">
-          ${[['Рост', player.height], ['Вес', player.weight], ['Хват', player.shoots], ['Дата рождения', player.birthDate], ['Место', player.birthPlace], ['Драфт', player.draft]]
+          ${[['Рост', player.height], ['Вес', player.weight], ['Хват', player.shoots], ['Дата рождения', player.birthDate], ['Страна', countryLabel], ['Место', player.birthPlace], ['Драфт', player.draft]]
             .filter(([, value]) => value)
             .map(([label, value]) => `<div class="info-row"><span>${label}</span><strong>${value}</strong></div>`).join('') || '<p class="empty-detail">Нет биоданных</p>'}
         </div>
@@ -602,6 +649,7 @@
       ${statsGridMarkup(`Сезон · ${player.seasonLabel || ''}`, player.seasonStats || [])}
       ${statsGridMarkup('Карьера', player.careerStats || [])}
       ${careerHistoryMarkup(player.careerHistory, player.position === 'G')}
+      ${trophiesMarkup(player.trophies)}
       ${awardsMarkup(player.awards)}
       <p class="panel-note">${player.note || player.source || ''}</p>
     `;

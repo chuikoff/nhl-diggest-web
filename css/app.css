@@ -592,3 +592,69 @@ h2 { font-size: 29px; }
   .award-copy strong { font-size: 11px; }
   .award-year { font-size: 8px; padding: 2px 6px; }
 }
+
+/* Player nationality flag next to name */
+.player-hero-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.player-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+.player-flag-emoji {
+  font-size: 22px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
+}
+.player-flag-img {
+  width: 22px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid rgba(120, 140, 160, .35);
+  display: block;
+}
+
+/* Grouped trophies (national + club); individual awards stay separate */
+.trophy-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.trophy-group-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 2px 6px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+.trophy-group-title span {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 700;
+}
+.trophy-medal {
+  margin-right: 4px;
+}
+.trophy-sub {
+  color: var(--muted);
+  font-weight: 650;
+}
+:root[data-theme="light"] .trophy-group-title { color: #5d7188; }
+:root[data-theme="light"] .player-flag-img { border-color: #b7c6d6; }
+@media(max-width:370px) {
+  .player-flag-emoji { font-size: 18px; }
+  .player-flag-img { width: 18px; height: 13px; }
+}
