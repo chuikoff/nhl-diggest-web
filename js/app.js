@@ -6,6 +6,20 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
+  function playerIsRussian(player) {
+    return Boolean(player?.isRussian || live?.isRussianPlayer?.(player));
+  }
+
+  function playerMarkup(player, fallbackName = '') {
+    const name = typeof player === 'string' ? player : (player?.name || fallbackName || '');
+    const russian = typeof player === 'object' ? playerIsRussian(player) : playerIsRussian(name);
+    return `<span class="player-name${russian ? ' russian-player' : ''}">${name}</span>`;
+  }
+
+  function assistsMarkup(assists = []) {
+    return assists.map(assist => playerMarkup(assist, assist)).join(', ');
+  }
+
   const bridge = window.NHL_BRIDGE || { env: 'browser', theme: 'dark' };
   const themeStorageKey = 'nhl-diggest-theme';
   const state = {
@@ -181,14 +195,14 @@
       list.innerHTML = players.map((player, index) => `<div class="leader-card goalie-card">
         <span class="player-rank">${String(index + 1).padStart(2, '0')}</span>
         <div class="player-avatar goalie-avatar">${(player.name || '?').split(' ').map(part => part[0]).join('').slice(0, 2)}</div>
-        <div class="player-copy"><strong>${player.name}</strong><span>${player.team || ''} · G</span></div>
+        <div class="player-copy"><strong>${playerMarkup(player)}</strong><span>${player.team || ''} · G</span></div>
         <div class="player-stat"><strong>${player.value ?? '—'}</strong><span>${state.statsBoard}</span></div>
       </div>`).join('');
     } else {
       list.innerHTML = players.map((player, index) => `<div class="leader-card">
         <span class="player-rank">${String(index + 1).padStart(2, '0')}</span>
         <div class="player-avatar">${(player.name || '?').split(' ').map(part => part[0]).join('').slice(0, 2)}</div>
-        <div class="player-copy"><strong>${player.name}</strong><span>${player.team || ''} · ${player.position || 'SK'}</span></div>
+        <div class="player-copy"><strong>${playerMarkup(player)}</strong><span>${player.team || ''} · ${player.position || 'SK'}</span></div>
         <div class="player-stat"><strong>${player.value ?? '—'}</strong><span>${state.statsBoard}</span></div>
       </div>`).join('');
     }
@@ -204,8 +218,8 @@
     }
     return groups.map(group => {
       const rows = kind === 'goals'
-        ? group.events.map(event => `<div class="scoring-row"><span class="event-time"><strong>${event.time || ''}</strong></span><span class="event-team">${event.team || ''}</span><div><strong>${event.scorer}</strong><small>${event.assists?.length ? `ассисты: ${event.assists.join(', ')}` : 'без ассистов'}${event.strength ? ` · ${event.strength}` : ''}</small></div></div>`).join('')
-        : group.events.map(item => `<div class="penalty-row"><span>${item.time || ''}</span><strong>${item.team} · ${item.player || ''}</strong><small>${item.minutes ? `${item.minutes} мин · ` : ''}${item.infraction || ''}</small></div>`).join('');
+        ? group.events.map(event => `<div class="scoring-row"><span class="event-time"><strong>${event.time || ''}</strong></span><span class="event-team">${event.team || ''}</span><div><strong>${playerMarkup({ name: event.scorer, isRussian: event.scorerRussian })}</strong><small>${event.assists?.length ? `ассисты: ${assistsMarkup(event.assists)}` : 'без ассистов'}${event.strength ? ` · ${event.strength}` : ''}</small></div></div>`).join('')
+        : group.events.map(item => `<div class="penalty-row"><span>${item.time || ''}</span><strong>${item.team} · ${playerMarkup({ name: item.player || '', isRussian: item.playerRussian })}</strong><small>${item.minutes ? `${item.minutes} мин · ` : ''}${item.infraction || ''}</small></div>`).join('');
       return `<div class="period-block"><div class="period-heading">${group.period}</div><div class="${kind === 'goals' ? 'scoring-list' : 'penalty-list'} period-events">${rows}</div></div>`;
     }).join('');
   }
@@ -248,9 +262,8 @@
         <section class="detail-section"><div class="detail-section-title"><h3>Командная статистика</h3></div>
           <div class="boxscore-table"><div class="boxscore-head"><span>Команда</span><span>Броски</span><span>Силовые</span><span>Вбрасывания</span><span>Большинство</span></div>${[game.away, game.home].map(team => { const stats = boxscore[team.short] || {}; return `<div class="boxscore-row"><strong><img src="${team.logo}" alt="">${team.short}</strong><span>${stats.shots ?? '—'}</span><span>${stats.hits ?? '—'}</span><span>${stats.faceoff ?? '—'}</span><span>${stats.powerPlay ?? '—'}</span></div>`; }).join('')}</div>
         </section>
-        ${skaters.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Очки в матче</h3><span>${skaters.length}</span></div><div class="penalty-list">${skaters.map(item => `<div class="penalty-row"><span>${item.team}</span><strong>${item.name}</strong><small>${item.goals}G · ${item.assists}A · PIM ${item.pim}${item.toi ? ` · TOI ${item.toi}` : ''}</small></div>`).join('')}</div></section>` : ''}
-        ${penalties.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Удаления</h3><span>${penalties.length}</span></div><div class="period-groups">${periodGroupsMarkup(penalties, 'penalties')}</div></section>` : ''}
-        ${goalies.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Вратари</h3></div><div class="goalie-lines">${goalies.map(goalie => `<div class="goalie-line"><span class="line-team">${teamByShort[goalie.team]?.short || goalie.team}</span><strong>${goalie.name}</strong><span>${goalie.saves}${goalie.sv ? ` · SV% ${goalie.sv}` : ''}${goalie.toi ? ` · ${goalie.toi}` : ''}</span></div>`).join('')}</div></section>` : ''}
+        <section class="detail-section"><div class="detail-section-title"><h3>Удаления</h3><span>${penalties.length}</span></div><div class="period-groups">${periodGroupsMarkup(penalties, 'penalties')}</div></section>
+        ${goalies.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Вратари</h3></div><div class="goalie-lines">${goalies.map(goalie => `<div class="goalie-line"><span class="line-team">${teamByShort[goalie.team]?.short || goalie.team}</span><strong>${playerMarkup(goalie)}</strong><span>${goalie.saves}${goalie.sv ? ` · SV% ${goalie.sv}` : ''}${goalie.toi ? ` · ${goalie.toi}` : ''}</span></div>`).join('')}</div></section>` : ''}
       `}`;
   }
 
@@ -366,14 +379,14 @@
       list.innerHTML = players.map((player, index) => `<div class="leader-card goalie-card">
         <span class="player-rank">${String(index + 1).padStart(2, '0')}</span>
         <div class="player-avatar goalie-avatar">${(player.name || '?').split(' ').map(part => part[0]).join('').slice(0, 2)}</div>
-        <div class="player-copy"><strong>${player.name}</strong><span>${player.team || 'NHL'} · G</span></div>
+        <div class="player-copy"><strong>${playerMarkup(player)}</strong><span>${player.team || 'NHL'} · G</span></div>
         <div class="player-stat"><strong>${player.value ?? '—'}</strong><span>${state.alltimeBoard}</span></div>
       </div>`).join('');
     } else {
       list.innerHTML = players.map((player, index) => `<div class="leader-card">
         <span class="player-rank">${String(index + 1).padStart(2, '0')}</span>
         <div class="player-avatar">${(player.name || '?').split(' ').map(part => part[0]).join('').slice(0, 2)}</div>
-        <div class="player-copy"><strong>${player.name}</strong><span>${player.team || 'NHL'} · ${player.position || 'SK'}</span></div>
+        <div class="player-copy"><strong>${playerMarkup(player)}</strong><span>${player.team || 'NHL'} · ${player.position || 'SK'}</span></div>
         <div class="player-stat"><strong>${player.value ?? '—'}</strong><span>${state.alltimeBoard}</span></div>
       </div>`).join('');
     }

@@ -22,6 +22,60 @@
 
   const cache = new Map();
 
+  // NHL and ESPN do not expose nationality in exactly the same shape. Keep the
+  // check in one place so every player surface (including game box scores) uses
+  // the same country-code and birth-country rules.
+  const RUSSIAN_COUNTRY_RE = /(?:^|[\s_./-])(RUS|RU|RUSSIA|RUSSIAN|РОССИЯ)(?:$|[\s_./-])/i;
+  const RUSSIAN_NAME_FALLBACKS = new Set([
+    'alexander ovechkin', 'alex ovechkin', 'artemi panarin', 'nikita kucherov',
+    'evgeni malkin', 'yevgeni malkin', 'evgeny malkin', 'andrei svechnikov',
+    'kirill kaprizov', 'matvei michkov', 'mikhail sergachev', 'mikhail sergachyov',
+    'ivan provo rov', 'ivan provorov', 'dmitry orlov', 'nikita zadorov',
+    'vladislav namestnikov', 'evgeny dadonov', 'valeri nichushkin', 'ilya lyubushkin',
+    'igor shesterkin', 'ilya sorokin', 'semen varlamov', 'andrei vasilevskiy',
+    'alexander radulov', 'ilya kovalchuk', 'pavel datsyuk', 'sergei fedorov',
+    'igor larionov', 'alexei kovalev', 'pavel bure', 'valeri bure', 'slava kozlov',
+    'viacheslav kozlov', 'viacheslav fetisov', 'nikolai kulemin', 'vitaly kratsov',
+    'yegor shangovich', 'nikolai goldobin', 'anatoli golyshev'
+  ]);
+
+  function normalizedName(value) {
+    return String(value || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-zа-яё0-9]+/gi, ' ').trim();
+  }
+
+  function countryValueIsRussian(value, depth = 0) {
+    if (depth > 3 || value == null) return false;
+    if (typeof value === 'string' || typeof value === 'number') {
+      return RUSSIAN_COUNTRY_RE.test(String(value).trim()) || /\b(russia|russian)\b/i.test(String(value));
+    }
+    if (Array.isArray(value)) return value.some(item => countryValueIsRussian(item, depth + 1));
+    if (typeof value === 'object') {
+      return Object.entries(value).some(([key, item]) => {
+        if (/name|code|country|national|citizenship|flag|default|display|abbr|iso|alt|href|slug/i.test(key)) {
+          return countryValueIsRussian(item, depth + 1);
+        }
+        return false;
+      });
+    }
+    return false;
+  }
+
+  function isRussianPlayer(player) {
+    const name = typeof player === 'string'
+      ? player
+      : player?.name || player?.displayName || player?.fullName ||
+        playerName(player?.firstName, player?.lastName);
+    if (normalizedName(name) && RUSSIAN_NAME_FALLBACKS.has(normalizedName(name))) return true;
+    if (!player || typeof player === 'string') return false;
+    return [
+      player.nationality, player.countryCode, player.birthCountry, player.birthPlace,
+      player.birthplace, player.country, player.citizenship, player.flag,
+      player.birth?.country, player.birth?.countryCode, player.birth?.place
+    ].some(countryValueIsRussian);
+  }
+
   function loc(value) {
     if (value == null) return '';
     if (typeof value === 'string' || typeof value === 'number') return String(value);
@@ -359,7 +413,8 @@
       abbrev: loc(row.teamAbbrev).toUpperCase(),
       position: row.position || '',
       value,
-      headshot: row.headshot || ''
+      headshot: row.headshot || '',
+      isRussian: isRussianPlayer(row)
     };
   }
 
@@ -447,7 +502,8 @@
         abbrev: '',
         position: (athlete.position || {}).abbreviation || '',
         value: value ?? '—',
-        headshot: athlete.headshot?.href || ''
+        headshot: athlete.headshot?.href || '',
+        isRussian: isRussianPlayer(athlete)
       };
     }));
     return rows.filter(Boolean);
@@ -474,7 +530,8 @@
       points: pick('offensive', 2),
       plusMinus: pick('general', 1),
       toi: pick('general', names.general.indexOf('timeOnIce')),
-      pim: pick('penalties', 0)
+      pim: pick('penalties', 0),
+      isRussian: isRussianPlayer(athlete)
     };
   }
 
@@ -513,7 +570,8 @@
               team: team.abbreviation || team.shortDisplayName || '',
               position: 'G',
               value: board.format ? board.format(raw) : raw,
-              headshot: athlete.headshot?.href || ''
+              headshot: athlete.headshot?.href || '',
+              isRussian: isRussianPlayer(athlete)
             });
           }
           return { source: 'espn', note: 'ESPN · 2024/25', players };
@@ -637,7 +695,11 @@
           time: goal.timeInPeriod || '',
           team: loc(goal.teamAbbrev).toUpperCase(),
           scorer: playerName(goal.firstName, goal.lastName),
-          assists: (goal.assists || []).map(assist => playerName(assist.firstName, assist.lastName)).filter(Boolean),
+          scorerRussian: isRussianPlayer({ ...goal, name: playerName(goal.firstName, goal.lastName) }),
+          assists: (goal.assists || []).map(assist => ({
+            name: playerName(assist.firstName, assist.lastName),
+            isRussian: isRussianPlayer({ ...assist, name: playerName(assist.firstName, assist.lastName) })
+          })).filter(assist => assist.name),
           strength: goal.strength || ''
         });
       });
@@ -655,6 +717,7 @@
           time: pen.timeInPeriod || '',
           team: loc(pen.teamAbbrev || pen.committedByTeam).toUpperCase(),
           player: who,
+          playerRussian: isRussianPlayer({ ...pen, name: who }),
           minutes: pen.duration || pen.penaltyMinutes || '',
           infraction: loc(pen.descKey) || loc(pen.type) || ''
         });
@@ -680,6 +743,7 @@
           skaters.push({
             team: team.short,
             name: loc(player.name),
+            isRussian: isRussianPlayer({ ...player, name: loc(player.name) }),
             goals: player.goals ?? 0,
             assists: player.assists ?? 0,
             pim: player.pim ?? 0,
@@ -691,6 +755,7 @@
         goalies.push({
           team: team.short,
           name: loc(goalie.name),
+          isRussian: isRussianPlayer({ ...goalie, name: loc(goalie.name) }),
           saves: goalie.saveShotsAgainst || `${goalie.saves ?? '—'}/${goalie.shotsAgainst ?? '—'}`,
           sv: goalie.savePctg != null ? formatSv(goalie.savePctg) : '',
           decision: goalie.decision || '',
@@ -714,7 +779,10 @@
     const scoring = plays.filter(play => play.scoringPlay).map(play => {
       const participants = play.participants || [];
       const scorer = participants.find(item => item.type === 'scorer') || participants[0];
-      const assists = participants.filter(item => item.type === 'assist').map(item => item.athlete?.displayName).filter(Boolean);
+      const assists = participants.filter(item => item.type === 'assist').map(item => ({
+        name: item.athlete?.displayName || '',
+        isRussian: isRussianPlayer(item.athlete || {})
+      })).filter(item => item.name);
       const text = play.text || '';
       const teamId = String(play.team?.id || '');
       return {
@@ -722,6 +790,7 @@
         time: play.clock?.displayValue || '',
         team: teamId,
         scorer: scorer?.athlete?.displayName || text.split(' Goal')[0] || text,
+        scorerRussian: isRussianPlayer(scorer?.athlete || scorer?.athlete?.displayName || ''),
         assists,
         strength: /power play|power-play|\bpp\b/i.test(text) ? 'pp' : /short/i.test(text) ? 'sh' : ''
       };
@@ -761,6 +830,7 @@
             goalies.push({
               team: short,
               name: athlete.athlete?.displayName || '',
+              isRussian: isRussianPlayer(athlete.athlete || {}),
               saves: stats[index('saves')] && stats[index('shotsAgainst')]
                 ? `${stats[index('saves')]}/${stats[index('shotsAgainst')]}`
                 : (stats[index('saves')] || '—'),
@@ -781,6 +851,7 @@
           skaters.push({
             team: short,
             name: athlete.athlete?.displayName || '',
+            isRussian: isRussianPlayer(athlete.athlete || {}),
             goals,
             assists,
             pim,
@@ -799,6 +870,7 @@
         time: play.clock?.displayValue || '',
         team: teamIdToAbbrev[String(play.team?.id)] || '',
         player: (play.participants || [])[0]?.athlete?.displayName || '',
+        playerRussian: isRussianPlayer((play.participants || [])[0]?.athlete || ''),
         minutes: '',
         infraction: play.text || typeText
       });
@@ -884,6 +956,7 @@
       position: (athlete.position || {}).abbreviation || '',
       headshot: athlete.headshot?.href || '',
       athleteId: athlete.id || '',
+      isRussian: isRussianPlayer(athlete),
       raw: leader.displayValue ?? leader.value
     };
   }
@@ -991,6 +1064,7 @@
     GOALIE_BOARDS,
     CAREER_SKATER_BOARDS,
     CAREER_GOALIE_BOARDS,
+    isRussianPlayer,
     clearCache: () => cache.clear()
   };
 })();
