@@ -4,12 +4,12 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
-    tg.setHeaderColor?.('#0c111b');
-    tg.setBackgroundColor?.('#080d15');
+  // Host bridge is initialized in js/bridge.js (Telegram and/or Max).
+  const bridge = window.NHL_BRIDGE || { env: 'browser' };
+  if (bridge.env === 'telegram' && bridge.telegram) {
+    // Telegram path already called ready/expand in bridge.js; keep colors if re-entry.
+    bridge.telegram.setHeaderColor?.('#0c111b');
+    bridge.telegram.setBackgroundColor?.('#080d15');
   }
 
   function teamMarkup(team, side) {

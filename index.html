@@ -4,20 +4,39 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0c111b">
-  <meta name="description" content="NHL Diggest — результаты, турнирная таблица и статистика NHL в Telegram Mini App">
+  <meta name="description" content="NHL Diggest — результаты, турнирная таблица и статистика NHL в Mini App для Telegram и Max">
   <title>NHL Diggest</title>
-  <link rel="stylesheet" href="css/app.css">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/mock-data.js"></script>
-  <script defer src="js/app.js"></script>
+  <!-- Resolve assets correctly under /nhl-diggest-web/ even without a trailing slash (GH Pages / Max WebView). -->
+  <script>
+    (function () {
+      try {
+        var segments = location.pathname.split('/').filter(Boolean);
+        if (segments.length && /\.[a-z0-9]+$/i.test(segments[segments.length - 1])) {
+          segments.pop();
+        }
+        var baseHref = '/' + (segments.length ? segments.join('/') + '/' : '');
+        var base = document.createElement('base');
+        base.href = baseHref;
+        document.head.insertBefore(base, document.head.firstChild);
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="./css/app.css">
+  <!-- Telegram bridge (window.Telegram.WebApp). Soft-fail so browser preview still works. -->
+  <script src="https://telegram.org/js/telegram-web-app.js" onerror="console.warn('[NHL Diggest] Telegram bridge failed to load')"></script>
+  <!-- Max bridge (window.WebApp). Soft-fail so browser / Telegram still work if CDN is blocked. -->
+  <script src="https://st.max.ru/js/max-web-app.js" onerror="console.warn('[NHL Diggest] Max bridge failed to load')"></script>
+  <script src="./js/config.js"></script>
+  <script src="./js/mock-data.js"></script>
+  <script src="./js/bridge.js"></script>
+  <script defer src="./js/app.js"></script>
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-mark" aria-hidden="true"><span>🏒</span></div>
       <div class="brand-copy">
-        <p class="eyebrow">TELEGRAM MINI APP</p>
+        <p class="eyebrow">MINI APP · TG / MAX</p>
         <h1>NHL <strong>Diggest</strong></h1>
       </div>
       <button class="icon-button" id="profileButton" aria-label="Профиль">◉</button>
@@ -63,7 +82,7 @@
         <div class="settings-card profile-card"><div class="profile-icon">G</div><div><strong>NHL fan</strong><span>Настройки Mini App</span></div><span class="chevron">›</span></div>
         <div class="settings-group"><p class="group-label">ОБЩИЕ</p><div class="settings-card"><div class="setting-copy"><strong>Язык интерфейса</strong><span>Русский</span></div><span class="chevron">›</span></div><div class="settings-card"><div class="setting-copy"><strong>Тёмная тема</strong><span>Всегда включена</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div></div>
         <div class="settings-group"><p class="group-label">УВЕДОМЛЕНИЯ</p><div class="settings-card"><div class="setting-copy"><strong>Мои команды</strong><span>Новости и результаты</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div><div class="settings-card"><div class="setting-copy"><strong>Ежедневный дайджест</strong><span>09:00 по Москве</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div></div>
-        <p class="settings-note">Настройки сохранятся в вашем Telegram-профиле.<br>Сейчас это демонстрационный режим.</p>
+        <p class="settings-note">Настройки сохранятся в профиле мессенджера.<br>Сейчас это демонстрационный режим.</p>
       </section>
     </main>
 
