@@ -121,7 +121,7 @@ Endpoint (CORS `*`):
 
 **Трофеи / награды / флаг на карточке игрока:**
 - флаг страны: emoji + flagcdn fallback; ISO/IOC коды, ESPN `birthCountry`/`citizenship`, провинции/штаты (`ON`→CA, `NY`→US), парсинг `birthCity` / `City, Country`
-- секция **Трофеи** → **Сборная** (Олимпиада: медали и участие; ЧМ / МЧМ U20 / U18) и **Клубные** (**только Кубок Стэнли** из NHL awards + curated; KHL/AHL убраны)
+- секция **Трофеи** → **Сборная** (Олимпиада: медали и участие; ЧМ / МЧМ U20 / U18) и **Клубные** (Кубок Стэнли + **Кубок Гагарина** KHL; AHL Calder Cup убран)
 - **Индивидуальные награды**: Hart, Richard, Calder Memorial, … плюс **NHL First/Second All-Star Team** и **All-Star Game** (ESPN overview merge + curated для ветеранов вроде Ovechkin — ESPN исторически отдаёт почти только Second Team)
 - пустые группы скрываются; если трофеев нет — мягкий empty state
 

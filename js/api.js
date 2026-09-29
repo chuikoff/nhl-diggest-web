@@ -312,8 +312,9 @@
 
   function clubTrophyCanonical(name) {
     const n = String(name || '').toLowerCase().replace(/[“”"]/g, '"');
-    // Club trophies: NHL Stanley Cup only (KHL/AHL cups dropped — no reliable stats).
+    // Club trophies: NHL Stanley Cup + KHL Gagarin Cup. AHL Calder Cup omitted (unreliable).
     if (/stanley\s*cup/.test(n)) return { key: 'stanley', name: 'Кубок Стэнли' };
+    if (/gagarin/.test(n)) return { key: 'gagarin', name: 'Кубок Гагарина' };
     return null;
   }
 
@@ -337,7 +338,7 @@
   // Curated national medals/appearances + NHL All-Star supplements for well-known players.
   // Keyed by NHL playerId; optional `names` for ESPN-only lookups.
   // National years are calendar years; club/individual NHL seasons use labels like 2017/18.
-  // KHL (Gagarin) / AHL (Calder Cup) are intentionally omitted — no reliable API coverage.
+  // AHL Calder Cup omitted (unreliable). KHL Gagarin Cup kept via curated + API name match.
   const CURATED_PLAYER_TROPHIES = {
     '8471214': { // Alexander Ovechkin
       names: ['alexander ovechkin', 'alex ovechkin'],
@@ -384,7 +385,9 @@
         { key: 'wjc', medal: 'silver', seasons: ['2016'] },
         { key: 'wjc', medal: 'bronze', seasons: ['2017'] }
       ],
-      club: [],
+      club: [
+        { key: 'gagarin', seasons: ['2018/19'] }
+      ],
       individual: []
     },
     '8478550': { // Artemi Panarin
@@ -394,7 +397,9 @@
         { key: 'wc', medal: 'bronze', seasons: ['2016', '2017'] },
         { key: 'wjc', medal: 'gold', seasons: ['2011'] }
       ],
-      club: [],
+      club: [
+        { key: 'gagarin', seasons: ['2014/15'] }
+      ],
       individual: []
     },
     '8476883': { // Andrei Vasilevskiy
@@ -405,7 +410,8 @@
         { key: 'wjc', medal: 'bronze', seasons: ['2013', '2014'] }
       ],
       club: [
-        { key: 'stanley', seasons: ['2019/20', '2020/21'] }
+        { key: 'stanley', seasons: ['2019/20', '2020/21'] },
+        { key: 'gagarin', seasons: ['2010/11'] }
       ],
       individual: []
     },
@@ -438,7 +444,9 @@
         { key: 'wc', medal: 'bronze', seasons: ['2019'] },
         { key: 'wjc', medal: 'bronze', seasons: ['2015'] }
       ],
-      club: [],
+      club: [
+        { key: 'gagarin', seasons: ['2013/14'] }
+      ],
       individual: []
     },
     '8480830': { // Andrei Svechnikov
@@ -481,7 +489,8 @@
   };
 
   const CLUB_KEY_META = {
-    stanley: { name: 'Кубок Стэнли' }
+    stanley: { name: 'Кубок Стэнли' },
+    gagarin: { name: 'Кубок Гагарина' }
   };
 
   function curatedEntryForPlayer(nhlId, name) {
@@ -545,7 +554,7 @@
           if (ka !== kb) return ka - kb;
           return (MEDAL_RANK[a.medal] ?? 9) - (MEDAL_RANK[b.medal] ?? 9);
         }
-        const order = { stanley: 0 };
+        const order = { stanley: 0, gagarin: 1 };
         const ka = order[a.key] ?? 9;
         const kb = order[b.key] ?? 9;
         if (ka !== kb) return ka - kb;
