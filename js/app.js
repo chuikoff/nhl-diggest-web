@@ -5,12 +5,78 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
   // Host bridge is initialized in js/bridge.js (Telegram and/or Max).
-  const bridge = window.NHL_BRIDGE || { env: 'browser' };
-  if (bridge.env === 'telegram' && bridge.telegram) {
-    // Telegram path already called ready/expand in bridge.js; keep colors if re-entry.
-    bridge.telegram.setHeaderColor?.('#0c111b');
-    bridge.telegram.setBackgroundColor?.('#080d15');
+  const bridge = window.NHL_BRIDGE || { env: 'browser', theme: 'dark' };
+  const dateKeys = Object.keys(data.gamesByDate || {}).sort();
+  const state = { selectedDate: data.defaultDate || dateKeys[dateKeys.length - 1] };
+  const themeStorageKey = 'nhl-diggest-theme';
+  bridge.applyTheme?.(bridge.theme || 'dark');
+
+  function localDateKey(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
+
+  function dateDistance(dateKey, referenceKey) {
+    return Math.round((Date.parse(`${dateKey}T00:00:00Z`) - Date.parse(`${referenceKey}T00:00:00Z`)) / 86400000);
+  }
+
+  function formatDate(dateKey) {
+    return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' })
+      .format(new Date(`${dateKey}T00:00:00`));
+  }
+
+  function renderDayNavigation() {
+    const today = localDateKey();
+    const distance = dateDistance(state.selectedDate, today);
+    $('#dayLabel').textContent = distance === 0 ? 'Сегодня' : distance === -1 ? 'Вчера' : distance === 1 ? 'Завтра' : 'Выбранный день';
+    $('#dateLabel').textContent = formatDate(state.selectedDate);
+    const index = dateKeys.indexOf(state.selectedDate);
+    $('#prevDay').disabled = index <= 0;
+    $('#nextDay').disabled = index < 0 || index >= dateKeys.length - 1;
+  }
+
+  function gamesForSelectedDate() {
+    return (data.gamesByDate && data.gamesByDate[state.selectedDate]) || [];
+  }
+
+  function selectDay(step) {
+    const index = dateKeys.indexOf(state.selectedDate);
+    const nextIndex = index + step;
+    if (nextIndex < 0 || nextIndex >= dateKeys.length) return;
+    state.selectedDate = dateKeys[nextIndex];
+    data.games = gamesForSelectedDate();
+    renderDayNavigation();
+    renderGames();
+    toast('Результаты загружены');
+  }
+
+  function storedTheme() {
+    try {
+      const value = window.localStorage.getItem(themeStorageKey);
+      return value === 'light' || value === 'dark' ? value : null;
+    } catch { return null; }
+  }
+
+  function applyTheme(theme, persist = false) {
+    const nextTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = nextTheme;
+    document.body.dataset.theme = nextTheme;
+    bridge.applyTheme?.(nextTheme);
+    const toggle = $('#themeToggle');
+    const label = $('#themeModeLabel');
+    if (toggle) toggle.checked = nextTheme === 'dark';
+    if (label) label.textContent = nextTheme === 'dark' ? 'Включена' : 'Выключена';
+    $('#themeColorMeta')?.setAttribute('content', nextTheme === 'dark' ? '#0c111b' : '#f5f7fb');
+    if (persist) {
+      try { window.localStorage.setItem(themeStorageKey, nextTheme); } catch { /* private mode */ }
+    }
+  }
+
+  const savedTheme = storedTheme();
+  applyTheme(savedTheme || bridge.theme || 'dark');
+  bridge.subscribeTheme?.(theme => { if (!storedTheme()) applyTheme(theme); });
 
   function teamMarkup(team, side) {
     return `<div class="team ${side}">
@@ -72,7 +138,7 @@
   }
 
   function renderGameDetail(gameId) {
-    const game = data.games.find(item => String(item.id) === String(gameId));
+    const game = gamesForSelectedDate().find(item => String(item.id) === String(gameId));
     if (!game) return;
     const detail = data.gameDetails[String(game.id)] || {};
     const isScheduled = detail.scheduled || game.status === 'FUT' || game.status === 'Preseason';
@@ -144,10 +210,13 @@
   $('#gameDetailBack').addEventListener('click', () => showPanel('results'));
   $('#refreshButton').addEventListener('click', () => { renderGames(); toast('Результаты обновлены'); });
   $('#profileButton').addEventListener('click', () => showPanel('settings'));
-  $('#prevDay').addEventListener('click', () => toast('Предыдущий день недоступен в демо'));
-  $('#nextDay').addEventListener('click', () => toast('Следующий день недоступен в демо'));
-  $$('.toggle input').forEach(input => input.addEventListener('change', () => toast(input.checked ? 'Включено' : 'Выключено')));
+  $('#prevDay').addEventListener('click', () => selectDay(-1));
+  $('#nextDay').addEventListener('click', () => selectDay(1));
+  $('#themeToggle').addEventListener('change', event => applyTheme(event.target.checked ? 'dark' : 'light', true));
+  $$('.toggle input:not(#themeToggle)').forEach(input => input.addEventListener('change', () => toast(input.checked ? 'Включено' : 'Выключено')));
 
+  data.games = gamesForSelectedDate();
+  renderDayNavigation();
   renderGames();
   renderStandings();
   renderStats();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0c111b">
+  <meta name="theme-color" content="#0c111b" id="themeColorMeta">
   <meta name="description" content="NHL Diggest — результаты, турнирная таблица и статистика NHL в Mini App для Telegram и Max">
   <title>NHL Diggest</title>
   <!-- Resolve assets correctly under /nhl-diggest-web/ even without a trailing slash (GH Pages / Max WebView). -->
@@ -80,7 +80,7 @@
       <section class="panel" data-panel="settings" aria-labelledby="settingsTitle">
         <div class="section-heading"><div><p class="eyebrow accent">PERSONALIZE</p><h2 id="settingsTitle">Настройки</h2></div><span class="settings-avatar">G</span></div>
         <div class="settings-card profile-card"><div class="profile-icon">G</div><div><strong>NHL fan</strong><span>Настройки Mini App</span></div><span class="chevron">›</span></div>
-        <div class="settings-group"><p class="group-label">ОБЩИЕ</p><div class="settings-card"><div class="setting-copy"><strong>Язык интерфейса</strong><span>Русский</span></div><span class="chevron">›</span></div><div class="settings-card"><div class="setting-copy"><strong>Тёмная тема</strong><span>Всегда включена</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div></div>
+        <div class="settings-group"><p class="group-label">ОБЩИЕ</p><div class="settings-card"><div class="setting-copy"><strong>Язык интерфейса</strong><span>Русский</span></div><span class="chevron">›</span></div><div class="settings-card"><div class="setting-copy"><strong>Тёмная тема</strong><span id="themeModeLabel">Включена</span></div><label class="toggle"><input id="themeToggle" type="checkbox" checked><span></span></label></div></div>
         <div class="settings-group"><p class="group-label">УВЕДОМЛЕНИЯ</p><div class="settings-card"><div class="setting-copy"><strong>Мои команды</strong><span>Новости и результаты</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div><div class="settings-card"><div class="setting-copy"><strong>Ежедневный дайджест</strong><span>09:00 по Москве</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div></div>
         <p class="settings-note">Настройки сохранятся в профиле мессенджера.<br>Сейчас это демонстрационный режим.</p>
       </section>

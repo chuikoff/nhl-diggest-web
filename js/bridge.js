@@ -64,14 +64,55 @@
     return 'browser';
   }
 
+  function normalizeTheme(value) {
+    if (typeof value !== 'string') return null;
+    const theme = value.toLowerCase();
+    if (theme === 'light' || theme === 'day') return 'light';
+    if (theme === 'dark' || theme === 'night') return 'dark';
+    return null;
+  }
+
+  function detectTheme(source) {
+    if (!source) return null;
+    const direct = normalizeTheme(source.colorScheme || source.theme || source.appearance);
+    if (direct) return direct;
+    const params = source.themeParams || source.theme_params || {};
+    const paramTheme = normalizeTheme(params.colorScheme || params.color_scheme || params.theme);
+    if (paramTheme) return paramTheme;
+    // A light background is a useful fallback for bridges that expose only colors.
+    const background = params.bg_color || params.bgColor;
+    if (typeof background === 'string' && /^#?[0-9a-f]{6}$/i.test(background)) {
+      const hex = background.replace('#', '');
+      const rgb = [0, 2, 4].map(index => parseInt(hex.slice(index, index + 2), 16));
+      const luminance = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+      return luminance > 0.62 ? 'light' : 'dark';
+    }
+    return null;
+  }
+
+  function setHostColors(theme, env) {
+    const dark = theme !== 'light';
+    const header = dark ? '#0c111b' : '#f5f7fb';
+    const background = dark ? '#080d15' : '#eef2f7';
+    const tg = window.Telegram?.WebApp;
+    const max = window.WebApp;
+    if (env === 'telegram' && tg) {
+      tg.setHeaderColor?.(header);
+      tg.setBackgroundColor?.(background);
+    }
+    if (env === 'max' && max) {
+      max.setHeaderColor?.(header);
+      max.setBackgroundColor?.(background);
+    }
+  }
+
   function initTelegram() {
     const tg = window.Telegram?.WebApp;
     if (!tg) return false;
     try {
       tg.ready();
       tg.expand?.();
-      tg.setHeaderColor?.('#0c111b');
-      tg.setBackgroundColor?.('#080d15');
+      setHostColors('dark', 'telegram');
       return true;
     } catch (err) {
       console.warn('[NHL Diggest] Telegram WebApp init failed:', err);
@@ -109,8 +150,28 @@
       // Browser preview stays usable even if Max CDN failed (initMax returns false).
     }
 
+    const host = env === 'telegram' ? window.Telegram?.WebApp : env === 'max' ? window.WebApp : null;
+    const initialTheme = detectTheme(host) || 'dark';
+    const themeListeners = new Set();
+    const applyTheme = theme => {
+      const nextTheme = normalizeTheme(theme) || 'dark';
+      const changed = document.documentElement.dataset.theme !== nextTheme;
+      document.documentElement.dataset.theme = nextTheme;
+      setHostColors(nextTheme, env);
+      if (changed) themeListeners.forEach(listener => listener(nextTheme));
+      return nextTheme;
+    };
     document.documentElement.dataset.messenger = env;
+    document.documentElement.dataset.theme = initialTheme;
     if (document.body) document.body.dataset.messenger = env;
+    setHostColors(initialTheme, env);
+
+    const subscribeToHostTheme = () => {
+      ['themeChanged', 'theme_changed'].forEach(eventName => {
+        try { host?.onEvent?.(eventName, () => applyTheme(detectTheme(host) || initialTheme)); } catch { /* optional host API */ }
+      });
+    };
+    subscribeToHostTheme();
 
     window.NHL_BRIDGE = {
       env,
@@ -118,6 +179,10 @@
       isTelegram: env === 'telegram',
       isMax: env === 'max',
       isBrowser: env === 'browser',
+      theme: initialTheme,
+      getTheme: () => detectTheme(host) || initialTheme,
+      applyTheme,
+      subscribeTheme: listener => { themeListeners.add(listener); return () => themeListeners.delete(listener); },
       telegram: window.Telegram?.WebApp || null,
       max: window.WebApp && typeof window.WebApp.ready === 'function' ? window.WebApp : null
     };
