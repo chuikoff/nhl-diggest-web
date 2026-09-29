@@ -16,6 +16,8 @@
     standingsNote: '',
     statsGroup: 'skaters',
     statsBoard: 'points',
+    alltimeGroup: 'skaters',
+    alltimeBoard: 'points',
     loading: false
   };
 
@@ -194,6 +196,20 @@
     if (noteNode) noteNode.textContent = note || '';
   }
 
+
+  function periodGroupsMarkup(events, kind) {
+    const groups = live?.groupByPeriod?.(events) || [{ period: '—', events: events || [] }];
+    if (!events?.length) {
+      return `<p class="empty-detail">${kind === 'goals' ? 'Пока без голов' : 'Нет удалений'}</p>`;
+    }
+    return groups.map(group => {
+      const rows = kind === 'goals'
+        ? group.events.map(event => `<div class="scoring-row"><span class="event-time"><strong>${event.time || ''}</strong></span><span class="event-team">${event.team || ''}</span><div><strong>${event.scorer}</strong><small>${event.assists?.length ? `ассисты: ${event.assists.join(', ')}` : 'без ассистов'}${event.strength ? ` · ${event.strength}` : ''}</small></div></div>`).join('')
+        : group.events.map(item => `<div class="penalty-row"><span>${item.time || ''}</span><strong>${item.team} · ${item.player || ''}</strong><small>${item.minutes ? `${item.minutes} мин · ` : ''}${item.infraction || ''}</small></div>`).join('');
+      return `<div class="period-block"><div class="period-heading">${group.period}</div><div class="${kind === 'goals' ? 'scoring-list' : 'penalty-list'} period-events">${rows}</div></div>`;
+    }).join('');
+  }
+
   function detailTeamMarkup(team) {
     return `<div class="detail-team"><img class="detail-logo" src="${team.logo}" alt="${team.name} logo" onerror="this.style.display='none'"><strong>${team.name}</strong><span>${team.nick}</span></div>`;
   }
@@ -227,13 +243,13 @@
       </div>
       ${isScheduled ? `<div class="detail-notice"><strong>Матч ещё не начался</strong><span>Подробная статистика появится после стартового вбрасывания.</span></div>` : `
         <section class="detail-section"><div class="detail-section-title"><h3>Голы</h3><span>${scoring.length}</span></div>
-          <div class="scoring-list">${scoring.map(event => `<div class="scoring-row"><span class="event-time">${event.period}<br><strong>${event.time || ''}</strong></span><span class="event-team">${event.team || ''}</span><div><strong>${event.scorer}</strong><small>${event.assists?.length ? `ассисты: ${event.assists.join(', ')}` : 'без ассистов'}</small></div></div>`).join('') || '<p class="empty-detail">Пока без голов</p>'}</div>
+          <div class="period-groups">${periodGroupsMarkup(scoring, 'goals')}</div>
         </section>
         <section class="detail-section"><div class="detail-section-title"><h3>Командная статистика</h3></div>
           <div class="boxscore-table"><div class="boxscore-head"><span>Команда</span><span>Броски</span><span>Силовые</span><span>Вбрасывания</span><span>Большинство</span></div>${[game.away, game.home].map(team => { const stats = boxscore[team.short] || {}; return `<div class="boxscore-row"><strong><img src="${team.logo}" alt="">${team.short}</strong><span>${stats.shots ?? '—'}</span><span>${stats.hits ?? '—'}</span><span>${stats.faceoff ?? '—'}</span><span>${stats.powerPlay ?? '—'}</span></div>`; }).join('')}</div>
         </section>
         ${skaters.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Очки в матче</h3><span>${skaters.length}</span></div><div class="penalty-list">${skaters.map(item => `<div class="penalty-row"><span>${item.team}</span><strong>${item.name}</strong><small>${item.goals}G · ${item.assists}A · PIM ${item.pim}${item.toi ? ` · TOI ${item.toi}` : ''}</small></div>`).join('')}</div></section>` : ''}
-        ${penalties.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Удаления</h3><span>${penalties.length}</span></div><div class="penalty-list">${penalties.map(item => `<div class="penalty-row"><span>${item.period} ${item.time || ''}</span><strong>${item.team} · ${item.player || ''}</strong><small>${item.minutes ? `${item.minutes} мин · ` : ''}${item.infraction || ''}</small></div>`).join('')}</div></section>` : ''}
+        ${penalties.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Удаления</h3><span>${penalties.length}</span></div><div class="period-groups">${periodGroupsMarkup(penalties, 'penalties')}</div></section>` : ''}
         ${goalies.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Вратари</h3></div><div class="goalie-lines">${goalies.map(goalie => `<div class="goalie-line"><span class="line-team">${teamByShort[goalie.team]?.short || goalie.team}</span><strong>${goalie.name}</strong><span>${goalie.saves}${goalie.sv ? ` · SV% ${goalie.sv}` : ''}${goalie.toi ? ` · ${goalie.toi}` : ''}</span></div>`).join('')}</div></section>` : ''}
       `}`;
   }
@@ -320,9 +336,75 @@
     }
   }
 
+
+  function renderAlltimeTabs() {
+    const groupTabs = $('#alltimeGroupTabs');
+    const boardTabs = $('#alltimeBoardTabs');
+    if (!groupTabs || !boardTabs || !live) return;
+    const groups = [
+      { id: 'skaters', label: 'Скейттеры' },
+      { id: 'goalies', label: 'Вратари' }
+    ];
+    groupTabs.innerHTML = groups.map(group =>
+      `<button class="segment ${state.alltimeGroup === group.id ? 'is-selected' : ''}" data-alltime-group="${group.id}">${group.label}</button>`
+    ).join('');
+    const boards = state.alltimeGroup === 'goalies' ? live.CAREER_GOALIE_BOARDS : live.CAREER_SKATER_BOARDS;
+    if (!boards.some(board => board.id === state.alltimeBoard)) {
+      state.alltimeBoard = boards[0].id;
+    }
+    boardTabs.innerHTML = boards.map(board =>
+      `<button class="segment ${state.alltimeBoard === board.id ? 'is-selected' : ''}" data-alltime-board="${board.id}">${board.label}</button>`
+    ).join('');
+  }
+
+  function renderAlltime(players = [], note = '') {
+    const list = $('#alltimeList');
+    if (!list) return;
+    if (!players.length) {
+      list.innerHTML = `<div class="empty-state"><strong>Нет данных</strong><span>Карьерные лидеры по этой категории пока недоступны.</span></div>`;
+    } else if (state.alltimeGroup === 'goalies') {
+      list.innerHTML = players.map((player, index) => `<div class="leader-card goalie-card">
+        <span class="player-rank">${String(index + 1).padStart(2, '0')}</span>
+        <div class="player-avatar goalie-avatar">${(player.name || '?').split(' ').map(part => part[0]).join('').slice(0, 2)}</div>
+        <div class="player-copy"><strong>${player.name}</strong><span>${player.team || 'NHL'} · G</span></div>
+        <div class="player-stat"><strong>${player.value ?? '—'}</strong><span>${state.alltimeBoard}</span></div>
+      </div>`).join('');
+    } else {
+      list.innerHTML = players.map((player, index) => `<div class="leader-card">
+        <span class="player-rank">${String(index + 1).padStart(2, '0')}</span>
+        <div class="player-avatar">${(player.name || '?').split(' ').map(part => part[0]).join('').slice(0, 2)}</div>
+        <div class="player-copy"><strong>${player.name}</strong><span>${player.team || 'NHL'} · ${player.position || 'SK'}</span></div>
+        <div class="player-stat"><strong>${player.value ?? '—'}</strong><span>${state.alltimeBoard}</span></div>
+      </div>`).join('');
+    }
+    const noteNode = $('#alltimeNote');
+    if (noteNode) noteNode.textContent = note || '';
+  }
+
+  async function loadAlltimeLive() {
+    renderAlltimeTabs();
+    const list = $('#alltimeList');
+    if (list) list.innerHTML = `<div class="empty-state"><strong>Загрузка…</strong><span>Карьерные лидеры NHL</span></div>`;
+    if (!live?.loadCareerBoard) {
+      renderAlltime([], 'API недоступен');
+      return;
+    }
+    try {
+      const payload = await live.loadCareerBoard(
+        state.alltimeGroup === 'goalies' ? 'goalies' : 'skaters',
+        state.alltimeBoard
+      );
+      renderAlltime(payload.players || [], payload.note || payload.source || '');
+    } catch (error) {
+      console.warn(error);
+      renderAlltime([], 'ошибка загрузки');
+    }
+  }
+
   $$('.nav-item').forEach(button => button.addEventListener('click', () => {
     showPanel(button.dataset.nav);
     if (button.dataset.nav === 'stats') loadStatsLive();
+    if (button.dataset.nav === 'alltime') loadAlltimeLive();
     if (button.dataset.nav === 'standings') loadStandingsLive();
   }));
 
@@ -344,6 +426,21 @@
     if (!button) return;
     state.statsBoard = button.dataset.statsBoard;
     loadStatsLive();
+  });
+
+  $('#alltimeGroupTabs')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-alltime-group]');
+    if (!button) return;
+    state.alltimeGroup = button.dataset.alltimeGroup;
+    state.alltimeBoard = state.alltimeGroup === 'goalies' ? 'wins' : 'points';
+    loadAlltimeLive();
+  });
+
+  $('#alltimeBoardTabs')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-alltime-board]');
+    if (!button) return;
+    state.alltimeBoard = button.dataset.alltimeBoard;
+    loadAlltimeLive();
   });
 
   $('#gamesList').addEventListener('click', event => {

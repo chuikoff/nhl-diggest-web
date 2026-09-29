@@ -66,6 +66,7 @@ nhl.example.com
    - `site.api.espn.com` scoreboard / summary / standings
    - `site.web.api.espn.com` statistics/byathlete
    - `sports.core.api.espn.com` athlete statistics (hits / blocked shots / goalie metrics)
+   - `sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/leaders` — **all-time / career** boards
 3. **Mock** (`js/mock-data.js`) — только если оба live-источника упали.
 
 ### CORS (проверено 2026-09-29)
@@ -82,12 +83,32 @@ nhl.example.com
 
 «Сегодня» и подпись даты считаются в **Europe/Moscow**. Стрелки грузят расписание на любую дату (`score/{date}`), а время старта форматируется в MSK. Статусы: FUT / LIVE / FINAL (+ метка предсезона при `gameType=1`).
 
-### Статистика
+### Статистика (сезон)
 
-Отдельные доски:
+Отдельная вкладка **Статистика** (сезонные лидеры):
 
 - Скейттеры / новички: очки, голы, передачи, силовые, +/−, штрафы (PIM), блоки, время (TOI)
 - Вратари: GAA, сухие, SV%, победы
+
+Источники сезона: NHL `/v1/skater-stats-leaders/{season}/{gameType}` и `/v1/goalie-stats-leaders/...`, fallback ESPN `site.web.api` byathlete + `sports.core` athlete statistics.
+
+### За всё время (карьера)
+
+Отдельная нижняя вкладка **«За всё время»** (all-time / career), не смешивается с сезонной:
+
+- Скейттеры: очки, голы, передачи, штрафы (PIM)
+- Вратари: победы, сухие (SO); GAA и SV% считаются по карьерным splits топ-победителей (мин. ~200 игр)
+- Hits / +/− / blocks / TOI в ESPN career leaders **нет** — доски не показываем
+
+Endpoint (CORS `*`):
+
+- `GET https://sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/leaders?limit=15`
+- Athlete resolve: `.../athletes/{id}` (+ optional team `$ref`)
+- GAA/SV%: `.../athletes/{id}/statistics/0`
+
+### Детали матча
+
+Голы и удаления группируются **по периодам** (P1 / P2 / P3 / OT / SO) из NHL landing `summary.scoring|penalties` или ESPN `summary.plays`.
 
 Логотипы: ESPN CDN PNG (`a.espncdn.com/i/teamlogos/nhl/500/{slug}.png`), slug-исключения как в боте (`LAK→la`, `SJS→sj`, `UTA→utah`, …).
 

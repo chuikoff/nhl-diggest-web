@@ -633,7 +633,7 @@
       const label = desc.periodType === 'OT' ? 'OT' : desc.periodType === 'SO' ? 'SO' : `${desc.number || ''}`.trim();
       (period.goals || []).forEach(goal => {
         scoring.push({
-          period: label || '—',
+          period: careerPeriodLabel(label || desc.number || '—'),
           time: goal.timeInPeriod || '',
           team: loc(goal.teamAbbrev).toUpperCase(),
           scorer: playerName(goal.firstName, goal.lastName),
@@ -645,13 +645,13 @@
     const penalties = [];
     (summary.penalties || []).forEach(period => {
       const desc = period.periodDescriptor || {};
-      const label = `${desc.number || ''}`;
+      const label = desc.periodType === 'OT' ? 'OT' : desc.periodType === 'SO' ? 'SO' : `${desc.number || ''}`;
       (period.penalties || []).forEach(pen => {
         const who = pen.firstName || pen.lastName
           ? playerName(pen.firstName, pen.lastName)
           : loc(pen.committedByPlayer) || loc(pen.descKey);
         penalties.push({
-          period: label,
+          period: careerPeriodLabel(label || desc.number || '—'),
           time: pen.timeInPeriod || '',
           team: loc(pen.teamAbbrev || pen.committedByTeam).toUpperCase(),
           player: who,
@@ -718,7 +718,7 @@
       const text = play.text || '';
       const teamId = String(play.team?.id || '');
       return {
-        period: play.period?.displayValue || play.period?.number || '',
+        period: careerPeriodLabel(play.period?.displayValue || play.period?.number || ''),
         time: play.clock?.displayValue || '',
         team: teamId,
         scorer: scorer?.athlete?.displayName || text.split(' Goal')[0] || text,
@@ -795,7 +795,7 @@
       const typeText = String(play.type?.text || play.type?.abbreviation || '');
       if (!/penalt/i.test(typeText) && !/penalty/i.test(play.text || '')) return;
       penalties.push({
-        period: play.period?.displayValue || '',
+        period: careerPeriodLabel(play.period?.displayValue || play.period?.number || ''),
         time: play.clock?.displayValue || '',
         team: teamIdToAbbrev[String(play.team?.id)] || '',
         player: (play.participants || [])[0]?.athlete?.displayName || '',
@@ -814,6 +814,167 @@
     };
   }
 
+
+  // All-time / career leaders (ESPN core leaders; CORS *).
+  // Available categories: G, A, PTS, PIM, W, SO, GP.
+  // GAA / SV% are derived from career stats of top win leaders (min GP).
+  const CAREER_SKATER_BOARDS = [
+    { id: 'points', label: 'Очки', abbr: 'PTS' },
+    { id: 'goals', label: 'Голы', abbr: 'G' },
+    { id: 'assists', label: 'Передачи', abbr: 'A' },
+    { id: 'pim', label: 'Штрафы', abbr: 'PIM' }
+  ];
+
+  const CAREER_GOALIE_BOARDS = [
+    { id: 'wins', label: 'Победы', abbr: 'W' },
+    { id: 'shutouts', label: 'Сухие', abbr: 'SO' },
+    { id: 'gaa', label: 'GAA', derived: 'avgGoalsAgainst', format: formatGaa, asc: true },
+    { id: 'sv', label: 'SV%', derived: 'savePct', format: formatSv, asc: false }
+  ];
+
+  function careerPeriodLabel(raw) {
+    const text = String(raw ?? '').trim();
+    if (!text) return '—';
+    const upper = text.toUpperCase();
+    if (/\bOT\b|OVERTIME/.test(upper)) return 'OT';
+    if (/\bSO\b|SHOOTOUT/.test(upper)) return 'SO';
+    const num = Number((text.match(/(\d+)/) || [])[1]);
+    if (Number.isFinite(num) && num > 0) return `P${num}`;
+    return text;
+  }
+
+  function groupByPeriod(events) {
+    const order = [];
+    const buckets = new Map();
+    (events || []).forEach(event => {
+      const key = careerPeriodLabel(event.period);
+      if (!buckets.has(key)) {
+        buckets.set(key, []);
+        order.push(key);
+      }
+      buckets.get(key).push({ ...event, period: key });
+    });
+    const rank = key => {
+      if (key === 'OT') return 50;
+      if (key === 'SO') return 60;
+      const n = Number((String(key).match(/(\d+)/) || [])[1]);
+      return Number.isFinite(n) ? n : 40;
+    };
+    order.sort((a, b) => rank(a) - rank(b) || String(a).localeCompare(String(b)));
+    return order.map(period => ({ period, events: buckets.get(period) }));
+  }
+
+  async function resolveAthleteLeader(leader) {
+    const athRef = (leader.athlete?.$ref || '').replace('http://', 'https://');
+    const athlete = athRef ? await fetchJson(athRef) : {};
+    let teamAbbr = '';
+    let teamName = '';
+    const teamRef = (athlete.team?.$ref || leader.team?.$ref || '').replace('http://', 'https://');
+    if (teamRef) {
+      try {
+        const team = await fetchJson(teamRef);
+        teamAbbr = String(team.abbreviation || '').toUpperCase();
+        teamName = team.shortDisplayName || team.displayName || teamAbbr;
+      } catch { /* team optional for retired players */ }
+    }
+    return {
+      name: athlete.displayName || athlete.fullName || '—',
+      team: teamName || teamAbbr,
+      abbrev: teamAbbr,
+      position: (athlete.position || {}).abbreviation || '',
+      headshot: athlete.headshot?.href || '',
+      athleteId: athlete.id || '',
+      raw: leader.displayValue ?? leader.value
+    };
+  }
+
+  async function espnCareerLeaders(limit = 15) {
+    return cached('espn:career-leaders', async () => {
+      const data = await fetchJson(`${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/leaders?limit=${limit}`);
+      return data.categories || [];
+    });
+  }
+
+  function findCareerCategory(categories, abbr) {
+    const target = String(abbr || '').toUpperCase();
+    return (categories || []).find(item => String(item.abbreviation || '').toUpperCase() === target)
+      || (categories || []).find(item => String(item.displayName || '').toUpperCase() === target);
+  }
+
+  async function loadCareerBoard(group, boardId) {
+    const key = `career:${group}:${boardId}`;
+    return cached(key, async () => {
+      const categories = await espnCareerLeaders(15);
+      if (group === 'goalies') {
+        const board = CAREER_GOALIE_BOARDS.find(item => item.id === boardId) || CAREER_GOALIE_BOARDS[0];
+        if (board.derived) {
+          const winsCat = findCareerCategory(categories, 'W');
+          const seeds = (winsCat?.leaders || []).slice(0, 20);
+          const rows = [];
+          for (const leader of seeds) {
+            const base = await resolveAthleteLeader(leader);
+            if (!base.athleteId) continue;
+            try {
+              const stats = await fetchJson(
+                `${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/athletes/${base.athleteId}/statistics/0?lang=en`
+              );
+              const cats = stats?.splits?.categories || [];
+              let value = null;
+              let games = null;
+              for (const cat of cats) {
+                for (const stat of cat.stats || []) {
+                  if (stat.name === board.derived) value = stat.displayValue ?? stat.value;
+                  if (stat.name === 'games') games = Number(stat.value);
+                }
+              }
+              if (value == null) continue;
+              if (Number.isFinite(games) && games < 200) continue;
+              rows.push({
+                ...base,
+                position: 'G',
+                value: board.format ? board.format(value) : value,
+                sortValue: Number(String(value).replace(/^0/, '') || value)
+              });
+            } catch { /* skip athlete */ }
+          }
+          rows.sort((a, b) => board.asc
+            ? (a.sortValue - b.sortValue)
+            : (b.sortValue - a.sortValue));
+          return {
+            source: 'espn',
+            note: 'карьера · ESPN (мин. 200 игр)',
+            players: rows.slice(0, 15).map(({ sortValue, ...player }) => player)
+          };
+        }
+        const category = findCareerCategory(categories, board.abbr);
+        const leaders = (category?.leaders || []).slice(0, 15);
+        const players = [];
+        for (const leader of leaders) {
+          const base = await resolveAthleteLeader(leader);
+          players.push({
+            ...base,
+            position: 'G',
+            value: board.format ? board.format(base.raw) : base.raw
+          });
+        }
+        return { source: 'espn', note: 'карьера · ESPN all-time', players };
+      }
+
+      const board = CAREER_SKATER_BOARDS.find(item => item.id === boardId) || CAREER_SKATER_BOARDS[0];
+      const category = findCareerCategory(categories, board.abbr);
+      const leaders = (category?.leaders || []).slice(0, 15);
+      const players = [];
+      for (const leader of leaders) {
+        const base = await resolveAthleteLeader(leader);
+        players.push({
+          ...base,
+          value: base.raw
+        });
+      }
+      return { source: 'espn', note: 'карьера · ESPN all-time', players };
+    });
+  }
+
   window.NHL_LIVE = {
     mskDateKey,
     shiftDate,
@@ -822,9 +983,14 @@
     loadStandings,
     loadBoard,
     loadRookies,
+    loadCareerBoard,
     gameDetail,
+    groupByPeriod,
+    periodLabel: careerPeriodLabel,
     SKATER_BOARDS,
     GOALIE_BOARDS,
+    CAREER_SKATER_BOARDS,
+    CAREER_GOALIE_BOARDS,
     clearCache: () => cache.clear()
   };
 })();

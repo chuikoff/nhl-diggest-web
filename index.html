@@ -79,11 +79,19 @@
       </section>
 
       <section class="panel" data-panel="stats" aria-labelledby="statsTitle">
-        <div class="section-heading"><div><p class="eyebrow accent">LEAGUE LEADERS</p><h2 id="statsTitle">Статистика</h2></div><span class="pill">NHL</span></div>
+        <div class="section-heading"><div><p class="eyebrow accent">LEAGUE LEADERS</p><h2 id="statsTitle">Статистика</h2></div><span class="pill">СЕЗОН</span></div>
         <div class="segmented" id="statsGroupTabs" role="tablist" aria-label="Группы статистики"></div>
         <div class="segmented stats-boards" id="statsBoardTabs" role="tablist" aria-label="Показатели"></div>
         <p class="panel-note" id="statsNote"></p>
         <div id="statsList" class="leader-list"></div>
+      </section>
+
+      <section class="panel" data-panel="alltime" aria-labelledby="alltimeTitle">
+        <div class="section-heading"><div><p class="eyebrow accent">ALL-TIME · CAREER</p><h2 id="alltimeTitle">За всё время</h2></div><span class="pill">КАРЬЕРА</span></div>
+        <div class="segmented" id="alltimeGroupTabs" role="tablist" aria-label="Группы карьеры"></div>
+        <div class="segmented stats-boards" id="alltimeBoardTabs" role="tablist" aria-label="Показатели карьеры"></div>
+        <p class="panel-note" id="alltimeNote"></p>
+        <div id="alltimeList" class="leader-list"></div>
       </section>
 
       <section class="panel" data-panel="settings" aria-labelledby="settingsTitle">
@@ -91,7 +99,7 @@
         <div class="settings-card profile-card"><div class="profile-icon">G</div><div><strong>NHL fan</strong><span>Настройки Mini App</span></div><span class="chevron">›</span></div>
         <div class="settings-group"><p class="group-label">ОБЩИЕ</p><div class="settings-card"><div class="setting-copy"><strong>Язык интерфейса</strong><span>Русский</span></div><span class="chevron">›</span></div><div class="settings-card"><div class="setting-copy"><strong>Тёмная тема</strong><span id="themeModeLabel">Включена</span></div><label class="toggle"><input id="themeToggle" type="checkbox" checked><span></span></label></div></div>
         <div class="settings-group"><p class="group-label">УВЕДОМЛЕНИЯ</p><div class="settings-card"><div class="setting-copy"><strong>Мои команды</strong><span>Новости и результаты</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div><div class="settings-card"><div class="setting-copy"><strong>Ежедневный дайджест</strong><span>09:00 по Москве</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div></div>
-        <p class="settings-note">Данные NHL: api-web.nhle.com (если CORS позволит) или ESPN.<br>TG + Max bridge сохранён. Имена команд/игроков — на английском.</p>
+        <p class="settings-note">Данные NHL: api-web.nhle.com (если CORS позволит) или ESPN.<br>Карьера: ESPN all-time leaders. TG + Max bridge сохранён.<br>Имена команд/игроков — на английском.</p>
       </section>
     </main>
 
@@ -99,6 +107,7 @@
       <button class="nav-item is-active" data-nav="results"><span class="nav-icon">▣</span><span>Результаты</span></button>
       <button class="nav-item" data-nav="standings"><span class="nav-icon">☷</span><span>Турнирная</span></button>
       <button class="nav-item" data-nav="stats"><span class="nav-icon">⌁</span><span>Статистика</span></button>
+      <button class="nav-item" data-nav="alltime"><span class="nav-icon">∞</span><span>За всё время</span></button>
       <button class="nav-item" data-nav="settings"><span class="nav-icon">⚙</span><span>Настройки</span></button>
     </nav>
   </div>
