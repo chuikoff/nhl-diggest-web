@@ -335,10 +335,10 @@
     return 'individual';
   }
 
-  // Curated national medals/appearances + NHL All-Star supplements for well-known players.
+  // Curated NATIONAL medals + sparse All-Star / KHL Gagarin fallbacks only.
+  // Stanley Cup comes from live NHL landing awards and/or assets/nhl-trophies.json (all nationalities).
   // Keyed by NHL playerId; optional `names` for ESPN-only lookups.
-  // National years are calendar years; club/individual NHL seasons use labels like 2017/18.
-  // AHL Calder Cup omitted (unreliable). KHL Gagarin Cup kept via curated + API name match.
+  // AHL Calder Cup omitted. KHL Gagarin Cup kept via curated + API name match.
   const CURATED_PLAYER_TROPHIES = {
     '8471214': { // Alexander Ovechkin
       names: ['alexander ovechkin', 'alex ovechkin'],
@@ -353,7 +353,6 @@
         { key: 'u18', medal: 'bronze', seasons: ['2003'] }
       ],
       club: [
-        { key: 'stanley', seasons: ['2017/18'] }
       ],
       individual: [
         { name: 'NHL First All-Star Team', seasons: ['2005/06', '2006/07', '2007/08', '2008/09', '2009/10', '2012/13', '2014/15', '2018/19'] },
@@ -373,7 +372,6 @@
         { key: 'u18', medal: 'bronze', seasons: ['2003'] }
       ],
       club: [
-        { key: 'stanley', seasons: ['2008/09', '2015/16', '2016/17'] }
       ],
       individual: []
     },
@@ -410,7 +408,6 @@
         { key: 'wjc', medal: 'bronze', seasons: ['2013', '2014'] }
       ],
       club: [
-        { key: 'stanley', seasons: ['2019/20', '2020/21'] },
         { key: 'gagarin', seasons: ['2010/11'] }
       ],
       individual: []
@@ -425,7 +422,6 @@
         { key: 'u18', medal: 'bronze', seasons: ['2011'] }
       ],
       club: [
-        { key: 'stanley', seasons: ['2019/20', '2020/21'] }
       ],
       individual: []
     },
@@ -466,7 +462,6 @@
         { key: 'u18', medal: 'bronze', seasons: ['2015'] }
       ],
       club: [
-        { key: 'stanley', seasons: ['2019/20', '2020/21'] }
       ],
       individual: []
     },
@@ -674,21 +669,92 @@
     return name;
   }
 
-  function buildPlayerTrophies({ awardEntries = [], nhlId = '', name = '' } = {}) {
+  let trophyIndexPromise = null;
+  let trophyIndexCache = null;
+
+  function trophyIndexUrl() {
+    try {
+      const base = document.currentScript?.src || window.location.href;
+      return new URL('../assets/nhl-trophies.json', base.includes('/js/') ? base : './js/api.js').href;
+    } catch {
+      return './assets/nhl-trophies.json';
+    }
+  }
+
+  async function loadTrophyIndex() {
+    if (trophyIndexCache) return trophyIndexCache;
+    if (trophyIndexPromise) return trophyIndexPromise;
+    trophyIndexPromise = (async () => {
+      try {
+        const response = await fetch('./assets/nhl-trophies.json', { cache: 'force-cache' });
+        if (!response.ok) throw new Error(`trophy index ${response.status}`);
+        trophyIndexCache = await response.json();
+      } catch (error) {
+        console.warn('[NHL Diggest] trophy index load failed', error);
+        trophyIndexCache = {
+          stanleyByPlayerId: {},
+          stanleyByName: {},
+          teamTrophiesByAbbrev: {},
+          retiredNumbersByAbbrev: {}
+        };
+      }
+      return trophyIndexCache;
+    })();
+    return trophyIndexPromise;
+  }
+
+  function lookupStanleySeasons(index, nhlId, name) {
+    if (!index) return [];
+    const idKey = nhlId != null && nhlId !== '' ? String(nhlId) : '';
+    const fromId = idKey ? (index.stanleyByPlayerId || {})[idKey] : null;
+    if (fromId?.length) return fromId.slice();
+    const needle = normalizedName(name);
+    if (!needle) return [];
+    const fromName = (index.stanleyByName || {})[needle];
+    return fromName?.length ? fromName.slice() : [];
+  }
+
+  function teamTrophiesForAbbrev(index, abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    return (index?.teamTrophiesByAbbrev || {})[key] || [];
+  }
+
+  function retiredNumbersForAbbrev(index, abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    return (index?.retiredNumbersByAbbrev || {})[key] || [];
+  }
+
+  function buildPlayerTrophies({ awardEntries = [], nhlId = '', name = '', stanleySeasons = [] } = {}) {
     const split = splitAwardEntries(awardEntries);
     const curated = curatedEntryForPlayer(nhlId, name);
     const clubMap = new Map();
     const nationalMap = new Map();
 
+    // Live API awards first (NHL landing Stanley Cup, ESPN individual, etc.)
     split.club.forEach(item => pushTrophy(clubMap, item));
     split.national.forEach(item => pushTrophy(nationalMap, item));
+
+    // Nationality-agnostic Stanley Cup index (NHL records) — fills ESPN CORS path
+    // and any Cup winner missing from landing awards.
+    if (stanleySeasons?.length) {
+      pushTrophy(clubMap, {
+        key: 'stanley',
+        name: 'Кубок Стэнли',
+        seasons: stanleySeasons,
+        seasonMode: 'raw'
+      });
+    }
+
+    // Curated: national medals always useful (APIs omit them); club only Gagarin;
+    // individual All-Star only when API left those empty.
     if (curated) {
       expandCuratedList(curated.club, 'club').forEach(item => pushTrophy(clubMap, item));
       expandCuratedList(curated.national, 'national').forEach(item => pushTrophy(nationalMap, item));
     }
 
     const individualEntries = split.individual.map(item => ({ name: item.name, seasons: item.seasons }));
-    if (curated?.individual?.length) {
+    const hasAllStar = individualEntries.some(item => /all[-\s]?star/i.test(item.name || ''));
+    if (curated?.individual?.length && !hasAllStar) {
       curated.individual.forEach(item => {
         if (!item?.name) return;
         individualEntries.push({
@@ -703,6 +769,66 @@
       national: finalizeTrophyMap(nationalMap, { national: true }),
       individual: normalizeAwards(individualEntries)
     };
+  }
+
+  function formatMoneyUsd(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num) || num <= 0) return '';
+    if (num >= 1_000_000) {
+      const m = num / 1_000_000;
+      return `$${m % 1 === 0 ? m.toFixed(0) : m.toFixed(2)}M`;
+    }
+    if (num >= 1_000) return `$${Math.round(num / 1000)}K`;
+    return `$${Math.round(num)}`;
+  }
+
+  function mapNhlContract(landing = {}) {
+    const raw = landing.contract || landing.playerContract || landing.currentContract || null;
+    if (!raw || typeof raw !== 'object') return null;
+    const capHit = raw.capHit ?? raw.avgAnnual ?? raw.aav ?? raw.averageAnnualValue ?? raw.salary;
+    const signed = raw.signingDate || raw.signedDate || raw.dateSigned || raw.contractSigningDate || '';
+    const expiry = raw.expirationYear || raw.expiryYear || raw.contractExpiry || raw.throughSeason
+      || raw.seasonEnd || raw.endSeason || raw.expirationSeason || '';
+    const through = raw.throughSeasonLabel || (expiry
+      ? (String(expiry).length === 8
+        ? `${String(expiry).slice(0, 4)}/${String(expiry).slice(6)}`
+        : String(expiry))
+      : '');
+    const out = {
+      capHit: formatMoneyUsd(capHit) || (typeof capHit === 'string' ? capHit : ''),
+      signed: signed ? String(signed).slice(0, 10) : '',
+      through: through || ''
+    };
+    return out.capHit || out.signed || out.through ? out : null;
+  }
+
+  async function loadEspnContract(espnId) {
+    if (!espnId) return null;
+    try {
+      const data = await fetchJson(`${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/athletes/${espnId}/contracts?lang=en&region=us`);
+      const items = data?.items || [];
+      if (!items.length) return null;
+      let contract = items[0];
+      const ref = (contract?.$ref || '').replace('http://', 'https://');
+      if (ref) {
+        try { contract = await fetchJson(ref); } catch { /* keep stub */ }
+      }
+      const capHit = contract?.capHit || contract?.averageYearly || contract?.salary || contract?.value;
+      const signed = contract?.signingDate || contract?.dateSigned || contract?.startDate || '';
+      const end = contract?.endDate || contract?.expirationDate || contract?.throughDate || '';
+      const seasons = contract?.seasons || contract?.season || '';
+      let through = '';
+      if (seasons) through = String(Array.isArray(seasons) ? seasons[seasons.length - 1] : seasons);
+      else if (end) through = String(end).slice(0, 10);
+      const out = {
+        capHit: formatMoneyUsd(capHit) || (typeof capHit === 'string' ? capHit : ''),
+        signed: signed ? String(signed).slice(0, 10) : '',
+        through
+      };
+      return out.capHit || out.signed || out.through ? out : null;
+    } catch {
+      return null;
+    }
   }
 
 
@@ -1807,6 +1933,62 @@
 
   // --- Team + Player screens (NHL first, ESPN CORS fallback) ---
 
+  // NHL salary ceiling (USD). Used when a payroll figure is available to compute space.
+  // Soft-empty when APIs omit team cap hit — public NHL/ESPN payloads currently do.
+  const NHL_SALARY_CAP = {
+    '20252026': 95_500_000,
+    '20262027': 104_000_000
+  };
+
+  function currentSalaryCapCeiling() {
+    const season = String(window.NHL_SEASON || window.NHL_PREV_SEASON || '20262027');
+    return NHL_SALARY_CAP[season] || NHL_SALARY_CAP['20262027'] || 95_500_000;
+  }
+
+  function mapTeamSalaryCap(raw = {}) {
+    const payroll = Number(
+      raw.capHit ?? raw.teamCapHit ?? raw.payroll ?? raw.salaryCapHit ?? raw.totalCapHit ?? raw.capHitTotal
+    );
+    const spaceRaw = raw.capSpace ?? raw.salaryCapSpace ?? raw.space;
+    const ceiling = Number(raw.salaryCap ?? raw.capCeiling ?? raw.upperLimit) || currentSalaryCapCeiling();
+    const space = Number.isFinite(Number(spaceRaw))
+      ? Number(spaceRaw)
+      : (Number.isFinite(payroll) ? ceiling - payroll : NaN);
+    if (!Number.isFinite(payroll) && !Number.isFinite(space)) return null;
+    return {
+      capHit: Number.isFinite(payroll) ? formatMoneyUsd(payroll) : '',
+      capSpace: Number.isFinite(space) ? formatMoneyUsd(space) : '',
+      ceiling: formatMoneyUsd(ceiling),
+      rawCapHit: Number.isFinite(payroll) ? payroll : null,
+      rawCapSpace: Number.isFinite(space) ? space : null
+    };
+  }
+
+  async function loadTeamSalaryCap(abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    // Try ESPN core team payload fields if ever populated; soft-empty otherwise.
+    try {
+      const slug = espnTeamSlug(key);
+      const teamPayload = await fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/teams/${slug}`).catch(() => null);
+      const team = teamPayload?.team || {};
+      const mapped = mapTeamSalaryCap(team.record || team.franchise || team);
+      if (mapped) return mapped;
+    } catch { /* soft */ }
+    return null;
+  }
+
+  async function enrichTeamExtras(team) {
+    if (!team) return team;
+    const index = await loadTrophyIndex();
+    team.trophies = teamTrophiesForAbbrev(index, team.abbrev);
+    team.retiredNumbers = retiredNumbersForAbbrev(index, team.abbrev);
+    if (!team.salaryCap) {
+      team.salaryCap = await loadTeamSalaryCap(team.abbrev).catch(() => null);
+    }
+    return team;
+  }
+
+
   function espnTeamSlug(abbrev) {
     const key = String(abbrev || '').toUpperCase();
     return ESPN_SLUG[key] || key.toLowerCase();
@@ -2067,16 +2249,18 @@
     const key = String(abbrev || '').toUpperCase();
     if (!key) return null;
     return cached(`team:${key}`, async () => {
+      let team = null;
       try {
-        return await loadTeamNhl(key);
+        team = await loadTeamNhl(key);
       } catch (nhlError) {
         try {
-          return await loadTeamEspn(key);
+          team = await loadTeamEspn(key);
         } catch (espnError) {
           console.warn('[NHL Diggest] team load failed', nhlError, espnError);
           return null;
         }
       }
+      return enrichTeamExtras(team);
     });
   }
 
@@ -2177,20 +2361,23 @@
 
   async function loadEspnAwardEntries(espnId, overview = null) {
     const fromOverview = mapEspnOverviewAwards(overview?.awards);
-    if (fromOverview.length) return fromOverview;
-
-    const data = await fetchJson(`${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/athletes/${espnId}/awards`);
-    const items = data?.items || [];
-    const awards = await Promise.all(items.map(async item => {
-      const ref = (item?.$ref || item?.ref || '').replace('http://', 'https://');
-      let award = item;
-      if (ref) {
-        try { award = await fetchJson(ref); } catch { return null; }
-      }
-      const season = espnAwardSeasonLabel(award, ref);
-      return award?.name && season ? { name: award.name, seasons: [season] } : null;
-    }));
-    return awards.filter(Boolean);
+    let fromCore = [];
+    try {
+      const data = await fetchJson(`${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/athletes/${espnId}/awards`);
+      const items = data?.items || [];
+      // Cap parallel fetches — overview usually has the compact list already.
+      const limited = fromOverview.length ? [] : items.slice(0, 40);
+      fromCore = (await Promise.all(limited.map(async item => {
+        const ref = (item?.$ref || item?.ref || '').replace('http://', 'https://');
+        let award = item;
+        if (ref) {
+          try { award = await fetchJson(ref); } catch { return null; }
+        }
+        const season = espnAwardSeasonLabel(award, ref);
+        return award?.name && season ? { name: award.name, seasons: [season] } : null;
+      }))).filter(Boolean);
+    } catch { /* optional */ }
+    return [...fromOverview, ...fromCore];
   }
 
   async function loadEspnAwards(espnId) {
@@ -2427,11 +2614,18 @@
       })),
       ...espnAwardEntries
     ];
+    const trophyIndex = await loadTrophyIndex();
+    const stanleySeasons = lookupStanleySeasons(trophyIndex, landing.playerId || nhlId, name);
     const trophies = buildPlayerTrophies({
       awardEntries: rawAwards,
       nhlId: landing.playerId || nhlId,
-      name
+      name,
+      stanleySeasons
     });
+    let contract = mapNhlContract(landing);
+    if (!contract && espnId) {
+      contract = await loadEspnContract(espnId).catch(() => null);
+    }
 
     return {
       source: 'nhl',
@@ -2457,6 +2651,7 @@
       careerHistory: buildCareerHistory(landing.seasonTotals, isGoalie),
       awards: trophies.individual,
       trophies: { national: trophies.national, club: trophies.club },
+      contract: contract || null,
       flag: resolvePlayerFlag({
         ...landing,
         birthCountry: landing.birthCountry || '',
@@ -2500,7 +2695,15 @@
     const birthPlace = athlete.displayBirthPlace
       || [coreBirth.birthPlace?.city, coreBirth.birthPlace?.state, coreBirth.birthPlace?.country].filter(Boolean).join(', ')
       || '';
-    const trophies = buildPlayerTrophies({ awardEntries, nhlId: '', name });
+    const trophyIndex = await loadTrophyIndex();
+    const stanleySeasons = lookupStanleySeasons(trophyIndex, '', name);
+    const trophies = buildPlayerTrophies({
+      awardEntries,
+      nhlId: '',
+      name,
+      stanleySeasons
+    });
+    const contract = await loadEspnContract(athlete.id || espnId).catch(() => null);
     return {
       source: 'espn',
       nhlId: null,
@@ -2532,6 +2735,7 @@
       careerHistory: buildEspnCareerHistory(historyPayload, position === 'G'),
       awards: trophies.individual,
       trophies: { national: trophies.national, club: trophies.club },
+      contract: contract || null,
       flag: resolvePlayerFlag({
         ...athlete,
         name,

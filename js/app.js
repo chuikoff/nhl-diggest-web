@@ -575,6 +575,49 @@
     return `<section class="detail-section player-trophies-section"><div class="detail-section-title"><h3>Трофеи</h3><span>${total}</span></div><div class="trophy-groups">${groups.join('')}</div></section>`;
   }
 
+  function contractMarkup(contract) {
+    if (!contract || !(contract.capHit || contract.signed || contract.through)) return '';
+    const rows = [
+      ['Cap hit', contract.capHit],
+      ['Подписан', contract.signed],
+      ['До сезона', contract.through]
+    ].filter(([, v]) => v);
+    if (!rows.length) return '';
+    return `<section class="detail-section player-contract-section"><div class="detail-section-title"><h3>Контракт</h3></div>
+      <div class="info-grid">${rows.map(([label, value]) => `<div class="info-row"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}</div>
+    </section>`;
+  }
+
+  function teamTrophiesMarkup(rows = []) {
+    const list = rows || [];
+    if (!list.length) return '';
+    return `<section class="detail-section team-trophies-section"><div class="detail-section-title"><h3>Клубные трофеи</h3><span>${list.length}</span></div><div class="awards-list">${awardRowsMarkup(list)}</div></section>`;
+  }
+
+  function retiredNumbersMarkup(rows = []) {
+    const list = rows || [];
+    if (!list.length) return '';
+    const items = list.map(row => {
+      const num = escapeHtml(String(row.number ?? ''));
+      const name = escapeHtml(row.name || '');
+      return `<div class="retired-row"><span class="retired-number">#${num}</span><strong class="retired-name">${name}</strong></div>`;
+    }).join('');
+    return `<section class="detail-section team-retired-section"><div class="detail-section-title"><h3>Закреплённые номера</h3><span>${list.length}</span></div><div class="retired-list">${items}</div></section>`;
+  }
+
+  function teamSalaryCapMarkup(cap) {
+    if (!cap || !(cap.capHit || cap.capSpace)) return '';
+    const rows = [
+      ['Cap hit команды', cap.capHit],
+      ['Cap space', cap.capSpace],
+      ['Потолок NHL', cap.ceiling]
+    ].filter(([, v]) => v);
+    if (!rows.length) return '';
+    return `<section class="detail-section team-cap-section"><div class="detail-section-title"><h3>Зарплатная капа</h3></div>
+      <div class="info-grid">${rows.map(([label, value]) => `<div class="info-row"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}</div>
+    </section>`;
+  }
+
   async function openTeamDetail(abbrev, seed = {}) {
     const key = String(abbrev || seed.short || '').toUpperCase();
     if (!key) return;
@@ -601,6 +644,9 @@
         </div>
       </div>
       <p class="panel-note">${team.note || team.source || ''}${team.statsNote ? ` · ${team.statsNote}` : ''}</p>
+      ${teamSalaryCapMarkup(team.salaryCap)}
+      ${teamTrophiesMarkup(team.trophies)}
+      ${retiredNumbersMarkup(team.retiredNumbers)}
       <section class="detail-section"><div class="detail-section-title"><h3>Состав</h3><span>${team.roster?.length || 0}</span></div>${rosterGroupMarkup((team.roster || []).map(p => ({ ...p, abbrev: team.abbrev })))}</section>
       ${scheduleListMarkup('Ближайшие', team.schedule?.upcoming || [], 'Нет ближайших матчей', { remindable: true })}
       ${scheduleListMarkup('Недавние', team.schedule?.recent || [], 'Нет завершённых матчей')}
@@ -651,6 +697,7 @@
             .map(([label, value]) => `<div class="info-row"><span>${label}</span><strong>${value}</strong></div>`).join('') || '<p class="empty-detail">Нет биоданных</p>'}
         </div>
       </section>
+      ${contractMarkup(player.contract)}
       ${statsGridMarkup(`Сезон · ${player.seasonLabel || ''}`, player.seasonStats || [])}
       ${statsGridMarkup('Карьера', player.careerStats || [])}
       ${careerHistoryMarkup(player.careerHistory, player.position === 'G')}

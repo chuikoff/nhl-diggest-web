@@ -119,11 +119,17 @@ Endpoint (CORS `*`):
 
 Состав, лидеры статистики и имена в матче кликабельны → экран игрока (фото, флаг страны по `birthCountry`/nationality, био, сезон, карьера).
 
-**Трофеи / награды / флаг на карточке игрока:**
+**Трофеи / награды / флаг / контракт на карточке игрока:**
 - флаг страны: emoji + flagcdn fallback; ISO/IOC коды, ESPN `birthCountry`/`citizenship`, провинции/штаты (`ON`→CA, `NY`→US), парсинг `birthCity` / `City, Country`
-- секция **Трофеи** → **Сборная** (Олимпиада: медали и участие; ЧМ / МЧМ U20 / U18) и **Клубные** (Кубок Стэнли + **Кубок Гагарина** KHL; AHL Calder Cup убран)
-- **Индивидуальные награды**: Hart, Richard, Calder Memorial, … плюс **NHL First/Second All-Star Team** и **All-Star Game** (ESPN overview merge + curated для ветеранов вроде Ovechkin — ESPN исторически отдаёт почти только Second Team)
+- секция **Трофеи** → **Сборная** (Олимпиада: медали и участие; ЧМ / МЧМ U20 / U18) и **Клубные** (Кубок Стэнли для **любого** победителя из NHL landing awards + `assets/nhl-trophies.json` по NHL records; **Кубок Гагарина** KHL; AHL Calder Cup убран). Curated — только sparse fallback (нац. медали / All-Star / Gagarin), не Russian-only Stanley
+- **Индивидуальные награды**: Hart, Richard, Calder… + First/Second All-Star / All-Star Game из ESPN для всех национальностей; curated All-Star только если API пуст
+- **Контракт**: cap hit / дата подписания / до сезона — из NHL landing contract fields или ESPN core `/contracts` (soft empty, если API пуст)
 - пустые группы скрываются; если трофеев нет — мягкий empty state
+
+**На карточке команды:**
+- **Клубные трофеи** по годам: Stanley Cup, Presidents' Trophy, Campbell Bowl, Prince of Wales (из NHL records → `assets/nhl-trophies.json`)
+- **Закреплённые номера** с именем хоноре (Wikipedia NHL retired numbers)
+- **Зарплатная капа** команды (cap hit + cap space / потолок NHL) — soft empty, пока публичные NHL/ESPN payloads не отдают payroll
 
 Назад: кнопка «Назад», **swipe right-to-left** или **свайп от левого края** (как «к результатам»).
 
