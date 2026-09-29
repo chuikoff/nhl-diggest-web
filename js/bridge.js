@@ -173,6 +173,25 @@
     };
     subscribeToHostTheme();
 
+    const openLink = (url, options = {}) => {
+      if (!url || typeof url !== 'string') return false;
+      try {
+        if (env === 'telegram' && typeof window.Telegram?.WebApp?.openLink === 'function') {
+          window.Telegram.WebApp.openLink(url, options?.tryInstantView ? { try_instant_view: true } : undefined);
+          return true;
+        }
+        if (env === 'max' && typeof window.WebApp?.openLink === 'function') {
+          window.WebApp.openLink(url);
+          return true;
+        }
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return true;
+      } catch (err) {
+        console.warn('[NHL Diggest] openLink failed', err);
+        return false;
+      }
+    };
+
     window.NHL_BRIDGE = {
       env,
       ready,
@@ -182,6 +201,7 @@
       theme: initialTheme,
       getTheme: () => detectTheme(host) || initialTheme,
       applyTheme,
+      openLink,
       subscribeTheme: listener => { themeListeners.add(listener); return () => themeListeners.delete(listener); },
       telegram: window.Telegram?.WebApp || null,
       max: window.WebApp && typeof window.WebApp.ready === 'function' ? window.WebApp : null

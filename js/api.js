@@ -683,6 +683,100 @@
     });
   }
 
+
+  function humanizeInfraction(value) {
+    const text = loc(value);
+    if (!text) return '';
+    if (/^[A-Z][A-Za-z/ -]*$/.test(text) && !/[_-]/.test(text)) return text;
+    return text
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, ch => ch.toUpperCase());
+  }
+
+  function nhlCommittedPlayerName(pen) {
+    if (pen?.firstName || pen?.lastName) return playerName(pen.firstName, pen.lastName);
+    const committed = pen?.committedByPlayer;
+    if (committed == null) return '';
+    if (typeof committed === 'string' || typeof committed === 'number') return String(committed);
+    if (committed.firstName || committed.lastName) return playerName(committed.firstName, committed.lastName);
+    return loc(committed.name) || loc(committed);
+  }
+
+  function nhlGoalHighlight(goal) {
+    const share = loc(goal?.highlightClipSharingUrl) || loc(goal?.highlightClipSharingUrlFr);
+    if (share) return { url: share, embed: false, source: 'nhl' };
+    const clipId = goal?.highlightClip || goal?.discreteClip;
+    if (clipId) return { url: `https://www.nhl.com/video/c-${clipId}`, embed: false, source: 'nhl' };
+    return null;
+  }
+
+  function isEspnPenaltyPlay(play) {
+    const type = play?.type || {};
+    if (type.penaltyMinutes != null && type.penaltyMinutes !== '') return true;
+    if (type.penaltyType) return true;
+    const typeText = String(type.text || type.abbreviation || '');
+    if (/penalt/i.test(typeText)) return true;
+    if (/\bpenalty\b/i.test(play?.text || '')) return true;
+    return false;
+  }
+
+  function espnVideoHref(video) {
+    const links = video?.links || {};
+    const source = links.source || {};
+    const pick = item => {
+      if (!item) return '';
+      if (typeof item === 'string' && /^https?:/i.test(item)) return item;
+      if (typeof item === 'object' && item.href && /^https?:/i.test(item.href)) return item.href;
+      return '';
+    };
+    for (const key of ['HD', 'href', 'full', 'mezzanine', 'flash']) {
+      const href = pick(source[key]);
+      if (href && /\.mp4(\?|$)/i.test(href)) return href;
+    }
+    for (const key of ['HD', 'href', 'full', 'mezzanine', 'flash']) {
+      const href = pick(source[key]);
+      if (href) return href;
+    }
+    return pick(links.web) || pick(links.mobile) || '';
+  }
+
+  function attachEspnHighlights(scoring, videos) {
+    const pool = (videos || [])
+      .map(video => {
+        const href = espnVideoHref(video);
+        if (!href) return null;
+        const headline = String(video.headline || video.description || '');
+        if (/game highlights/i.test(headline)) return null;
+        return {
+          headline,
+          nameKey: normalizedName(headline),
+          url: href,
+          embed: /\.mp4(\?|$)/i.test(href),
+          source: 'espn'
+        };
+      })
+      .filter(Boolean);
+    scoring.forEach(goal => {
+      if (goal.highlight) return;
+      const scorerKey = normalizedName(goal.scorer);
+      if (!scorerKey) return;
+      const parts = scorerKey.split(' ').filter(Boolean);
+      const last = parts[parts.length - 1] || '';
+      const idx = pool.findIndex(item => {
+        if (item.nameKey.includes(scorerKey)) return true;
+        if (last.length > 2 && item.nameKey.includes(last) && parts.every(part => part.length < 3 || item.nameKey.includes(part))) {
+          return true;
+        }
+        return last.length > 3 && item.nameKey.includes(last);
+      });
+      if (idx < 0) return;
+      const [match] = pool.splice(idx, 1);
+      goal.highlight = { url: match.url, embed: match.embed, source: match.source };
+    });
+  }
+
   function normalizeNhlDetail(landing, box, game) {
     const summary = landing.summary || {};
     const scoring = [];
@@ -690,18 +784,22 @@
       const desc = period.periodDescriptor || {};
       const label = desc.periodType === 'OT' ? 'OT' : desc.periodType === 'SO' ? 'SO' : `${desc.number || ''}`.trim();
       (period.goals || []).forEach(goal => {
-        scoring.push({
+        const scorer = playerName(goal.firstName, goal.lastName);
+        const entry = {
           period: careerPeriodLabel(label || desc.number || '—'),
           time: goal.timeInPeriod || '',
           team: loc(goal.teamAbbrev).toUpperCase(),
-          scorer: playerName(goal.firstName, goal.lastName),
-          scorerRussian: isRussianPlayer({ ...goal, name: playerName(goal.firstName, goal.lastName) }),
+          scorer,
+          scorerRussian: isRussianPlayer({ ...goal, name: scorer }),
           assists: (goal.assists || []).map(assist => ({
             name: playerName(assist.firstName, assist.lastName),
             isRussian: isRussianPlayer({ ...assist, name: playerName(assist.firstName, assist.lastName) })
           })).filter(assist => assist.name),
           strength: goal.strength || ''
-        });
+        };
+        const highlight = nhlGoalHighlight(goal);
+        if (highlight) entry.highlight = highlight;
+        scoring.push(entry);
       });
     });
     const penalties = [];
@@ -709,9 +807,7 @@
       const desc = period.periodDescriptor || {};
       const label = desc.periodType === 'OT' ? 'OT' : desc.periodType === 'SO' ? 'SO' : `${desc.number || ''}`;
       (period.penalties || []).forEach(pen => {
-        const who = pen.firstName || pen.lastName
-          ? playerName(pen.firstName, pen.lastName)
-          : loc(pen.committedByPlayer) || loc(pen.descKey);
+        const who = nhlCommittedPlayerName(pen);
         penalties.push({
           period: careerPeriodLabel(label || desc.number || '—'),
           time: pen.timeInPeriod || '',
@@ -719,7 +815,7 @@
           player: who,
           playerRussian: isRussianPlayer({ ...pen, name: who }),
           minutes: pen.duration || pen.penaltyMinutes || '',
-          infraction: loc(pen.descKey) || loc(pen.type) || ''
+          infraction: humanizeInfraction(pen.descKey) || humanizeInfraction(pen.type) || ''
         });
       });
     });
@@ -863,23 +959,30 @@
     });
     const penalties = [];
     plays.forEach(play => {
-      const typeText = String(play.type?.text || play.type?.abbreviation || '');
-      if (!/penalt/i.test(typeText) && !/penalty/i.test(play.text || '')) return;
+      if (!isEspnPenaltyPlay(play)) return;
+      const type = play.type || {};
+      const typeText = String(type.text || type.abbreviation || '');
+      const athlete = (play.participants || [])[0]?.athlete || {};
       penalties.push({
         period: careerPeriodLabel(play.period?.displayValue || play.period?.number || ''),
         time: play.clock?.displayValue || '',
         team: teamIdToAbbrev[String(play.team?.id)] || '',
-        player: (play.participants || [])[0]?.athlete?.displayName || '',
-        playerRussian: isRussianPlayer((play.participants || [])[0]?.athlete || ''),
-        minutes: '',
-        infraction: play.text || typeText
+        player: athlete.displayName || '',
+        playerRussian: isRussianPlayer(athlete),
+        minutes: type.penaltyMinutes || '',
+        infraction: humanizeInfraction(typeText) || humanizeInfraction(type.penaltyType) || ''
       });
     });
+    try {
+      attachEspnHighlights(scoring, summary.videos || []);
+    } catch (error) {
+      console.warn('[NHL Diggest] ESPN highlight attach failed', error);
+    }
     return {
       venue: summary.gameInfo?.venue?.fullName || game.venue || '',
       attendance: summary.gameInfo?.attendance ? String(summary.gameInfo.attendance) : '',
       scoring,
-      penalties: penalties.slice(0, 24),
+      penalties,
       boxscore,
       goalies,
       skaters: skaters.slice(0, 16)

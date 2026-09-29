@@ -110,6 +110,10 @@ Endpoint (CORS `*`):
 
 Голы и удаления группируются **по периодам** (P1 / P2 / P3 / OT / SO) из NHL landing `summary.scoring|penalties` или ESPN `summary.plays`.
 
+**Удаления (fix 2026-09-29):** ESPN penalty plays имеют `type.text` = инфракция (`Hooking`, `Interference`, …), а не слово `Penalty`. Детект идёт по `type.penaltyMinutes` / `type.penaltyType`. У NHL имя нарушителя лежит в `committedByPlayer.firstName/lastName` (не на корне penalty-объекта).
+
+**Клипы голов (experimental):** если есть URL — кнопка ▶ у гола. NHL: `highlightClipSharingUrl` (открытие во внешнем WebView). ESPN: mp4 из `summary.videos`, матч по имени скорera в headline; inline `<video>` при `.mp4`, иначе `openLink`. Soft-fail, если клипа нет.
+
 Логотипы: ESPN CDN PNG (`a.espncdn.com/i/teamlogos/nhl/500/{slug}.png`), slug-исключения как в боте (`LAK→la`, `SJS→sj`, `UTA→utah`, …).
 
 Конфиг: `js/config.js` (`NHL_API_BASE`, сезоны). Логика: `js/api.js`. UI: `js/app.js`. TG+Max bridge без изменений (`js/bridge.js`).

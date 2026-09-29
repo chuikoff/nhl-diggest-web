@@ -211,6 +211,14 @@
   }
 
 
+  function highlightButtonMarkup(event) {
+    const highlight = event?.highlight;
+    if (!highlight?.url) return '';
+    const embed = highlight.embed ? '1' : '0';
+    const safeUrl = String(highlight.url).replace(/"/g, '&quot;');
+    return `<button type="button" class="goal-play" data-goal-video="${safeUrl}" data-goal-embed="${embed}" aria-label="Смотреть гол" title="Смотреть гол">▶</button>`;
+  }
+
   function periodGroupsMarkup(events, kind) {
     const groups = live?.groupByPeriod?.(events) || [{ period: '—', events: events || [] }];
     if (!events?.length) {
@@ -218,7 +226,7 @@
     }
     return groups.map(group => {
       const rows = kind === 'goals'
-        ? group.events.map(event => `<div class="scoring-row"><span class="event-time"><strong>${event.time || ''}</strong></span><span class="event-team">${event.team || ''}</span><div><strong>${playerMarkup({ name: event.scorer, isRussian: event.scorerRussian })}</strong><small>${event.assists?.length ? `ассисты: ${assistsMarkup(event.assists)}` : 'без ассистов'}${event.strength ? ` · ${event.strength}` : ''}</small></div></div>`).join('')
+        ? group.events.map(event => `<div class="scoring-row"><span class="event-time"><strong>${event.time || ''}</strong></span><span class="event-team">${event.team || ''}</span><div class="scoring-copy"><div class="scoring-main"><strong>${playerMarkup({ name: event.scorer, isRussian: event.scorerRussian })}</strong>${highlightButtonMarkup(event)}</div><small>${event.assists?.length ? `ассисты: ${assistsMarkup(event.assists)}` : 'без ассистов'}${event.strength ? ` · ${event.strength}` : ''}</small><div class="goal-video-slot" hidden></div></div></div>`).join('')
         : group.events.map(item => `<div class="penalty-row"><span>${item.time || ''}</span><strong>${item.team} · ${playerMarkup({ name: item.player || '', isRussian: item.playerRussian })}</strong><small>${item.minutes ? `${item.minutes} мин · ` : ''}${item.infraction || ''}</small></div>`).join('');
       return `<div class="period-block"><div class="period-heading">${group.period}</div><div class="${kind === 'goals' ? 'scoring-list' : 'penalty-list'} period-events">${rows}</div></div>`;
     }).join('');
@@ -467,7 +475,58 @@
       openGameDetail(card.dataset.gameId);
     }
   });
-  $('#gameDetailBack').addEventListener('click', () => showPanel('results'));
+  function closeGoalVideos(exceptSlot = null) {
+    $$('.goal-video-slot').forEach(slot => {
+      if (exceptSlot && slot === exceptSlot) return;
+      slot.hidden = true;
+      slot.innerHTML = '';
+    });
+    $$('.goal-play.is-open').forEach(btn => {
+      if (exceptSlot && btn.closest('.scoring-row')?.querySelector('.goal-video-slot') === exceptSlot) return;
+      btn.classList.remove('is-open');
+    });
+  }
+
+  function toggleGoalVideo(button) {
+    const url = button.getAttribute('data-goal-video') || '';
+    if (!url) return;
+    const embed = button.getAttribute('data-goal-embed') === '1';
+    const row = button.closest('.scoring-row');
+    const slot = row?.querySelector('.goal-video-slot');
+    if (!embed || !slot) {
+      const opened = bridge.openLink?.(url);
+      if (!opened) {
+        try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { /* soft-fail */ }
+      }
+      return;
+    }
+    const opening = slot.hidden || !button.classList.contains('is-open');
+    closeGoalVideos(opening ? slot : null);
+    if (!opening) {
+      slot.hidden = true;
+      slot.innerHTML = '';
+      button.classList.remove('is-open');
+      return;
+    }
+    const safe = url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    slot.innerHTML = `<video class="goal-video" controls playsinline preload="metadata" src="${safe}"></video>`;
+    slot.hidden = false;
+    button.classList.add('is-open');
+    const video = slot.querySelector('video');
+    try { video?.play?.().catch?.(() => {}); } catch { /* soft-fail autoplay */ }
+  }
+
+  $('#gameDetailContent')?.addEventListener('click', event => {
+    const button = event.target.closest?.('.goal-play');
+    if (!button || !$('#gameDetailContent').contains(button)) return;
+    event.preventDefault();
+    toggleGoalVideo(button);
+  });
+
+  $('#gameDetailBack').addEventListener('click', () => {
+    closeGoalVideos();
+    showPanel('results');
+  });
   $('#refreshButton').addEventListener('click', () => {
     live?.clearCache?.();
     loadGames(state.selectedDate, { toastOnDone: true });
