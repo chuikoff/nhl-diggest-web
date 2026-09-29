@@ -28,6 +28,7 @@
   <script src="https://st.max.ru/js/max-web-app.js" onerror="console.warn('[NHL Diggest] Max bridge failed to load')"></script>
   <script src="./js/config.js"></script>
   <script src="./js/mock-data.js"></script>
+  <script src="./js/api.js"></script>
   <script src="./js/bridge.js"></script>
   <script defer src="./js/app.js"></script>
 </head>
@@ -46,17 +47,22 @@
       <section class="panel is-active" data-panel="results" aria-labelledby="resultsTitle">
         <div class="section-heading">
           <div>
-            <p class="eyebrow accent">NHL / 2026</p>
+            <p class="eyebrow accent">NHL / 2026–27</p>
             <h2 id="resultsTitle">Результаты</h2>
           </div>
           <button class="round-button" id="refreshButton" aria-label="Обновить результаты">↻</button>
         </div>
         <div class="day-switcher" aria-label="Выбор дня">
           <button class="day-arrow" id="prevDay" aria-label="Предыдущий день">‹</button>
-          <div class="selected-day"><span id="dayLabel">Сегодня</span><small id="dateLabel">28 сентября, Пн</small></div>
+          <div class="selected-day"><span id="dayLabel">Сегодня</span><small id="dateLabel">29 сентября, Вт</small></div>
           <button class="day-arrow" id="nextDay" aria-label="Следующий день">›</button>
         </div>
-        <div class="result-summary"><span id="gameCount">6 игр</span><span class="live-dot"></span><span>регулярный сезон</span></div>
+        <div class="result-summary">
+          <span id="gameCount">—</span>
+          <span class="live-dot"></span>
+          <span id="seasonHint">расписание</span>
+          <span class="source-pill" id="dataSourceHint">…</span>
+        </div>
         <div class="games-list" id="gamesList"></div>
       </section>
 
@@ -68,12 +74,15 @@
       <section class="panel" data-panel="standings" aria-labelledby="standingsTitle">
         <div class="section-heading"><div><p class="eyebrow accent">2025 / 26 SEASON</p><h2 id="standingsTitle">Турнирная</h2></div><span class="pill">NHL</span></div>
         <div class="segmented" role="tablist" aria-label="Разделы таблицы"><button class="segment is-selected" data-standings-tab="division">Дивизионы</button><button class="segment" data-standings-tab="conference">Конференции</button></div>
+        <p class="panel-note" id="standingsNote"></p>
         <div id="standingsList" class="standings-list"></div>
       </section>
 
       <section class="panel" data-panel="stats" aria-labelledby="statsTitle">
-        <div class="section-heading"><div><p class="eyebrow accent">LEAGUE LEADERS</p><h2 id="statsTitle">Статистика</h2></div><span class="pill">2025 / 26</span></div>
-        <div class="stats-tabs segmented" role="tablist" aria-label="Статистика игроков"><button class="segment is-selected" data-stats-tab="scorers">Бомбардиры</button><button class="segment" data-stats-tab="rookies">Новички</button><button class="segment" data-stats-tab="goalies">Вратари</button></div>
+        <div class="section-heading"><div><p class="eyebrow accent">LEAGUE LEADERS</p><h2 id="statsTitle">Статистика</h2></div><span class="pill">NHL</span></div>
+        <div class="segmented" id="statsGroupTabs" role="tablist" aria-label="Группы статистики"></div>
+        <div class="segmented stats-boards" id="statsBoardTabs" role="tablist" aria-label="Показатели"></div>
+        <p class="panel-note" id="statsNote"></p>
         <div id="statsList" class="leader-list"></div>
       </section>
 
@@ -82,7 +91,7 @@
         <div class="settings-card profile-card"><div class="profile-icon">G</div><div><strong>NHL fan</strong><span>Настройки Mini App</span></div><span class="chevron">›</span></div>
         <div class="settings-group"><p class="group-label">ОБЩИЕ</p><div class="settings-card"><div class="setting-copy"><strong>Язык интерфейса</strong><span>Русский</span></div><span class="chevron">›</span></div><div class="settings-card"><div class="setting-copy"><strong>Тёмная тема</strong><span id="themeModeLabel">Включена</span></div><label class="toggle"><input id="themeToggle" type="checkbox" checked><span></span></label></div></div>
         <div class="settings-group"><p class="group-label">УВЕДОМЛЕНИЯ</p><div class="settings-card"><div class="setting-copy"><strong>Мои команды</strong><span>Новости и результаты</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div><div class="settings-card"><div class="setting-copy"><strong>Ежедневный дайджест</strong><span>09:00 по Москве</span></div><label class="toggle"><input type="checkbox" checked><span></span></label></div></div>
-        <p class="settings-note">Настройки сохранятся в профиле мессенджера.<br>Сейчас это демонстрационный режим.</p>
+        <p class="settings-note">Данные NHL: api-web.nhle.com (если CORS позволит) или ESPN.<br>TG + Max bridge сохранён. Имена команд/игроков — на английском.</p>
       </section>
     </main>
 

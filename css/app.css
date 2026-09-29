@@ -50,3 +50,46 @@
 :root[data-theme="light"] .toast { background: #172231; color: #f4f7fb; }
 :root[data-theme="light"] .app-shell { box-shadow: 0 20px 80px #7180962e; }
 .day-arrow:disabled { opacity: .35; cursor: default; }
+
+.empty-state {
+  border: 1px dashed #38506b;
+  background: #111d2c;
+  border-radius: 15px;
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+.empty-state strong { font-size: 13px; }
+.empty-state span { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.panel-note {
+  margin: -8px 4px 12px;
+  color: var(--dim);
+  font-size: 10px;
+  min-height: 14px;
+}
+.source-pill {
+  margin-left: auto;
+  border-radius: 999px;
+  background: #243246;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  padding: 3px 7px;
+  letter-spacing: .4px;
+}
+.stats-boards {
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  gap: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+.stats-boards .segment {
+  flex: 0 0 auto;
+  min-width: 64px;
+  white-space: nowrap;
+  padding: 9px 10px;
+}
+:root[data-theme="light"] .empty-state { background: #f5f9fc; border-color: #a8bfd2; }
+:root[data-theme="light"] .source-pill { background: #e1e9f1; }

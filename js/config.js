@@ -1,17 +1,20 @@
-// Конфигурация API. Оставьте пустым для режима демо.
-window.NHL_API_BASE = '';
+// NHL Diggest — API config (static GitHub Pages, browser CORS-aware).
+// Prefer direct api-web.nhle.com; ESPN is the CORS-friendly fallback.
+window.NHL_API_BASE = 'https://api-web.nhle.com';
+window.NHL_STATS_BASE = 'https://api.nhle.com';
+window.ESPN_SITE_API = 'https://site.api.espn.com';
+window.ESPN_WEB_API = 'https://site.web.api.espn.com';
+window.ESPN_CORE_API = 'https://sports.core.api.espn.com';
 
-window.NHL_API = {
-  async get(path, options = {}) {
-    if (!window.NHL_API_BASE) return null;
-    const response = await fetch(`${window.NHL_API_BASE}${path}`, {
-      headers: { Accept: 'application/json', ...(options.headers || {}) },
-      ...options
-    });
-    if (!response.ok) throw new Error(`NHL API: ${response.status}`);
-    return response.json();
-  },
-  getGames(date) { return this.get(`/games?date=${encodeURIComponent(date)}`); },
-  getStandings() { return this.get('/standings'); },
-  getStats(type = 'scorers') { return this.get(`/stats?type=${encodeURIComponent(type)}`); }
-};
+// Season: NHL uses YYYYYYYY (start+end). gameType 01=preseason, 02=regular, 03=playoffs.
+window.NHL_SEASON = '20262027';
+window.NHL_PREV_SEASON = '20252026';
+window.NHL_GAME_TYPE_PRE = '1';
+window.NHL_GAME_TYPE_REG = '2';
+
+// ESPN season year is the ending calendar year of the campaign (2025 => 2024-25).
+window.ESPN_SEASON_PREV = 2025; // last completed regular season with full stats
+window.ESPN_SEASON_CUR = 2026;  // 2025-26
+window.ESPN_SEASON_NEXT = 2027; // 2026-27 (in progress)
+
+window.NHL_TZ = 'Europe/Moscow';

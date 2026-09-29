@@ -53,6 +53,44 @@ nhl.example.com
 
 ## Данные и API
 
-Сейчас используются три демонстрационных дня из `js/mock-data.js`; стрелки в разделе результатов переключают дату и перерисовывают mock-игры, включая локальные SVG placeholder-логотипы. В `js/config.js` есть глобальная конфигурация `window.NHL_API_BASE` (пустая по умолчанию) и заготовки `window.NHL_API.getGames()`, `getStandings()` и `getStats()`. Когда API на VPS будет готов, укажите базовый URL и подключите ответы к рендерам в `js/app.js`.
+Мини-приложение **тянет живые данные** прямо из браузера (статический GitHub Pages, без своего бэкенда).
 
-Переключатель темы сохраняется локально и учитывает тему Telegram/Max при старте и событии изменения темы; остальные настройки пока UI-only и не отправляются на сервер.
+### Источники (порядок)
+
+1. **NHL api-web** — `https://api-web.nhle.com` (те же пути, что у бота в `/workspace/nhl-diggest`):
+   - `/v1/score/{YYYY-MM-DD}`, `/v1/schedule/{YYYY-MM-DD}`
+   - `/v1/standings/now` (если GP=0 — fallback на финал прошлого сезона `/v1/standings/2026-04-14`)
+   - `/v1/gamecenter/{id}/landing` + `/boxscore`
+   - `/v1/skater-stats-leaders/{season}/{gameType}`, `/v1/goalie-stats-leaders/...`
+2. **ESPN** (если NHL недоступен из браузера) — CORS `Access-Control-Allow-Origin: *`:
+   - `site.api.espn.com` scoreboard / summary / standings
+   - `site.web.api.espn.com` statistics/byathlete
+   - `sports.core.api.espn.com` athlete statistics (hits / blocked shots / goalie metrics)
+3. **Mock** (`js/mock-data.js`) — только если оба live-источника упали.
+
+### CORS (проверено 2026-09-29)
+
+| Host | CORS из браузера |
+| --- | --- |
+| `api-web.nhle.com` | **нет** ACAO — `fetch` из GitHub Pages / TG / Max WebView обычно падает |
+| `api.nhle.com` | **нет** ACAO |
+| `site.api.espn.com`, `site.web.api.espn.com`, `sports.core.api.espn.com` | **да** (`*`) |
+
+Клиент всё равно **сначала** пробует NHL (как в боте); при ошибке автоматически уходит на ESPN. Бейдж источника на экране результатов показывает `NHL` / `ESPN` / `демо`.
+
+### День и часовой пояс
+
+«Сегодня» и подпись даты считаются в **Europe/Moscow**. Стрелки грузят расписание на любую дату (`score/{date}`), а время старта форматируется в MSK. Статусы: FUT / LIVE / FINAL (+ метка предсезона при `gameType=1`).
+
+### Статистика
+
+Отдельные доски:
+
+- Скейттеры / новички: очки, голы, передачи, силовые, +/−, штрафы (PIM), блоки, время (TOI)
+- Вратари: GAA, сухие, SV%, победы
+
+Логотипы: ESPN CDN PNG (`a.espncdn.com/i/teamlogos/nhl/500/{slug}.png`), slug-исключения как в боте (`LAK→la`, `SJS→sj`, `UTA→utah`, …).
+
+Конфиг: `js/config.js` (`NHL_API_BASE`, сезоны). Логика: `js/api.js`. UI: `js/app.js`. TG+Max bridge без изменений (`js/bridge.js`).
+
+Переключатель темы сохраняется локально и учитывает тему Telegram/Max; остальные настройки пока UI-only.
