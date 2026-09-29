@@ -515,6 +515,18 @@
     return `<section class="detail-section career-history-section"><div class="detail-section-title"><h3>${title}</h3><span>регулярный сезон</span></div><div class="career-history-table${goalie ? ' goalie-history' : ''}"><div class="career-history-head">${header}</div>${body}</div></section>`;
   }
 
+  function awardsMarkup(awards = []) {
+    const rows = awards || [];
+    if (!rows.length) {
+      return `<section class="detail-section player-awards-section"><div class="detail-section-title"><h3>Индивидуальные награды</h3></div><p class="empty-detail">Данные о наградах пока недоступны</p></section>`;
+    }
+    const body = rows.map(award => {
+      const seasons = (award.seasons || []).map(season => `<span class="award-year">${escapeHtml(season)}</span>`).join('');
+      return `<div class="award-row"><div class="award-copy"><strong>${escapeHtml(award.name)}</strong><div class="award-years">${seasons}</div></div><span class="award-count">${award.seasons.length > 1 ? `${award.seasons.length}×` : '✓'}</span></div>`;
+    }).join('');
+    return `<section class="detail-section player-awards-section"><div class="detail-section-title"><h3>Индивидуальные награды</h3><span>${rows.length}</span></div><div class="awards-list">${body}</div></section>`;
+  }
+
   async function openTeamDetail(abbrev, seed = {}) {
     const key = String(abbrev || seed.short || '').toUpperCase();
     if (!key) return;
@@ -590,6 +602,7 @@
       ${statsGridMarkup(`Сезон · ${player.seasonLabel || ''}`, player.seasonStats || [])}
       ${statsGridMarkup('Карьера', player.careerStats || [])}
       ${careerHistoryMarkup(player.careerHistory, player.position === 'G')}
+      ${awardsMarkup(player.awards)}
       <p class="panel-note">${player.note || player.source || ''}</p>
     `;
   }

@@ -1509,6 +1509,69 @@
     return text;
   }
 
+  function awardSeasonLabel(value) {
+    if (value == null || value === '') return '';
+    const text = String(value).trim();
+    if (/^\d{4}\d{4}$/.test(text)) return seasonDisplayLabel(text);
+    if (/^\d{4}$/.test(text)) return `${Number(text) - 1}/${text.slice(-2)}`;
+    return seasonDisplayLabel(text);
+  }
+
+  function awardName(value) {
+    return loc(value).replace(/\s+/g, ' ').trim();
+  }
+
+  function normalizeAwards(entries = []) {
+    const byName = new Map();
+    entries.forEach(entry => {
+      const name = awardName(entry?.name || entry?.trophy);
+      if (!name || /^stanley cup$/i.test(name)) return;
+      const seasons = (entry.seasons || []).map(season => awardSeasonLabel(
+        season?.seasonId ?? season?.season?.displayName ?? season?.season?.year ?? season
+      )).filter(Boolean);
+      if (!byName.has(name)) byName.set(name, new Set());
+      seasons.forEach(season => byName.get(name).add(season));
+    });
+    return [...byName.entries()]
+      .map(([name, seasons]) => ({
+        name,
+        seasons: [...seasons].sort((a, b) => b.localeCompare(a))
+      }))
+      .filter(award => award.seasons.length)
+      .sort((a, b) => (b.seasons[0] || '').localeCompare(a.seasons[0] || '') || a.name.localeCompare(b.name));
+  }
+
+  function mapNhlAwards(awards) {
+    return normalizeAwards((awards || []).map(award => ({
+      name: award?.trophy?.default || award?.trophy?.en || award?.trophy,
+      seasons: award?.seasons || []
+    })));
+  }
+
+  function espnAwardSeasonLabel(award, ref = '') {
+    const season = award?.season;
+    const direct = season?.displayName || season?.year || (typeof season !== 'object' ? season : '');
+    if (direct) return awardSeasonLabel(direct);
+    const seasonRef = season?.$ref || ref;
+    const match = String(seasonRef).match(/\/seasons\/(\d{4})(?:[\/?]|$)/i);
+    return match ? awardSeasonLabel(match[1]) : '';
+  }
+
+  async function loadEspnAwards(espnId) {
+    const data = await fetchJson(`${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/athletes/${espnId}/awards`);
+    const items = data?.items || [];
+    const awards = await Promise.all(items.map(async item => {
+      const ref = (item?.$ref || item?.ref || '').replace('http://', 'https://');
+      let award = item;
+      if (ref) {
+        try { award = await fetchJson(ref); } catch { return null; }
+      }
+      const season = espnAwardSeasonLabel(award, ref);
+      return award?.name && season ? { name: award.name, seasons: [season] } : null;
+    }));
+    return normalizeAwards(awards.filter(Boolean));
+  }
+
   function parseTimeOnIce(value) {
     const match = String(value || '').match(/^(\d+):(\d{2})$/);
     if (!match) return 0;
@@ -1709,6 +1772,7 @@
       seasonStats,
       careerStats,
       careerHistory: buildCareerHistory(landing.seasonTotals, isGoalie),
+      awards: mapNhlAwards(landing.awards),
       seasonLabel: landing.featuredStats?.season
         ? String(landing.featuredStats.season).replace(/(\d{4})(\d{4})/, '$1/$2')
         : 'сезон',
@@ -1717,10 +1781,11 @@
   }
 
   async function loadPlayerEspn(espnId) {
-    const [bio, overview, historyPayload] = await Promise.all([
+    const [bio, overview, historyPayload, awards] = await Promise.all([
       fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}`),
       fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/overview`).catch(() => null),
-      fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/stats`).catch(() => null)
+      fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/stats`).catch(() => null),
+      loadEspnAwards(espnId).catch(() => [])
     ]);
     const athlete = bio.athlete || {};
     const name = athlete.displayName || athlete.fullName || '—';
@@ -1759,6 +1824,7 @@
       seasonStats,
       careerStats,
       careerHistory: buildEspnCareerHistory(historyPayload, position === 'G'),
+      awards,
       seasonLabel: statistics.displayName || 'сезон',
       note: 'ESPN athlete'
     };

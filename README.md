@@ -126,7 +126,7 @@ Endpoints (NHL → ESPN fallback, CORS `*` у ESPN):
 | Что | NHL api-web | ESPN |
 | --- | --- | --- |
 | Команда | `/v1/roster/{ABB}/current`, `/v1/club-schedule-season/{ABB}/now`, `/v1/club-stats/{ABB}/now`, `/v1/standings/now` | `/apis/site/v2/sports/hockey/nhl/teams/{slug}`, `/roster`, `/schedule`, `/statistics` |
-| Игрок | `/v1/player/{id}/landing` | `site.web.api` `/apis/common/v3/sports/hockey/nhl/athletes/{id}` + `/overview` |
+| Игрок | `/v1/player/{id}/landing` (включая awards) | `site.web.api` `/apis/common/v3/sports/hockey/nhl/athletes/{id}` + `/overview`; награды — `sports.core.api.espn.com/.../athletes/{id}/awards` |
 
 ### Детали матча
 

@@ -530,3 +530,65 @@ h2 { font-size: 29px; }
 .info-row { font-size: 12px; }
 .settings-note { font-size: 11px; }
 .game-open-label { font-size: 10px; }
+
+/* Individual player awards — grouped by trophy with winning seasons. */
+.awards-list {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  overflow: hidden;
+  background: #111a27;
+}
+.award-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border-top: 1px solid #253243;
+}
+.award-row:first-child { border-top: 0; }
+.award-copy { min-width: 0; flex: 1; }
+.award-copy strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.award-years {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.award-year {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: var(--accent);
+  background: #2a2719;
+  border: 1px solid #62552a;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.award-count {
+  flex: 0 0 auto;
+  min-width: 24px;
+  padding-top: 1px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 850;
+  text-align: right;
+}
+:root[data-theme="light"] .awards-list { background: #ffffff; }
+:root[data-theme="light"] .award-row { border-top-color: #e1e7ee; }
+:root[data-theme="light"] .award-year {
+  background: #fff8df;
+  border-color: #e8d58c;
+  color: #806617;
+}
+@media(max-width:370px) {
+  .award-copy strong { font-size: 11px; }
+  .award-year { font-size: 8px; padding: 2px 6px; }
+}
