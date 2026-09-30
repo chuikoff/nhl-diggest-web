@@ -22,6 +22,101 @@
 
   const cache = new Map();
 
+  // --- Season resolution (current campaign, not last completed) ---
+  // Prefer NHL /v1/standings-season when CORS allows; else date-based config.js defaults.
+  let seasonReady = null;
+
+  function nhlSeasonId() {
+    return String(window.NHL_SEASON || '20262027');
+  }
+
+  function nhlPrevSeasonId() {
+    return String(window.NHL_PREV_SEASON || '20252026');
+  }
+
+  function espnSeasonYear() {
+    return Number(window.ESPN_SEASON_CUR || 2027);
+  }
+
+  function seasonLabelShort(seasonId) {
+    const id = String(seasonId || nhlSeasonId());
+    if (id.length === 8) return `${id.slice(0, 4)}/${id.slice(6)}`;
+    return window.NHL_SEASON_LABEL || id;
+  }
+
+  function seasonNoteNhl() {
+    return `регулярный ${window.NHL_SEASON_LABEL || seasonLabelShort()}`;
+  }
+
+  function seasonNoteEspn() {
+    return `ESPN · ${window.NHL_SEASON_LABEL || seasonLabelShort()}`;
+  }
+
+  function applySeasonFromId(seasonId, prevId) {
+    const id = String(seasonId || '');
+    if (!/^\d{8}$/.test(id)) return;
+    const startYear = Number(id.slice(0, 4));
+    const endYear = Number(id.slice(4));
+    window.NHL_SEASON = id;
+    window.NHL_SEASON_START_YEAR = startYear;
+    window.NHL_SEASON_LABEL = `${startYear}/${String(endYear).slice(-2)}`;
+    window.ESPN_SEASON_CUR = endYear;
+    window.ESPN_SEASON_NEXT = endYear + 1;
+    const prev = String(prevId || '');
+    if (/^\d{8}$/.test(prev)) {
+      window.NHL_PREV_SEASON = prev;
+      window.NHL_PREV_SEASON_LABEL = `${prev.slice(0, 4)}/${prev.slice(6)}`;
+      window.ESPN_SEASON_PREV = Number(prev.slice(4));
+    } else {
+      const ps = startYear - 1;
+      const pe = startYear;
+      window.NHL_PREV_SEASON = `${ps}${pe}`;
+      window.NHL_PREV_SEASON_LABEL = `${ps}/${String(pe).slice(-2)}`;
+      window.ESPN_SEASON_PREV = pe;
+    }
+  }
+
+  function pickSeasonFromStandingsMeta(payload, todayIso) {
+    const seasons = payload?.seasons || [];
+    if (!seasons.length) return null;
+    const today = todayIso || new Date().toISOString().slice(0, 10);
+    // Prefer season whose standings window covers today; else latest with start <= today.
+    let best = null;
+    for (const row of seasons) {
+      const id = String(row.id || '');
+      const start = row.standingsStart || '';
+      const end = row.standingsEnd || '';
+      if (!/^\d{8}$/.test(id)) continue;
+      if (start && end && start <= today && today <= end) return { id, prev: null, row };
+      if (start && start <= today) best = { id, prev: null, row };
+    }
+    if (best) return best;
+    const last = seasons[seasons.length - 1];
+    return last?.id ? { id: String(last.id), prev: null, row: last } : null;
+  }
+
+  async function resolveSeasonFromNhl() {
+    try {
+      const data = await fetchJson(`${NHL()}/v1/standings-season`);
+      const today = data.currentDate || new Date().toISOString().slice(0, 10);
+      const picked = pickSeasonFromStandingsMeta(data, today);
+      if (!picked) return;
+      const seasons = data.seasons || [];
+      const idx = seasons.findIndex(s => String(s.id) === picked.id);
+      const prev = idx > 0 ? String(seasons[idx - 1].id) : null;
+      applySeasonFromId(picked.id, prev);
+    } catch (error) {
+      // Expected in browsers (NHL api-web has no CORS). Date-based config stays.
+      console.info('[NHL Diggest] season from NHL unavailable, using date-based', error?.message || error);
+    }
+  }
+
+  async function ensureSeason() {
+    if (!seasonReady) seasonReady = resolveSeasonFromNhl();
+    await seasonReady;
+  }
+
+
   // NHL and ESPN do not expose nationality in exactly the same shape. Keep the
   // check in one place so every player surface (including game box scores) uses
   // the same country-code and birth-country rules.
@@ -1334,25 +1429,43 @@
 
   async function loadStandings() {
     return cached('standings', async () => {
+      await ensureSeason();
       try {
         const now = await standingsNhl('/v1/standings/now');
         const grouped = groupStandings(now);
         if (grouped.played > 0) {
-          grouped.sourceNote = 'текущий сезон';
+          grouped.sourceNote = `текущий · ${window.NHL_SEASON_LABEL || seasonLabelShort()}`;
           grouped.source = 'nhl';
           return grouped;
         }
-        // Regular-season table is empty during preseason — use last completed season.
-        const prev = await standingsNhl('/v1/standings/2026-04-14');
-        const prevGrouped = groupStandings(prev);
-        prevGrouped.sourceNote = 'регулярный 2025/26';
-        prevGrouped.source = 'nhl-prev';
-        if (prevGrouped.played > 0) return prevGrouped;
+        // Empty /now only during true offseason (before Sep flip). Do not pin a stale end-date.
+        const month = new Date().getMonth() + 1;
+        if (month >= 7 && month <= 8) {
+          try {
+            const meta = await fetchJson(`${NHL()}/v1/standings-season`);
+            const seasons = meta.seasons || [];
+            const prev = seasons.length >= 2 ? seasons[seasons.length - 2] : null;
+            const end = prev?.standingsEnd;
+            if (end) {
+              const rows = await standingsNhl(`/v1/standings/${end}`);
+              const prevGrouped = groupStandings(rows);
+              prevGrouped.sourceNote = `регулярный ${window.NHL_PREV_SEASON_LABEL || seasonLabelShort(nhlPrevSeasonId())}`;
+              prevGrouped.source = 'nhl-prev';
+              if (prevGrouped.played > 0) return prevGrouped;
+            }
+          } catch { /* fall through */ }
+        }
+        // In-season with 0 GP yet: still return the empty current table.
+        grouped.sourceNote = `текущий · ${window.NHL_SEASON_LABEL || seasonLabelShort()}`;
+        grouped.source = 'nhl';
+        if (grouped.division.length) return grouped;
       } catch (nhlError) {
         try {
           const rows = await standingsEspn();
           const grouped = groupStandings(rows);
-          grouped.sourceNote = grouped.played > 0 ? 'ESPN' : 'ESPN · сезон ещё не начат';
+          grouped.sourceNote = grouped.played > 0
+            ? `ESPN · ${window.NHL_SEASON_LABEL || seasonLabelShort()}`
+            : 'ESPN · сезон ещё не начат';
           grouped.source = 'espn';
           if (grouped.division.length) return grouped;
         } catch (espnError) {
@@ -1421,23 +1534,32 @@
   ];
 
   async function nhlCategory(kind, category) {
-    const season = window.NHL_PREV_SEASON || '20252026';
+    await ensureSeason();
     const gameType = window.NHL_GAME_TYPE_REG || '2';
     const path = kind === 'goalie' ? 'goalie-stats-leaders' : 'skater-stats-leaders';
-    const data = await fetchJson(`${NHL()}/v1/${path}/${season}/${gameType}?categories=${encodeURIComponent(category)}&limit=15`);
+    // Prefer /current (same as the Python bot); fall back to explicit seasonId.
+    let data;
+    try {
+      data = await fetchJson(`${NHL()}/v1/${path}/current?categories=${encodeURIComponent(category)}&limit=15`);
+    } catch {
+      const season = nhlSeasonId();
+      data = await fetchJson(`${NHL()}/v1/${path}/${season}/${gameType}?categories=${encodeURIComponent(category)}&limit=15`);
+    }
     const rows = data[category] || data[Object.keys(data)[0]] || [];
     return rows.slice(0, 15);
   }
 
   async function espnByAthlete(sort, limit = 15) {
-    const season = window.ESPN_SEASON_PREV || 2025;
+    await ensureSeason();
+    const season = espnSeasonYear();
     const url = `${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/statistics/byathlete?region=us&lang=en&contentorigin=espn&limit=${limit}&sort=${encodeURIComponent(sort)}&season=${season}&seasontype=2`;
     const data = await fetchJson(url);
     return data.athletes || [];
   }
 
   async function coreStat(athleteId, name) {
-    const season = window.ESPN_SEASON_PREV || 2025;
+    await ensureSeason();
+    const season = espnSeasonYear();
     const url = `${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/seasons/${season}/types/2/athletes/${athleteId}/statistics/0?lang=en`;
     const data = await fetchJson(url);
     const categories = data?.splits?.categories || [];
@@ -1499,13 +1621,14 @@
   async function loadBoard(group, boardId) {
     const key = `board:${group}:${boardId}`;
     return cached(key, async () => {
+      await ensureSeason();
       if (group === 'goalies') {
         const board = GOALIE_BOARDS.find(item => item.id === boardId) || GOALIE_BOARDS[0];
         try {
           const rows = await nhlCategory('goalie', board.nhl);
           return {
             source: 'nhl',
-            note: 'регулярный 2025/26',
+            note: seasonNoteNhl(),
             players: rows.map(row => ({
               ...mapLeader(row, board.format ? board.format(row.value) : row.value),
               position: 'G'
@@ -1513,7 +1636,7 @@
           };
         } catch {
           const coreName = { gaa: 'avgGoalsAgainst', shutouts: 'shutouts', sv: 'savePct', wins: 'wins' }[board.id] || 'wins';
-          const season = window.ESPN_SEASON_PREV || 2025;
+          const season = espnSeasonYear();
           const data = await fetchJson(`${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/seasons/${season}/types/2/leaders?limit=12`);
           const category = (data.categories || []).find(item => item.name === coreName);
           const leaders = category?.leaders || [];
@@ -1536,7 +1659,7 @@
               isRussian: isRussianPlayer(athlete)
             });
           }
-          return { source: 'espn', note: 'ESPN · 2024/25', players };
+          return { source: 'espn', note: seasonNoteEspn(), players };
         }
       }
 
@@ -1544,7 +1667,7 @@
       if (board.espnSort) {
         try {
           const players = await espnHitsOrBlocks(board.stat, board.espnSort, 12);
-          if (players.length) return { source: 'espn', note: 'ESPN · 2024/25', players };
+          if (players.length) return { source: 'espn', note: seasonNoteEspn(), players };
         } catch (error) {
           console.warn('[NHL Diggest] espn stat board failed', error);
         }
@@ -1554,7 +1677,7 @@
         const rows = await nhlCategory('skater', board.nhl);
         return {
           source: 'nhl',
-          note: 'регулярный 2025/26',
+          note: seasonNoteNhl(),
           players: rows.map(row => ({
             ...mapLeader(row, board.format ? board.format(row.value) : row.value)
           }))
@@ -1575,13 +1698,14 @@
           ...player,
           value: board.id === 'toi' ? player.toi : player[board.id === 'pim' ? 'pim' : board.id]
         }));
-        return { source: 'espn', note: 'ESPN · 2024/25', players };
+        return { source: 'espn', note: seasonNoteEspn(), players };
       }
     });
   }
 
   async function loadRookies(boardId) {
     return cached(`rookies:${boardId}`, async () => {
+      await ensureSeason();
       const sortMap = {
         points: 'offensive.points:desc',
         goals: 'offensive.goals:desc',
@@ -1593,11 +1717,12 @@
         toi: 'general.timeOnIcePerGame:desc'
       };
       const athletes = await espnByAthlete(sortMap[boardId] || sortMap.points, 80);
+      const debutFloor = Number(window.NHL_SEASON_START_YEAR || nhlSeasonId().slice(0, 4)) || 2026;
       const rookies = athletes.filter(entry => {
         const athlete = entry.athlete || {};
         if ((athlete.position || {}).abbreviation === 'G') return false;
         const debut = Number(athlete.debutYear);
-        if (debut && debut >= 2024) return true;
+        if (debut && debut >= debutFloor) return true;
         // ESPN omits debutYear for several recent first-years; age <= 21 is a conservative proxy.
         return !debut && Number(athlete.age) > 0 && Number(athlete.age) <= 21;
       });
@@ -1617,7 +1742,7 @@
         }
         players.push(mapped);
       }
-      return { source: 'espn', note: 'новички · ESPN 2024/25', players };
+      return { source: 'espn', note: `новички · ${seasonNoteEspn()}`, players };
     });
   }
 
@@ -2403,6 +2528,7 @@
 
   async function loadTeamNhl(abbrev) {
     const key = String(abbrev || '').toUpperCase();
+    await ensureSeason();
     const [rosterPayload, schedulePayload, clubStats, standingsPayload] = await Promise.all([
       fetchJson(`${NHL()}/v1/roster/${key}/current`),
       fetchJson(`${NHL()}/v1/club-schedule-season/${key}/now`),
@@ -2418,13 +2544,25 @@
     const games = (schedulePayload.games || []).map(g => mapTeamScheduleGame(g, key, 'nhl'));
     const schedule = splitSchedule(games);
     let stats = teamStatsFromNhlClub(clubStats);
-    let statsNote = clubStats ? 'club-stats · now' : '';
-    if (!stats.length || (Number(stats[0]?.value) === 0 && stats.length < 3)) {
+    let statsNote = clubStats ? `club-stats · ${window.NHL_SEASON_LABEL || seasonLabelShort()}` : '';
+    const month = new Date().getMonth() + 1;
+    const emptyCurrent = !stats.length || (Number(stats[0]?.value) === 0 && stats.length < 3);
+    // Only fall back to last completed season during Jul–Aug offseason.
+    if (emptyCurrent && month >= 7 && month <= 8) {
       try {
-        const prev = await fetchJson(`${NHL()}/v1/club-stats/${key}/${window.NHL_PREV_SEASON || '20252026'}/2`);
+        const prev = await fetchJson(`${NHL()}/v1/club-stats/${key}/${nhlPrevSeasonId()}/2`);
         stats = teamStatsFromNhlClub(prev);
-        statsNote = 'регулярный 2025/26';
+        statsNote = `регулярный ${window.NHL_PREV_SEASON_LABEL || seasonLabelShort(nhlPrevSeasonId())}`;
       } catch { /* keep empty */ }
+    } else if (emptyCurrent) {
+      try {
+        const cur = await fetchJson(`${NHL()}/v1/club-stats/${key}/${nhlSeasonId()}/2`);
+        const curStats = teamStatsFromNhlClub(cur);
+        if (curStats.length) {
+          stats = curStats;
+          statsNote = seasonNoteNhl();
+        }
+      } catch { /* keep now/empty */ }
     }
     const homeGame = (schedulePayload.games || []).find(g => loc(g.homeTeam?.abbrev).toUpperCase() === key);
     const arena = loc(homeGame?.venue) || '';
@@ -2542,6 +2680,54 @@
       { abbr: 'SOG', label: 'Броски', value: block.shots ?? '—' },
       { abbr: 'PPG', label: 'Голы в бол.', value: block.powerPlayGoals ?? '—' }
     ];
+  }
+
+
+  function statsPairsFromEspnCore(categories, isGoalie) {
+    const want = isGoalie
+      ? [
+          ['games', 'Игры'], ['wins', 'Победы'], ['losses', 'Поражения'],
+          ['avgGoalsAgainst', 'GAA'], ['savePct', 'SV%'], ['shutouts', 'Сухие'],
+          ['saves', 'Сейвы'], ['goalsAgainst', 'Пропущено']
+        ]
+      : [
+          ['games', 'Игры'], ['goals', 'Голы'], ['assists', 'Передачи'], ['points', 'Очки'],
+          ['plusMinus', '+/−'], ['penaltyMinutes', 'Штрафы'], ['shotsTotal', 'Броски'],
+          ['powerPlayGoals', 'Голы в бол.'], ['timeOnIce', 'ТОИ']
+        ];
+    const byName = {};
+    for (const category of categories || []) {
+      for (const stat of category.stats || []) {
+        if (stat?.name) byName[stat.name] = stat.displayValue ?? stat.value;
+      }
+    }
+    return want
+      .filter(([key]) => byName[key] != null)
+      .map(([key, label]) => ({ abbr: key, label, value: byName[key] }))
+      .slice(0, 12);
+  }
+
+  function overviewMatchesCurrentSeason(displayName) {
+    const text = String(displayName || '');
+    const label = String(window.NHL_SEASON_LABEL || ''); // e.g. 2026/27
+    if (!label) return true;
+    const start = label.slice(0, 4);
+    const end2 = label.slice(-2);
+    // ESPN uses "2026-27 General"
+    return text.includes(`${start}-${end2}`) || text.includes(label) || text.includes(`${start}/${end2}`);
+  }
+
+  async function loadEspnCoreSeasonStats(espnId, isGoalie) {
+    await ensureSeason();
+    const season = espnSeasonYear();
+    const url = `${ESPN_CORE()}/v2/sports/hockey/leagues/nhl/seasons/${season}/types/2/athletes/${espnId}/statistics/0?lang=en`;
+    const data = await fetchJson(url);
+    const categories = data?.splits?.categories || [];
+    if (!categories.length) return null;
+    return {
+      seasonStats: statsPairsFromEspnCore(categories, isGoalie),
+      seasonLabel: window.NHL_SEASON_LABEL || seasonLabelShort()
+    };
   }
 
   function statsPairsFromEspnSplit(names, labels, values) {
@@ -2929,6 +3115,7 @@
   }
 
   async function loadPlayerEspn(espnId) {
+    await ensureSeason();
     const [bio, overview, historyPayload, coreBirth] = await Promise.all([
       fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}`),
       fetchJson(`${ESPN_WEB()}/apis/common/v3/sports/hockey/nhl/athletes/${espnId}/overview`).catch(() => null),
@@ -2940,12 +3127,30 @@
     const name = athlete.displayName || athlete.fullName || '—';
     const team = athlete.team || {};
     const position = (athlete.position || {}).abbreviation || '';
+    const isGoalie = String(position).toUpperCase() === 'G';
     const statistics = overview?.statistics || {};
     const splits = statistics.splits || [];
     const seasonSplit = splits.find(item => /regular/i.test(item.displayName || '')) || splits[0];
     const careerSplit = splits.find(item => /career/i.test(item.displayName || ''));
-    const seasonStats = statsPairsFromEspnSplit(statistics.names, statistics.labels, seasonSplit?.stats);
+    let seasonStats = statsPairsFromEspnSplit(statistics.names, statistics.labels, seasonSplit?.stats);
     const careerStats = statsPairsFromEspnSplit(statistics.names, statistics.labels, careerSplit?.stats);
+    let seasonLabel = statistics.displayName || window.NHL_SEASON_LABEL || 'сезон';
+    // Overview can lag on the previous campaign for players with 0 GP this season.
+    if (!overviewMatchesCurrentSeason(statistics.displayName)) {
+      try {
+        const core = await loadEspnCoreSeasonStats(espnId, isGoalie);
+        if (core?.seasonStats?.length) {
+          seasonStats = core.seasonStats;
+          seasonLabel = core.seasonLabel;
+        } else {
+          seasonStats = [];
+          seasonLabel = window.NHL_SEASON_LABEL || seasonLabelShort();
+        }
+      } catch {
+        seasonStats = [];
+        seasonLabel = window.NHL_SEASON_LABEL || seasonLabelShort();
+      }
+    }
     const birthCountry = coreBirth.birthCountry?.abbreviation
       || coreBirth.birthPlace?.country
       || (() => {
@@ -3012,7 +3217,7 @@
         citizenship: coreBirth.citizenship
       }),
       nationality: birthCountry || birthPlace || '',
-      seasonLabel: statistics.displayName || 'сезон',
+      seasonLabel,
       note: 'ESPN athlete'
     };
   }
@@ -3143,6 +3348,9 @@
     gameDetail,
     groupByPeriod,
     periodLabel: careerPeriodLabel,
+    ensureSeason,
+    nhlSeasonId,
+    espnSeasonYear,
     SKATER_BOARDS,
     GOALIE_BOARDS,
     CAREER_SKATER_BOARDS,
