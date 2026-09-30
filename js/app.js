@@ -507,18 +507,7 @@
     const skaters = detail?.skaters || [];
     const teamByShort = { [game.away.short]: game.away, [game.home.short]: game.home };
 
-    $('#gameDetailContent').innerHTML = `
-      <div class="detail-hero">
-        <div class="detail-status status ${game.status === 'Live' ? 'live' : isScheduled ? (game.preseason ? 'preseason' : 'future') : 'final'}">${statusLabel(game.status, game.preseason)}</div>
-        <div class="detail-scoreboard">${detailTeamMarkup(game.away)}<div class="detail-score"><strong>${score}</strong><span>${isScheduled ? game.time : game.period || ''}</span></div>${detailTeamMarkup(game.home)}</div>
-        <div class="detail-venue">${detail?.venue || game.venue || 'NHL Arena'}${detail?.attendance ? ` · ${detail.attendance} зрителей` : ''}</div>
-      </div>
-      ${isScheduled ? `<div class="detail-notice"><strong>Матч ещё не начался</strong><span>Подробная статистика появится после стартового вбрасывания.</span></div>` : `
-        <div class="segmented game-detail-tabs" role="tablist">
-          <button type="button" class="segment is-selected" data-game-tab="overview" role="tab" aria-selected="true">Обзор</button>
-          <button type="button" class="segment" data-game-tab="stats" role="tab" aria-selected="false">Статистика</button>
-        </div>
-        <div class="game-tab-panel" data-game-tab-panel="overview">
+    const overviewBody = `
           ${recapMarkup(detail?.recap)}
           <section class="detail-section"><div class="detail-section-title"><h3>Голы</h3><span>${scoring.length}</span></div>
             <div class="period-groups">${periodGroupsMarkup(scoring, 'goals')}</div>
@@ -527,12 +516,30 @@
             <div class="boxscore-table"><div class="boxscore-head"><span>Команда</span><span>Броски</span><span>Силовые</span><span>Вбрасывания</span><span>Большинство</span></div>${[game.away, game.home].map(team => { const stats = boxscore[team.short] || {}; return `<div class="boxscore-row"><strong><img src="${team.logo}" alt="">${team.short}</strong><span>${stats.shots ?? '—'}</span><span>${stats.hits ?? '—'}</span><span>${stats.faceoff ?? '—'}</span><span>${stats.powerPlay ?? '—'}</span></div>`; }).join('')}</div>
           </section>
           <section class="detail-section"><div class="detail-section-title"><h3>Удаления</h3><span>${penalties.length}</span></div><div class="period-groups">${periodGroupsMarkup(penalties, 'penalties')}</div></section>
-          ${goalies.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Вратари</h3></div><div class="goalie-lines">${goalies.map(goalie => `<div class="goalie-line"><span class="line-team">${teamByShort[goalie.team]?.short || goalie.team}</span><strong>${playerMarkup({ ...goalie, abbrev: goalie.team })}</strong><span>${goalie.saves}${goalie.sv ? ` · SV% ${goalie.sv}` : ''}${goalie.toi ? ` · ${goalie.toi}` : ''}</span></div>`).join('')}</div></section>` : ''}
+          ${goalies.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Вратари</h3></div><div class="goalie-lines">${goalies.map(goalie => `<div class="goalie-line"><span class="line-team">${teamByShort[goalie.team]?.short || goalie.team}</span><strong>${playerMarkup({ ...goalie, abbrev: goalie.team })}</strong><span>${goalie.saves}${goalie.sv ? ` · SV% ${goalie.sv}` : ''}${goalie.toi ? ` · ${goalie.toi}` : ''}</span></div>`).join('')}</div></section>` : ''}`;
+    const cardBody = isScheduled
+      ? `<div class="match-card-body"><div class="detail-notice"><strong>Матч ещё не начался</strong><span>Подробная статистика появится после стартового вбрасывания.</span></div></div>`
+      : `<div class="match-card-tabs" role="tablist" aria-label="Разделы матча">
+          <button type="button" class="match-tab is-selected" data-game-tab="overview" role="tab" aria-selected="true" id="matchTabOverview">Обзор</button>
+          <button type="button" class="match-tab" data-game-tab="stats" role="tab" aria-selected="false" id="matchTabStats">Статистика</button>
         </div>
-        <div class="game-tab-panel" data-game-tab-panel="stats" hidden>
-          ${playerBoxscoreMarkup(game, skaters, goalies)}
+        <div class="match-card-body">
+          <div class="game-tab-panel" data-game-tab-panel="overview" role="tabpanel" aria-labelledby="matchTabOverview">
+            ${overviewBody}
+          </div>
+          <div class="game-tab-panel" data-game-tab-panel="stats" role="tabpanel" aria-labelledby="matchTabStats" hidden>
+            ${playerBoxscoreMarkup(game, skaters, goalies)}
+          </div>
+        </div>`;
+    $('#gameDetailContent').innerHTML = `
+      <article class="match-card">
+        <div class="detail-hero">
+          <div class="detail-status status ${game.status === 'Live' ? 'live' : isScheduled ? (game.preseason ? 'preseason' : 'future') : 'final'}">${statusLabel(game.status, game.preseason)}</div>
+          <div class="detail-scoreboard">${detailTeamMarkup(game.away)}<div class="detail-score"><strong>${score}</strong><span>${isScheduled ? game.time : game.period || ''}</span></div>${detailTeamMarkup(game.home)}</div>
+          <div class="detail-venue">${detail?.venue || game.venue || 'NHL Arena'}${detail?.attendance ? ` · ${detail.attendance} зрителей` : ''}</div>
         </div>
-      `}`;
+        ${cardBody}
+      </article>`;
   }
 
   function boxStatCell(value) {
@@ -1415,6 +1422,7 @@
     let startX = 0;
     let startY = 0;
     let tracking = false;
+    let fromHScroll = false;
     const EDGE = 32;
     const MIN_DX = 64;
     const MAX_DY = 56;
@@ -1426,6 +1434,8 @@
       startX = touch.clientX;
       startY = touch.clientY;
       tracking = true;
+      // Horizontal table scroll inside the match card must not steal swipe-back.
+      fromHScroll = Boolean(event.target?.closest?.('.player-box-scroll, .boxscore-table'));
     }, { passive: true });
 
     shell.addEventListener('touchend', event => {
@@ -1436,7 +1446,7 @@
       const dx = touch.clientX - startX;
       const dy = Math.abs(touch.clientY - startY);
       if (dy > MAX_DY) return;
-      const rtlBack = dx <= -MIN_DX;
+      const rtlBack = dx <= -MIN_DX && !fromHScroll;
       const edgeBack = startX <= EDGE && dx >= MIN_DX;
       if (rtlBack || edgeBack) goBack();
     }, { passive: true });
