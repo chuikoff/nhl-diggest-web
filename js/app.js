@@ -795,12 +795,12 @@
       </div>
       <p class="panel-note">${team.note || team.source || ''}${team.statsNote ? ` · ${team.statsNote}` : ''}</p>
       ${teamSalaryCapMarkup(team.salaryCap)}
-      ${teamTrophiesMarkup(team.trophies)}
-      ${retiredNumbersMarkup(team.retiredNumbers)}
       <section class="detail-section"><div class="detail-section-title"><h3>Состав</h3><span>${team.roster?.length || 0}</span></div>${rosterGroupMarkup((team.roster || []).map(p => ({ ...p, abbrev: team.abbrev })))}</section>
       ${scheduleListMarkup('Ближайшие', team.schedule?.upcoming || [], 'Нет ближайших матчей', { remindable: true })}
       ${scheduleListMarkup('Недавние', team.schedule?.recent || [], 'Нет завершённых матчей')}
       ${statsGridMarkup('Командная статистика', team.stats || [], team.statsNote || '')}
+      ${teamTrophiesMarkup(team.trophies)}
+      ${retiredNumbersMarkup(team.retiredNumbers)}
     `;
   }
 
