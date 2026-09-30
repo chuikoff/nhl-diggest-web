@@ -79,10 +79,31 @@
     return name ? `name:${name}` : '';
   }
 
+  function favPlayerKeys(ref = {}) {
+    const keys = [];
+    if (ref.nhlId) keys.push(`nhl:${ref.nhlId}`);
+    if (ref.espnId) keys.push(`espn:${ref.espnId}`);
+    const name = String(ref.name || '').trim().toLowerCase();
+    if (name) keys.push(`name:${name}`);
+    return keys;
+  }
+
+  function favoritePlayerIndex(ref = {}, players = []) {
+    const want = new Set(favPlayerKeys(ref));
+    if (want.size) {
+      const byIds = players.findIndex(item => favPlayerKeys(item).some(key => want.has(key)));
+      if (byIds >= 0) return byIds;
+    }
+    // Settings × stores the canonical favPlayerKey string in data-fav-remove-player.
+    const raw = String(ref.key || ref.rawKey || '').trim();
+    if (raw) {
+      return players.findIndex(item => favPlayerKey(item) === raw || favPlayerKeys(item).includes(raw));
+    }
+    return -1;
+  }
+
   function isFavoritePlayer(ref = {}) {
-    const key = favPlayerKey(ref);
-    if (!key) return false;
-    return loadFavorites().players.some(item => favPlayerKey(item) === key);
+    return favoritePlayerIndex(ref, loadFavorites().players) >= 0;
   }
 
   function isFavoriteTeam(abbrev) {
@@ -92,10 +113,10 @@
   }
 
   function toggleFavoritePlayer(ref = {}) {
-    const key = favPlayerKey(ref);
-    if (!key) return false;
+    const keys = favPlayerKeys(ref);
+    if (!keys.length) return false;
     const fav = loadFavorites();
-    const idx = fav.players.findIndex(item => favPlayerKey(item) === key);
+    const idx = favoritePlayerIndex(ref, fav.players);
     if (idx >= 0) {
       fav.players.splice(idx, 1);
       saveFavorites(fav);
@@ -132,10 +153,15 @@
   }
 
   function removeFavoritePlayer(ref) {
-    const key = favPlayerKey(ref);
-    if (!key) return;
     const fav = loadFavorites();
-    fav.players = fav.players.filter(item => favPlayerKey(item) !== key);
+    const idx = favoritePlayerIndex(ref, fav.players);
+    if (idx < 0) {
+      const raw = String(ref?.key || ref?.rawKey || favPlayerKey(ref || {}) || '').trim();
+      if (!raw) return;
+      fav.players = fav.players.filter(item => favPlayerKey(item) !== raw && !favPlayerKeys(item).includes(raw));
+    } else {
+      fav.players.splice(idx, 1);
+    }
     saveFavorites(fav);
   }
 
@@ -1276,7 +1302,11 @@
 
   $$('.nav-item').forEach(button => button.addEventListener('click', () => {
     showPanel(button.dataset.nav);
-    if (button.dataset.nav === 'stats') loadStatsLive();
+    if (button.dataset.nav === 'stats') {
+      // Drop only leaderboard entries so season flips / old PREV responses cannot stick.
+      live?.clearStatsCache?.();
+      loadStatsLive();
+    }
     if (button.dataset.nav === 'alltime') loadAlltimeLive();
     if (button.dataset.nav === 'standings') loadStandingsLive();
     if (button.dataset.nav === 'settings') { renderFavoritesSettings(); syncDonateSettingsVisibility(); }
@@ -1476,6 +1506,37 @@
     live?.clearCache?.();
     loadGames(state.selectedDate, { toastOnDone: true });
   });
+  // Settings favorites: × remove + open player/team (panel is outside detailClickHandler roots).
+  document.getElementById('favPlayersList')?.addEventListener('click', event => {
+    const removeBtn = event.target.closest?.('[data-fav-remove-player]');
+    if (removeBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      const key = removeBtn.getAttribute('data-fav-remove-player') || '';
+      removeFavoritePlayer({ key, rawKey: key });
+      renderFavoritesSettings();
+      toast('Игрок убран из избранного');
+      return;
+    }
+    if (bindPlayerOpen(event.target)) {
+      event.preventDefault();
+    }
+  });
+  document.getElementById('favTeamsList')?.addEventListener('click', event => {
+    const removeBtn = event.target.closest?.('[data-fav-remove-team]');
+    if (removeBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      removeFavoriteTeam(removeBtn.getAttribute('data-fav-remove-team') || '');
+      renderFavoritesSettings();
+      toast('Команда убрана из избранного');
+      return;
+    }
+    if (bindTeamOpen(event.target)) {
+      event.preventDefault();
+    }
+  });
+
   $('#profileButton').addEventListener('click', () => { showPanel('settings'); renderFavoritesSettings(); syncDonateSettingsVisibility(); });
   const donateBtn = document.getElementById('tgDonateBtn');
   if (donateBtn) {

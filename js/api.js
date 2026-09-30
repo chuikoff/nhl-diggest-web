@@ -35,7 +35,11 @@
   }
 
   function espnSeasonYear() {
-    return Number(window.ESPN_SEASON_CUR || 2027);
+    const cur = Number(window.ESPN_SEASON_CUR);
+    if (Number.isFinite(cur) && cur >= 2026) return cur;
+    const fromNhl = Number(String(window.NHL_SEASON || '').slice(4));
+    if (Number.isFinite(fromNhl) && fromNhl >= 2026) return fromNhl;
+    return 2027;
   }
 
   function seasonLabelShort(seasonId) {
@@ -128,10 +132,27 @@
     'ivan provo rov', 'ivan provorov', 'dmitry orlov', 'nikita zadorov',
     'vladislav namestnikov', 'evgeny dadonov', 'valeri nichushkin', 'ilya lyubushkin',
     'igor shesterkin', 'ilya sorokin', 'semen varlamov', 'andrei vasilevskiy',
-    'alexander radulov', 'ilya kovalchuk', 'pavel datsyuk', 'sergei fedorov',
-    'igor larionov', 'alexei kovalev', 'pavel bure', 'valeri bure', 'slava kozlov',
-    'viacheslav kozlov', 'viacheslav fetisov', 'nikolai kulemin', 'vitaly kratsov',
-    'yegor shangovich', 'nikolai goldobin', 'anatoli golyshev'
+    'andrey vasilevskiy', 'alexander radulov', 'ilya kovalchuk', 'pavel datsyuk',
+    'sergei fedorov', 'igor larionov', 'alexei kovalev', 'pavel bure', 'valeri bure',
+    'slava kozlov', 'viacheslav kozlov', 'viacheslav fetisov', 'nikolai kulemin',
+    'vitaly kratsov', 'yegor shangovich', 'nikolai goldobin', 'anatoli golyshev',
+    // Active / common NHL Russians (boxscore + leaders; short names matched by last token)
+    'pavel dorofeyev', 'vladislav gavrikov', 'marat khusnutdinov', 'vasily podkolzin',
+    'alexander nikishin', 'alex nikishin', 'yegor chinakhov', 'kirill marchenko',
+    'daniil tarasov', 'alexandar georgiev', 'alexander georgiev', 'pyotr kochetkov',
+    'ivan fedotov', 'arseniy gusev', 'nikita chibrikov', 'yegor sharangovich',
+    'yegor shangovich', 'alexander alexeyev', 'alex alexeyev', 'dmitri voronkov',
+    'dmitry voronkov', 'vasiliy glotov', 'nikita okhotyuk', 'arsenii gritsyuk',
+    'nikolai kovalenko', 'alexander romanov', 'alex romanov', 'vladislav kolyachonok',
+    'bogdan konyushkov', 'danila yurov', 'matvei blinovsky', 'prokhor poltapov'
+  ]);
+
+  // NHL playerIds for Russian nationals (boxscore rows often lack birthCountry).
+  const RUSSIAN_PLAYER_IDS = new Set([
+    '8471214', '8471215', '8478864', '8478550', '8476883', '8476453', '8478048',
+    '8478009', '8480830', '8479410', '8484387', '8477507', '8481617', '8481604',
+    '8482177', '8478882', '8482142', '8480839', '8481554', '8482158', '8480012',
+    '8481032', '8477424', '8477942', '8480009'
   ]);
 
   function normalizedName(value) {
@@ -157,13 +178,32 @@
     return false;
   }
 
+  function russianNameFallbackMatch(name) {
+    const norm = normalizedName(name);
+    if (!norm) return false;
+    if (RUSSIAN_NAME_FALLBACKS.has(norm)) return true;
+    // NHL boxscore often uses "I. Shesterkin" / shortName — match by last token.
+    const parts = norm.split(' ').filter(Boolean);
+    const last = parts[parts.length - 1] || '';
+    if (last.length < 4) return false;
+    for (const full of RUSSIAN_NAME_FALLBACKS) {
+      const fullParts = full.split(' ').filter(Boolean);
+      const fullLast = fullParts[fullParts.length - 1] || '';
+      if (fullLast === last) return true;
+    }
+    return false;
+  }
+
   function isRussianPlayer(player) {
     const name = typeof player === 'string'
       ? player
-      : player?.name || player?.displayName || player?.fullName ||
+      : player?.name || player?.displayName || player?.fullName || player?.shortName ||
         playerName(player?.firstName, player?.lastName);
-    if (normalizedName(name) && RUSSIAN_NAME_FALLBACKS.has(normalizedName(name))) return true;
+    if (russianNameFallbackMatch(name)) return true;
     if (!player || typeof player === 'string') return false;
+    // Prefer NHL playerId (boxscore). Do not use ESPN athlete.id here — different namespace.
+    const nhlId = String(player.nhlId || player.playerId || '').trim();
+    if (nhlId && RUSSIAN_PLAYER_IDS.has(nhlId)) return true;
     return [
       player.nationality, player.countryCode, player.birthCountry, player.birthPlace,
       player.birthplace, player.country, player.citizenship, player.flag,
@@ -1537,13 +1577,14 @@
     await ensureSeason();
     const gameType = window.NHL_GAME_TYPE_REG || '2';
     const path = kind === 'goalie' ? 'goalie-stats-leaders' : 'skater-stats-leaders';
-    // Prefer /current (same as the Python bot); fall back to explicit seasonId.
+    const season = nhlSeasonId(); // force current campaign (e.g. 20262027)
+    const qs = `categories=${encodeURIComponent(category)}&limit=15`;
+    // Prefer explicit seasonId (no 307). /current is backup (redirects to same season).
     let data;
     try {
-      data = await fetchJson(`${NHL()}/v1/${path}/current?categories=${encodeURIComponent(category)}&limit=15`);
+      data = await fetchJson(`${NHL()}/v1/${path}/${season}/${gameType}?${qs}`);
     } catch {
-      const season = nhlSeasonId();
-      data = await fetchJson(`${NHL()}/v1/${path}/${season}/${gameType}?categories=${encodeURIComponent(category)}&limit=15`);
+      data = await fetchJson(`${NHL()}/v1/${path}/current?${qs}`);
     }
     const rows = data[category] || data[Object.keys(data)[0]] || [];
     return rows.slice(0, 15);
@@ -1619,9 +1660,9 @@
   }
 
   async function loadBoard(group, boardId) {
-    const key = `board:${group}:${boardId}`;
+    await ensureSeason();
+    const key = `board:${nhlSeasonId()}:${espnSeasonYear()}:${group}:${boardId}`;
     return cached(key, async () => {
-      await ensureSeason();
       if (group === 'goalies') {
         const board = GOALIE_BOARDS.find(item => item.id === boardId) || GOALIE_BOARDS[0];
         try {
@@ -1704,8 +1745,8 @@
   }
 
   async function loadRookies(boardId) {
-    return cached(`rookies:${boardId}`, async () => {
-      await ensureSeason();
+    await ensureSeason();
+    return cached(`rookies:${nhlSeasonId()}:${espnSeasonYear()}:${boardId}`, async () => {
       const sortMap = {
         points: 'offensive.points:desc',
         goals: 'offensive.goals:desc',
@@ -3357,6 +3398,11 @@
     CAREER_GOALIE_BOARDS,
     isRussianPlayer,
     resolvePlayerFlag,
-    clearCache: () => cache.clear()
+    clearCache: () => { cache.clear(); seasonReady = null; },
+    clearStatsCache: () => {
+      for (const key of [...cache.keys()]) {
+        if (String(key).startsWith('board:') || String(key).startsWith('rookies:')) cache.delete(key);
+      }
+    }
   };
 })();
