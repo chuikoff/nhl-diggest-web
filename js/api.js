@@ -197,10 +197,11 @@
   }
 
   function isRussianPlayer(player) {
-    const name = typeof player === 'string'
+    const rawName = typeof player === 'string'
       ? player
       : player?.name || player?.displayName || player?.fullName || player?.shortName ||
         playerName(player?.firstName, player?.lastName);
+    const name = typeof rawName === 'object' ? loc(rawName) : rawName;
     if (russianNameFallbackMatch(name)) return true;
     if (!player || typeof player === 'string') return false;
     // Prefer NHL playerId (boxscore). Do not use ESPN athlete.id here — different namespace.
@@ -1789,16 +1790,62 @@
     });
   }
 
+  function rosterIndexFromPayload(payload, source) {
+    const rows = source === 'nhl'
+      ? [
+          ...(payload?.forwards || []),
+          ...(payload?.defensemen || []),
+          ...(payload?.goalies || [])
+        ]
+      : (payload?.athletes || []).flatMap(group => Array.isArray(group?.items)
+        ? group.items
+        : (group?.id != null ? [group] : []));
+    const index = new Map();
+    rows.forEach(row => {
+      const id = row?.id;
+      if (id != null && id !== '') index.set(String(id), row);
+    });
+    return index;
+  }
+
+  function mergePlayerIdentity(player, rosterIndex) {
+    if (!player || !rosterIndex) return player || {};
+    const id = player.playerId ?? player.id ?? player.committedByPlayer?.playerId ?? player.committedByPlayer?.id;
+    const profile = id == null ? null : rosterIndex.get(String(id));
+    if (!profile) return player;
+    // Boxscore payloads carry stats and initials; roster payloads carry birthCountry.
+    // Preserve the game row while filling identity fields from the matching player id.
+    const merged = { ...profile, ...player };
+    ['birthCountry', 'birthPlace', 'birthCity', 'firstName', 'lastName', 'displayName', 'fullName'].forEach(key => {
+      if (merged[key] == null || merged[key] === '') merged[key] = profile[key];
+    });
+    return merged;
+  }
+
+  async function gameRosterIndex(game, source) {
+    const abbrevs = [...new Set([game?.away?.short, game?.home?.short].map(value => String(value || '').toUpperCase()).filter(Boolean))];
+    const payloads = await Promise.all(abbrevs.map(async abbrev => {
+      const path = source === 'nhl'
+        ? `${NHL()}/v1/roster/${abbrev}/current`
+        : `${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/teams/${espnTeamSlug(abbrev)}/roster`;
+      try { return await fetchJson(path); } catch { return null; }
+    }));
+    const index = new Map();
+    payloads.forEach(payload => rosterIndexFromPayload(payload, source).forEach((row, id) => index.set(id, row)));
+    return index;
+  }
+
   async function gameDetail(game) {
     const key = `detail:${game.id}`;
     return cached(key, async () => {
       if (!game.espn) {
         try {
-          const [landing, box] = await Promise.all([
+          const [landing, box, rosterIndex] = await Promise.all([
             fetchJson(`${NHL()}/v1/gamecenter/${game.id}/landing`),
-            fetchJson(`${NHL()}/v1/gamecenter/${game.id}/boxscore`)
+            fetchJson(`${NHL()}/v1/gamecenter/${game.id}/boxscore`),
+            gameRosterIndex(game, 'nhl')
           ]);
-          const detail = { source: 'nhl', ...normalizeNhlDetail(landing, box, game) };
+          const detail = { source: 'nhl', ...normalizeNhlDetail(landing, box, game, rosterIndex) };
           detail.recap = extractNhlGameRecap(game, landing);
           if (!detail.recap?.embed) {
             const espnRecap = await findEspnRecapForGame(game);
@@ -1810,8 +1857,11 @@
         }
       }
       try {
-        const summary = await fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/summary?event=${game.id}`);
-        const detail = { source: 'espn', ...normalizeEspnDetail(summary, game) };
+        const [summary, rosterIndex] = await Promise.all([
+          fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/summary?event=${game.id}`),
+          gameRosterIndex(game, 'espn')
+        ]);
+        const detail = { source: 'espn', ...normalizeEspnDetail(summary, game, rosterIndex) };
         detail.recap = extractEspnGameRecap(summary.videos || []) || extractNhlGameRecap(game);
         return detail;
       } catch (error) {
@@ -1929,7 +1979,7 @@
     return `${Number.isInteger(rounded) ? rounded : rounded}%`;
   }
 
-  function mapNhlSkaterRow(player, teamShort) {
+  function mapNhlSkaterRow(player, teamShort, rosterIndex) {
     const name = loc(player.name);
     const goals = Number(player.goals || 0);
     const assists = Number(player.assists || 0);
@@ -1938,7 +1988,7 @@
       number: player.sweaterNumber != null ? String(player.sweaterNumber) : '',
       name,
       nhlId: player.playerId || null,
-      isRussian: isRussianPlayer({ ...player, name }),
+      isRussian: isRussianPlayer({ ...mergePlayerIdentity(player, rosterIndex), name }),
       position: player.position || '',
       goals,
       assists,
@@ -1953,7 +2003,7 @@
     };
   }
 
-  function mapNhlGoalieRow(goalie, teamShort) {
+  function mapNhlGoalieRow(goalie, teamShort, rosterIndex) {
     const name = loc(goalie.name);
     const saves = goalie.saves;
     const shotsAgainst = goalie.shotsAgainst;
@@ -1962,7 +2012,7 @@
       number: goalie.sweaterNumber != null ? String(goalie.sweaterNumber) : '',
       name,
       nhlId: goalie.playerId || null,
-      isRussian: isRussianPlayer({ ...goalie, name }),
+      isRussian: isRussianPlayer({ ...mergePlayerIdentity(goalie, rosterIndex), name }),
       saves: goalie.saveShotsAgainst
         || (saves != null && shotsAgainst != null ? `${saves}/${shotsAgainst}` : (saves ?? '—')),
       shotsAgainst: shotsAgainst ?? '',
@@ -1973,7 +2023,7 @@
     };
   }
 
-  function normalizeNhlDetail(landing, box, game) {
+  function normalizeNhlDetail(landing, box, game, rosterIndex) {
     const summary = landing.summary || {};
     const scoring = [];
     (summary.scoring || []).forEach(period => {
@@ -1981,18 +2031,22 @@
       const label = desc.periodType === 'OT' ? 'OT' : desc.periodType === 'SO' ? 'SO' : `${desc.number || ''}`.trim();
       (period.goals || []).forEach(goal => {
         const scorer = playerName(goal.firstName, goal.lastName);
+        const scorerIdentity = mergePlayerIdentity({ ...goal, name: scorer }, rosterIndex);
         const entry = {
           period: careerPeriodLabel(label || desc.number || '—'),
           time: goal.timeInPeriod || '',
           team: loc(goal.teamAbbrev).toUpperCase(),
           scorer,
           scorerId: goal.playerId || goal.nhlPlayerId || null,
-          scorerRussian: isRussianPlayer({ ...goal, name: scorer }),
-          assists: (goal.assists || []).map(assist => ({
-            name: playerName(assist.firstName, assist.lastName),
-            nhlId: assist.playerId || null,
-            isRussian: isRussianPlayer({ ...assist, name: playerName(assist.firstName, assist.lastName) })
-          })).filter(assist => assist.name),
+          scorerRussian: isRussianPlayer(scorerIdentity),
+          assists: (goal.assists || []).map(assist => {
+            const name = playerName(assist.firstName, assist.lastName);
+            return {
+              name,
+              nhlId: assist.playerId || null,
+              isRussian: isRussianPlayer(mergePlayerIdentity({ ...assist, name }, rosterIndex))
+            };
+          }).filter(assist => assist.name),
           strength: goal.strength || ''
         };
         const highlight = nhlGoalHighlight(goal);
@@ -2006,12 +2060,13 @@
       const label = desc.periodType === 'OT' ? 'OT' : desc.periodType === 'SO' ? 'SO' : `${desc.number || ''}`;
       (period.penalties || []).forEach(pen => {
         const who = nhlCommittedPlayerName(pen);
+        const playerIdentity = mergePlayerIdentity({ ...pen, name: who }, rosterIndex);
         penalties.push({
           period: careerPeriodLabel(label || desc.number || '—'),
           time: pen.timeInPeriod || '',
           team: loc(pen.teamAbbrev || pen.committedByTeam).toUpperCase(),
           player: who,
-          playerRussian: isRussianPlayer({ ...pen, name: who }),
+          playerRussian: isRussianPlayer(playerIdentity),
           minutes: pen.duration || pen.penaltyMinutes || '',
           infraction: humanizeInfraction(pen.descKey) || humanizeInfraction(pen.type) || ''
         });
@@ -2033,10 +2088,10 @@
       const hits = players.reduce((sum, player) => sum + Number(player.hits || 0), 0);
       boxscore[team.short] = { shots, hits, faceoff: '—', powerPlay: '—' };
       players.forEach(player => {
-        skaters.push(mapNhlSkaterRow(player, team.short));
+        skaters.push(mapNhlSkaterRow(player, team.short, rosterIndex));
       });
       (sideStats.goalies || []).forEach(goalie => {
-        goalies.push(mapNhlGoalieRow(goalie, team.short));
+        goalies.push(mapNhlGoalieRow(goalie, team.short, rosterIndex));
       });
     });
     return {
@@ -2050,7 +2105,7 @@
     };
   }
 
-  function normalizeEspnDetail(summary, game) {
+  function normalizeEspnDetail(summary, game, rosterIndex) {
     const plays = summary.plays || [];
     const scoring = plays.filter(play => play.scoringPlay).map(play => {
       const participants = play.participants || [];
@@ -2058,7 +2113,7 @@
       const assists = participants.filter(item => item.type === 'assister' || item.type === 'assist').map(item => ({
         name: item.athlete?.displayName || '',
         espnId: item.athlete?.id || null,
-        isRussian: isRussianPlayer(item.athlete || {})
+        isRussian: isRussianPlayer(mergePlayerIdentity(item.athlete || {}, rosterIndex))
       })).filter(item => item.name);
       const text = play.text || '';
       const teamId = String(play.team?.id || '');
@@ -2069,7 +2124,7 @@
         scorer: scorer?.athlete?.displayName || text.split(' Goal')[0] || text,
         scorerId: scorer?.athlete?.id || null,
         scorerEspn: true,
-        scorerRussian: isRussianPlayer(scorer?.athlete || scorer?.athlete?.displayName || ''),
+        scorerRussian: isRussianPlayer(mergePlayerIdentity(scorer?.athlete || {}, rosterIndex)),
         assists,
         strength: /power play|power-play|\bpp\b/i.test(text) ? 'pp' : /short/i.test(text) ? 'sh' : ''
       };
@@ -2115,7 +2170,7 @@
               number: athlete.jersey != null ? String(athlete.jersey) : '',
               name: athlete.displayName || '',
               espnId: athlete.id || null,
-              isRussian: isRussianPlayer(athlete),
+              isRussian: isRussianPlayer(mergePlayerIdentity(athlete, rosterIndex)),
               saves: saves != null && shotsAgainst != null
                 ? `${saves}/${shotsAgainst}`
                 : (saves || '—'),
@@ -2140,7 +2195,7 @@
             number: athlete.jersey != null ? String(athlete.jersey) : '',
             name: athlete.displayName || '',
             espnId: athlete.id || null,
-            isRussian: isRussianPlayer(athlete),
+            isRussian: isRussianPlayer(mergePlayerIdentity(athlete, rosterIndex)),
             position: athlete.position?.abbreviation || athlete.position || '',
             goals,
             assists,
@@ -2167,7 +2222,7 @@
         time: play.clock?.displayValue || '',
         team: teamIdToAbbrev[String(play.team?.id)] || '',
         player: athlete.displayName || '',
-        playerRussian: isRussianPlayer(athlete),
+        playerRussian: isRussianPlayer(mergePlayerIdentity(athlete, rosterIndex)),
         minutes: type.penaltyMinutes || '',
         infraction: humanizeInfraction(typeText) || humanizeInfraction(type.penaltyType) || ''
       });
