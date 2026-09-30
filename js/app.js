@@ -899,8 +899,30 @@
     group.hidden = !show;
   }
 
-  function remindDeepLink(gameId, enable) {
-    const payload = `${enable ? 'remind' : 'unremind'}_${gameId}`;
+  function compactStartUtcForBot(iso) {
+    // Telegram start payloads allow only [A-Za-z0-9_-] (max 64). Encode UTC without colons.
+    if (!iso) return '';
+    const raw = String(iso).trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (m) {
+      return `${m[1]}${m[2]}${m[3]}T${m[4]}${m[5]}${m[6] || '00'}Z`;
+    }
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return '';
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`;
+  }
+
+  function remindDeepLink(gameId, enable, startTimeUTC) {
+    let payload = `${enable ? 'remind' : 'unremind'}_${gameId}`;
+    if (enable) {
+      const compact = compactStartUtcForBot(startTimeUTC);
+      if (compact) {
+        const withStart = `${payload}_${compact}`;
+        // Keep under Telegram's 64-char start payload limit.
+        if (withStart.length <= 64) payload = withStart;
+      }
+    }
     if (bridge.isTelegram || (!bridge.isMax && !bridge.isBrowser)) {
       const bot = window.NHL_TG_BOT || 'nhldig_bot';
       return `https://t.me/${bot}?start=${encodeURIComponent(payload)}`;
@@ -913,8 +935,8 @@
     return `https://t.me/${bot}?start=${encodeURIComponent(payload)}`;
   }
 
-  function openRemindBot(gameId, enable) {
-    const url = remindDeepLink(gameId, enable);
+  function openRemindBot(gameId, enable, startTimeUTC) {
+    const url = remindDeepLink(gameId, enable, startTimeUTC);
     const opened = bridge.openBotLink?.(url);
     if (!opened) openExternal(url);
   }
@@ -1531,7 +1553,7 @@
       remindBtn.setAttribute('data-remind-on', nextOn ? '1' : '0');
       remindBtn.setAttribute('aria-pressed', nextOn ? 'true' : 'false');
       remindBtn.textContent = nextOn ? '🔔 Вкл' : '🔔';
-      openRemindBot(gameId, nextOn);
+      openRemindBot(gameId, nextOn, remindBtn.getAttribute('data-remind-start') || '');
       toast(nextOn ? 'Напоминание: откройте бота для подтверждения' : 'Напоминание снято — подтвердите в боте');
       return;
     }
