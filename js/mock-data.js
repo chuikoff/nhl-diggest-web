@@ -110,8 +110,18 @@ window.NHL_MOCK = {
       ],
       boxscore: { PIT: { shots: 32, hits: 21, faceoff: '52%', powerPlay: '1/4' }, NYR: { shots: 30, hits: 18, faceoff: '48%', powerPlay: '0/3' } },
       goalies: [
-        { team: 'PIT', name: 'Tristan Jarry', saves: '28/30', gaa: '2.00' },
-        { team: 'NYR', name: 'Igor Shesterkin', saves: '28/32', gaa: '4.00' }
+        { team: 'PIT', name: 'Tristan Jarry', number: '35', saves: '28/30', goalsAgainst: 2, sv: '.933', toi: '60:00', decision: 'W' },
+        { team: 'NYR', name: 'Igor Shesterkin', number: '31', saves: '28/32', goalsAgainst: 4, sv: '.875', toi: '60:00', decision: 'L' }
+      ],
+      skaters: [
+        { team: 'PIT', number: '87', name: 'Sidney Crosby', goals: 1, assists: 1, points: 2, plusMinus: 2, sog: 4, pim: 0, hits: 1, blocks: 0, faceoffPct: '58%', toi: '21:04' },
+        { team: 'PIT', number: '59', name: 'Jake Guentzel', goals: 1, assists: 0, points: 1, plusMinus: 1, sog: 5, pim: 0, hits: 2, blocks: 1, faceoffPct: '0%', toi: '18:42' },
+        { team: 'PIT', number: '17', name: 'Bryan Rust', goals: 1, assists: 1, points: 2, plusMinus: 2, sog: 3, pim: 0, hits: 3, blocks: 0, faceoffPct: '', toi: '17:11' },
+        { team: 'PIT', number: '58', name: 'Kris Letang', goals: 0, assists: 1, points: 1, plusMinus: 1, sog: 2, pim: 2, hits: 1, blocks: 3, faceoffPct: '', toi: '23:18' },
+        { team: 'NYR', number: '10', name: 'Artemi Panarin', goals: 1, assists: 0, points: 1, plusMinus: -1, sog: 4, pim: 0, hits: 0, blocks: 0, faceoffPct: '', toi: '20:33' },
+        { team: 'NYR', number: '20', name: 'Chris Kreider', goals: 1, assists: 0, points: 1, plusMinus: 0, sog: 3, pim: 0, hits: 4, blocks: 1, faceoffPct: '', toi: '16:50' },
+        { team: 'NYR', number: '93', name: 'Mika Zibanejad', goals: 0, assists: 1, points: 1, plusMinus: -1, sog: 2, pim: 0, hits: 1, blocks: 0, faceoffPct: '51%', toi: '19:22' },
+        { team: 'NYR', number: '23', name: 'Adam Fox', goals: 0, assists: 1, points: 1, plusMinus: -2, sog: 1, pim: 0, hits: 0, blocks: 2, faceoffPct: '', toi: '24:05' }
       ]
     },
     2: {

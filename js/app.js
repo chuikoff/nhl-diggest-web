@@ -504,6 +504,7 @@
     const penalties = detail?.penalties || [];
     const boxscore = detail?.boxscore || {};
     const goalies = detail?.goalies || [];
+    const skaters = detail?.skaters || [];
     const teamByShort = { [game.away.short]: game.away, [game.home.short]: game.home };
 
     $('#gameDetailContent').innerHTML = `
@@ -513,16 +514,131 @@
         <div class="detail-venue">${detail?.venue || game.venue || 'NHL Arena'}${detail?.attendance ? ` · ${detail.attendance} зрителей` : ''}</div>
       </div>
       ${isScheduled ? `<div class="detail-notice"><strong>Матч ещё не начался</strong><span>Подробная статистика появится после стартового вбрасывания.</span></div>` : `
-        ${recapMarkup(detail?.recap)}
-        <section class="detail-section"><div class="detail-section-title"><h3>Голы</h3><span>${scoring.length}</span></div>
-          <div class="period-groups">${periodGroupsMarkup(scoring, 'goals')}</div>
-        </section>
-        <section class="detail-section"><div class="detail-section-title"><h3>Командная статистика</h3></div>
-          <div class="boxscore-table"><div class="boxscore-head"><span>Команда</span><span>Броски</span><span>Силовые</span><span>Вбрасывания</span><span>Большинство</span></div>${[game.away, game.home].map(team => { const stats = boxscore[team.short] || {}; return `<div class="boxscore-row"><strong><img src="${team.logo}" alt="">${team.short}</strong><span>${stats.shots ?? '—'}</span><span>${stats.hits ?? '—'}</span><span>${stats.faceoff ?? '—'}</span><span>${stats.powerPlay ?? '—'}</span></div>`; }).join('')}</div>
-        </section>
-        <section class="detail-section"><div class="detail-section-title"><h3>Удаления</h3><span>${penalties.length}</span></div><div class="period-groups">${periodGroupsMarkup(penalties, 'penalties')}</div></section>
-        ${goalies.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Вратари</h3></div><div class="goalie-lines">${goalies.map(goalie => `<div class="goalie-line"><span class="line-team">${teamByShort[goalie.team]?.short || goalie.team}</span><strong>${playerMarkup({ ...goalie, abbrev: goalie.team })}</strong><span>${goalie.saves}${goalie.sv ? ` · SV% ${goalie.sv}` : ''}${goalie.toi ? ` · ${goalie.toi}` : ''}</span></div>`).join('')}</div></section>` : ''}
+        <div class="segmented game-detail-tabs" role="tablist">
+          <button type="button" class="segment is-selected" data-game-tab="overview" role="tab" aria-selected="true">Обзор</button>
+          <button type="button" class="segment" data-game-tab="stats" role="tab" aria-selected="false">Статистика</button>
+        </div>
+        <div class="game-tab-panel" data-game-tab-panel="overview">
+          ${recapMarkup(detail?.recap)}
+          <section class="detail-section"><div class="detail-section-title"><h3>Голы</h3><span>${scoring.length}</span></div>
+            <div class="period-groups">${periodGroupsMarkup(scoring, 'goals')}</div>
+          </section>
+          <section class="detail-section"><div class="detail-section-title"><h3>Командная статистика</h3></div>
+            <div class="boxscore-table"><div class="boxscore-head"><span>Команда</span><span>Броски</span><span>Силовые</span><span>Вбрасывания</span><span>Большинство</span></div>${[game.away, game.home].map(team => { const stats = boxscore[team.short] || {}; return `<div class="boxscore-row"><strong><img src="${team.logo}" alt="">${team.short}</strong><span>${stats.shots ?? '—'}</span><span>${stats.hits ?? '—'}</span><span>${stats.faceoff ?? '—'}</span><span>${stats.powerPlay ?? '—'}</span></div>`; }).join('')}</div>
+          </section>
+          <section class="detail-section"><div class="detail-section-title"><h3>Удаления</h3><span>${penalties.length}</span></div><div class="period-groups">${periodGroupsMarkup(penalties, 'penalties')}</div></section>
+          ${goalies.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Вратари</h3></div><div class="goalie-lines">${goalies.map(goalie => `<div class="goalie-line"><span class="line-team">${teamByShort[goalie.team]?.short || goalie.team}</span><strong>${playerMarkup({ ...goalie, abbrev: goalie.team })}</strong><span>${goalie.saves}${goalie.sv ? ` · SV% ${goalie.sv}` : ''}${goalie.toi ? ` · ${goalie.toi}` : ''}</span></div>`).join('')}</div></section>` : ''}
+        </div>
+        <div class="game-tab-panel" data-game-tab-panel="stats" hidden>
+          ${playerBoxscoreMarkup(game, skaters, goalies)}
+        </div>
       `}`;
+  }
+
+  function boxStatCell(value) {
+    if (value == null || value === '') return '—';
+    return escapeHtml(value);
+  }
+
+  function skaterStatsTableMarkup(players) {
+    if (!players.length) return `<p class="empty-detail">Нет статистики скейтеров</p>`;
+    const cols = [
+      { key: 'number', label: '#', cls: 'col-num' },
+      { key: 'name', label: 'Игрок', cls: 'col-name' },
+      { key: 'goals', label: 'G' },
+      { key: 'assists', label: 'A' },
+      { key: 'points', label: 'P' },
+      { key: 'plusMinus', label: '+/−' },
+      { key: 'sog', label: 'SOG' },
+      { key: 'pim', label: 'PIM' },
+      { key: 'hits', label: 'HIT' },
+      { key: 'blocks', label: 'BLK' },
+      { key: 'faceoffPct', label: 'FO%' },
+      { key: 'toi', label: 'TOI', cls: 'col-toi' }
+    ].filter(col => col.key === 'name' || col.key === 'number'
+      || players.some(row => row[col.key] !== '' && row[col.key] != null));
+    const template = cols.map(col => {
+      if (col.key === 'name') return 'minmax(96px, 1.6fr)';
+      if (col.key === 'number') return '28px';
+      if (col.key === 'toi') return 'minmax(44px, 0.7fr)';
+      if (col.key === 'faceoffPct') return 'minmax(40px, 0.65fr)';
+      return 'minmax(32px, 0.55fr)';
+    }).join(' ');
+    const head = cols.map(col => `<span class="${col.cls || ''}">${col.label}</span>`).join('');
+    const body = players.map(player => {
+      const cells = cols.map(col => {
+        if (col.key === 'name') {
+          return `<span class="col-name">${playerMarkup({ ...player, abbrev: player.team })}</span>`;
+        }
+        if (col.key === 'number') {
+          return `<span class="col-num">${boxStatCell(player.number)}</span>`;
+        }
+        return `<span class="${col.cls || ''}">${boxStatCell(player[col.key])}</span>`;
+      }).join('');
+      return `<div class="player-box-row">${cells}</div>`;
+    }).join('');
+    return `<div class="player-box-scroll"><div class="player-box-table" style="--player-box-cols:${template}"><div class="player-box-head">${head}</div>${body}</div></div>`;
+  }
+
+  function goalieStatsTableMarkup(goalies) {
+    if (!goalies.length) return '';
+    const cols = [
+      { key: 'number', label: '#', cls: 'col-num' },
+      { key: 'name', label: 'Игрок', cls: 'col-name' },
+      { key: 'goalsAgainst', label: 'GA' },
+      { key: 'saves', label: 'SV' },
+      { key: 'sv', label: 'SV%' },
+      { key: 'toi', label: 'TOI', cls: 'col-toi' },
+      { key: 'decision', label: 'DEC' }
+    ].filter(col => col.key === 'name' || col.key === 'number'
+      || goalies.some(row => row[col.key] !== '' && row[col.key] != null));
+    const template = cols.map(col => {
+      if (col.key === 'name') return 'minmax(96px, 1.6fr)';
+      if (col.key === 'number') return '28px';
+      if (col.key === 'saves') return 'minmax(48px, 0.8fr)';
+      if (col.key === 'toi') return 'minmax(44px, 0.7fr)';
+      return 'minmax(34px, 0.55fr)';
+    }).join(' ');
+    const head = cols.map(col => `<span class="${col.cls || ''}">${col.label}</span>`).join('');
+    const body = goalies.map(goalie => {
+      const cells = cols.map(col => {
+        if (col.key === 'name') {
+          return `<span class="col-name">${playerMarkup({ ...goalie, abbrev: goalie.team })}</span>`;
+        }
+        if (col.key === 'number') {
+          return `<span class="col-num">${boxStatCell(goalie.number)}</span>`;
+        }
+        return `<span class="${col.cls || ''}">${boxStatCell(goalie[col.key])}</span>`;
+      }).join('');
+      return `<div class="player-box-row">${cells}</div>`;
+    }).join('');
+    return `<div class="detail-section-title"><h3>Вратари</h3><span>${goalies.length}</span></div>
+      <div class="player-box-scroll"><div class="player-box-table goalie-box-table" style="--player-box-cols:${template}"><div class="player-box-head">${head}</div>${body}</div></div>`;
+  }
+
+  function playerBoxscoreMarkup(game, skaters = [], goalies = []) {
+    if (!skaters.length && !goalies.length) {
+      return `<div class="detail-notice"><strong>Статистика игроков недоступна</strong><span>Боксскор для этого матча пока не пришёл из NHL/ESPN.</span></div>`;
+    }
+    const sides = [
+      { team: game.away, key: game.away.short },
+      { team: game.home, key: game.home.short }
+    ];
+    const tabs = sides.map((side, index) =>
+      `<button type="button" class="segment${index === 0 ? ' is-selected' : ''}" data-box-team="${escapeAttr(side.key)}" aria-selected="${index === 0 ? 'true' : 'false'}">${escapeHtml(side.key)}</button>`
+    ).join('');
+    const panels = sides.map((side, index) => {
+      const teamSkaters = skaters.filter(row => row.team === side.key);
+      const teamGoalies = goalies.filter(row => row.team === side.key);
+      return `<div class="box-team-panel" data-box-team-panel="${escapeAttr(side.key)}"${index === 0 ? '' : ' hidden'}>
+        <section class="detail-section">
+          <div class="detail-section-title"><h3>Скейтеры · ${escapeHtml(side.key)}</h3><span>${teamSkaters.length}</span></div>
+          ${skaterStatsTableMarkup(teamSkaters)}
+        </section>
+        ${teamGoalies.length ? `<section class="detail-section">${goalieStatsTableMarkup(teamGoalies)}</section>` : ''}
+      </div>`;
+    }).join('');
+    return `<div class="segmented box-team-tabs" role="tablist">${tabs}</div>${panels}`;
   }
 
   function rosterGroupMarkup(roster) {
@@ -1154,6 +1270,36 @@
   });
 
   function detailClickHandler(event) {
+    const gameTab = event.target.closest?.('[data-game-tab]');
+    if (gameTab) {
+      event.preventDefault();
+      const root = gameTab.closest('#gameDetailContent') || $('#gameDetailContent');
+      const tab = gameTab.getAttribute('data-game-tab');
+      root.querySelectorAll('[data-game-tab]').forEach(btn => {
+        const on = btn === gameTab;
+        btn.classList.toggle('is-selected', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      root.querySelectorAll('[data-game-tab-panel]').forEach(panel => {
+        panel.hidden = panel.getAttribute('data-game-tab-panel') !== tab;
+      });
+      return;
+    }
+    const boxTeam = event.target.closest?.('[data-box-team]');
+    if (boxTeam) {
+      event.preventDefault();
+      const root = boxTeam.closest('#gameDetailContent') || $('#gameDetailContent');
+      const key = boxTeam.getAttribute('data-box-team');
+      root.querySelectorAll('[data-box-team]').forEach(btn => {
+        const on = btn === boxTeam;
+        btn.classList.toggle('is-selected', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      root.querySelectorAll('[data-box-team-panel]').forEach(panel => {
+        panel.hidden = panel.getAttribute('data-box-team-panel') !== key;
+      });
+      return;
+    }
     const favBtn = event.target.closest?.('.fav-toggle');
     if (favBtn) {
       event.preventDefault();

@@ -1747,6 +1747,64 @@
     });
   }
 
+  function formatFoPct(value) {
+    if (value == null || value === '') return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) {
+      const raw = String(value).trim();
+      if (!raw) return '';
+      return /%$/.test(raw) ? raw : `${raw}%`;
+    }
+    // NHL faceoffWinningPctg is 0–1; ESPN faceoffPercent is usually 0–100.
+    const pct = n >= 0 && n <= 1 ? n * 100 : n;
+    const rounded = Math.round(pct * 10) / 10;
+    return `${Number.isInteger(rounded) ? rounded : rounded}%`;
+  }
+
+  function mapNhlSkaterRow(player, teamShort) {
+    const name = loc(player.name);
+    const goals = Number(player.goals || 0);
+    const assists = Number(player.assists || 0);
+    return {
+      team: teamShort,
+      number: player.sweaterNumber != null ? String(player.sweaterNumber) : '',
+      name,
+      nhlId: player.playerId || null,
+      isRussian: isRussianPlayer({ ...player, name }),
+      position: player.position || '',
+      goals,
+      assists,
+      points: player.points != null ? Number(player.points) : goals + assists,
+      plusMinus: player.plusMinus ?? '',
+      sog: player.sog ?? '',
+      pim: player.pim ?? '',
+      hits: player.hits ?? '',
+      blocks: player.blockedShots ?? '',
+      faceoffPct: formatFoPct(player.faceoffWinningPctg),
+      toi: player.toi || ''
+    };
+  }
+
+  function mapNhlGoalieRow(goalie, teamShort) {
+    const name = loc(goalie.name);
+    const saves = goalie.saves;
+    const shotsAgainst = goalie.shotsAgainst;
+    return {
+      team: teamShort,
+      number: goalie.sweaterNumber != null ? String(goalie.sweaterNumber) : '',
+      name,
+      nhlId: goalie.playerId || null,
+      isRussian: isRussianPlayer({ ...goalie, name }),
+      saves: goalie.saveShotsAgainst
+        || (saves != null && shotsAgainst != null ? `${saves}/${shotsAgainst}` : (saves ?? '—')),
+      shotsAgainst: shotsAgainst ?? '',
+      goalsAgainst: goalie.goalsAgainst ?? '',
+      sv: goalie.savePctg != null ? formatSv(goalie.savePctg) : '',
+      decision: goalie.decision || '',
+      toi: goalie.toi || ''
+    };
+  }
+
   function normalizeNhlDetail(landing, box, game) {
     const summary = landing.summary || {};
     const scoring = [];
@@ -1799,38 +1857,18 @@
       const keyName = `${side}Team`;
       const team = game[side];
       const sideStats = pbg[keyName] || {};
+      const teamBox = box[keyName] || {};
       const players = [...(sideStats.forwards || []), ...(sideStats.defense || [])];
-      const shots = players.reduce((sum, player) => sum + Number(player.sog || 0), 0);
+      const shots = teamBox.sog != null
+        ? Number(teamBox.sog)
+        : players.reduce((sum, player) => sum + Number(player.sog || 0), 0);
       const hits = players.reduce((sum, player) => sum + Number(player.hits || 0), 0);
       boxscore[team.short] = { shots, hits, faceoff: '—', powerPlay: '—' };
-      players
-        .filter(player => player.goals || player.assists || player.pim)
-        .sort((a, b) => (b.points || 0) - (a.points || 0))
-        .slice(0, 8)
-        .forEach(player => {
-          skaters.push({
-            team: team.short,
-            name: loc(player.name),
-            nhlId: player.playerId || null,
-            isRussian: isRussianPlayer({ ...player, name: loc(player.name) }),
-            goals: player.goals ?? 0,
-            assists: player.assists ?? 0,
-            pim: player.pim ?? 0,
-            plusMinus: player.plusMinus ?? 0,
-            toi: player.toi || ''
-          });
-        });
+      players.forEach(player => {
+        skaters.push(mapNhlSkaterRow(player, team.short));
+      });
       (sideStats.goalies || []).forEach(goalie => {
-        goalies.push({
-          team: team.short,
-          name: loc(goalie.name),
-          nhlId: goalie.playerId || null,
-          isRussian: isRussianPlayer({ ...goalie, name: loc(goalie.name) }),
-          saves: goalie.saveShotsAgainst || `${goalie.saves ?? '—'}/${goalie.shotsAgainst ?? '—'}`,
-          sv: goalie.savePctg != null ? formatSv(goalie.savePctg) : '',
-          decision: goalie.decision || '',
-          toi: goalie.toi || ''
-        });
+        goalies.push(mapNhlGoalieRow(goalie, team.short));
       });
     });
     return {
@@ -1897,17 +1935,24 @@
       (block.statistics || []).forEach(group => {
         const keys = group.keys || group.names || [];
         const index = name => keys.indexOf(name);
-        if (group.name === 'goalies' || /goalie/i.test(group.name || '')) {
-          (group.athletes || []).forEach(athlete => {
-            const stats = athlete.stats || [];
+        const groupName = String(group.name || '');
+        if (groupName === 'goalies' || /goalie/i.test(groupName)) {
+          (group.athletes || []).forEach(entry => {
+            const athlete = entry.athlete || {};
+            const stats = entry.stats || [];
+            const saves = stats[index('saves')];
+            const shotsAgainst = stats[index('shotsAgainst')];
             goalies.push({
               team: short,
-              name: athlete.athlete?.displayName || '',
-              espnId: athlete.athlete?.id || null,
-              isRussian: isRussianPlayer(athlete.athlete || {}),
-              saves: stats[index('saves')] && stats[index('shotsAgainst')]
-                ? `${stats[index('saves')]}/${stats[index('shotsAgainst')]}`
-                : (stats[index('saves')] || '—'),
+              number: athlete.jersey != null ? String(athlete.jersey) : '',
+              name: athlete.displayName || '',
+              espnId: athlete.id || null,
+              isRussian: isRussianPlayer(athlete),
+              saves: saves != null && shotsAgainst != null
+                ? `${saves}/${shotsAgainst}`
+                : (saves || '—'),
+              shotsAgainst: shotsAgainst ?? '',
+              goalsAgainst: stats[index('goalsAgainst')] ?? '',
               sv: stats[index('savePct')] || '',
               decision: '',
               toi: stats[index('timeOnIce')] || ''
@@ -1915,22 +1960,29 @@
           });
           return;
         }
-        if (group.name !== 'forwards' && group.name !== 'defenses' && group.name !== 'defense') return;
-        (group.athletes || []).forEach(athlete => {
-          const stats = athlete.stats || [];
+        if (!/^(forwards|defenses|defense|skaters)$/i.test(groupName)) return;
+        (group.athletes || []).forEach(entry => {
+          const athlete = entry.athlete || {};
+          const stats = entry.stats || [];
           const goals = Number(stats[index('goals')] || 0);
           const assists = Number(stats[index('assists')] || 0);
-          const pim = Number(stats[index('penaltyMinutes')] || 0);
-          if (!goals && !assists && !pim) return;
+          const sog = index('shotsTotal') >= 0 ? stats[index('shotsTotal')] : (stats[index('shots')] ?? '');
           skaters.push({
             team: short,
-            name: athlete.athlete?.displayName || '',
-            espnId: athlete.athlete?.id || null,
-            isRussian: isRussianPlayer(athlete.athlete || {}),
+            number: athlete.jersey != null ? String(athlete.jersey) : '',
+            name: athlete.displayName || '',
+            espnId: athlete.id || null,
+            isRussian: isRussianPlayer(athlete),
+            position: athlete.position?.abbreviation || athlete.position || '',
             goals,
             assists,
-            pim,
-            plusMinus: stats[index('plusMinus')] ?? '',
+            points: goals + assists,
+            plusMinus: index('plusMinus') >= 0 ? stats[index('plusMinus')] : '',
+            sog,
+            pim: index('penaltyMinutes') >= 0 ? stats[index('penaltyMinutes')] : '',
+            hits: index('hits') >= 0 ? stats[index('hits')] : '',
+            blocks: index('blockedShots') >= 0 ? stats[index('blockedShots')] : '',
+            faceoffPct: formatFoPct(index('faceoffPercent') >= 0 ? stats[index('faceoffPercent')] : ''),
             toi: stats[index('timeOnIce')] || ''
           });
         });
@@ -1964,7 +2016,7 @@
       penalties,
       boxscore,
       goalies,
-      skaters: skaters.slice(0, 16)
+      skaters
     };
   }
 

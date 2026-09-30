@@ -35,11 +35,13 @@
 :root[data-theme="light"] .scoring-list,
 :root[data-theme="light"] .penalty-list,
 :root[data-theme="light"] .goalie-lines,
-:root[data-theme="light"] .boxscore-table { background: #ffffff; }
+:root[data-theme="light"] .boxscore-table,
+:root[data-theme="light"] .player-box-scroll { background: #ffffff; }
 :root[data-theme="light"] .division-title { background: #edf3f8; }
 :root[data-theme="light"] .standing-row,
 :root[data-theme="light"] .scoring-row,
 :root[data-theme="light"] .boxscore-row,
+:root[data-theme="light"] .player-box-row,
 :root[data-theme="light"] .penalty-row,
 :root[data-theme="light"] .goalie-line { border-top-color: #e1e7ee; }
 :root[data-theme="light"] .detail-hero { background: linear-gradient(135deg, #f5f9fc, #e9f0f6); }
@@ -507,6 +509,9 @@ h2 { font-size: 29px; }
 .event-time strong, .event-team, .line-team { font-size: 11px; }
 .boxscore-head, .boxscore-row { font-size: 10px; }
 .boxscore-head { font-size: 9px; }
+.player-box-head, .player-box-row { font-size: 10px; }
+.player-box-head { font-size: 9px; }
+.player-box-row .col-name { font-size: 11px; }
 .penalty-row span, .penalty-row small { font-size: 10px; }
 .penalty-row strong, .goalie-line strong { font-size: 11px; }
 .goalie-line span:last-child { font-size: 10px; }
@@ -791,3 +796,68 @@ h2 { font-size: 29px; }
   border-color: #49637f;
   outline: none;
 }
+
+/* Match detail: Обзор | Статистика + per-team player boxscore */
+.game-detail-tabs { margin-top: 18px; margin-bottom: 4px; }
+.box-team-tabs { margin-top: 8px; }
+.game-tab-panel[hidden],
+.box-team-panel[hidden] { display: none !important; }
+.player-box-scroll {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #111a27;
+}
+.player-box-table {
+  width: max-content;
+  min-width: max(100%, 620px);
+}
+.player-box-table.goalie-box-table { min-width: max(100%, 420px); }
+.player-box-head,
+.player-box-row {
+  display: grid;
+  grid-template-columns: var(--player-box-cols);
+  gap: 4px;
+  align-items: center;
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.player-box-head {
+  color: var(--dim);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .2px;
+  line-height: 1.15;
+  position: sticky;
+  top: 0;
+  background: #162333;
+  z-index: 1;
+}
+.player-box-row {
+  border-top: 1px solid #253243;
+  color: var(--muted);
+}
+.player-box-row .col-num,
+.player-box-head .col-num {
+  text-align: center;
+  color: var(--dim);
+  font-weight: 700;
+}
+.player-box-row .col-name,
+.player-box-head .col-name {
+  text-align: left;
+  min-width: 0;
+}
+.player-box-row .col-name {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-box-row .col-toi { white-space: nowrap; }
