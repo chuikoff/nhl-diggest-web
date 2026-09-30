@@ -126,7 +126,7 @@
   --russian-highlight: #ffd43d;
   --russian-highlight-text: #241b00;
 }
-.player-name.russian-player {
+:root[data-ru-highlight="on"] .player-name.russian-player {
   display: inline-block;
   padding: 1px 4px;
   border-radius: 4px;

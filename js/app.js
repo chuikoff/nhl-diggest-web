@@ -48,6 +48,7 @@
 
   const bridge = window.NHL_BRIDGE || { env: 'browser', theme: 'dark' };
   const themeStorageKey = 'nhl-diggest-theme';
+  const russianHighlightStorageKey = 'nhl-diggest-ru-highlight';
   const FAV_STORAGE_KEY = 'nhl-diggest-favorites';
 
   function loadFavorites() {
@@ -241,6 +242,25 @@
     toast.timer = window.setTimeout(() => node.classList.remove('visible'), 1600);
   }
 
+  function storedRussianHighlight() {
+    try {
+      return window.localStorage.getItem(russianHighlightStorageKey) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function applyRussianHighlight(enabled, persist = false) {
+    const nextEnabled = Boolean(enabled);
+    document.documentElement.dataset.ruHighlight = nextEnabled ? 'on' : 'off';
+    document.body.dataset.ruHighlight = nextEnabled ? 'on' : 'off';
+    const toggle = $('#ruHighlightToggle');
+    if (toggle) toggle.checked = nextEnabled;
+    if (persist) {
+      try { window.localStorage.setItem(russianHighlightStorageKey, nextEnabled ? '1' : '0'); } catch { /* private mode */ }
+    }
+  }
+
   function storedTheme() {
     try {
       const value = window.localStorage.getItem(themeStorageKey);
@@ -265,6 +285,7 @@
     }
   }
 
+  applyRussianHighlight(storedRussianHighlight());
   applyTheme(storedTheme() || bridge.theme || 'dark');
   bridge.subscribeTheme?.(theme => { if (!storedTheme()) applyTheme(theme); });
 
@@ -1411,7 +1432,11 @@
   $('#prevDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, -1), { toastOnDone: true }));
   $('#nextDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, 1), { toastOnDone: true }));
   $('#themeToggle').addEventListener('change', event => applyTheme(event.target.checked ? 'dark' : 'light', true));
-  $$('.toggle input:not(#themeToggle)').forEach(input => input.addEventListener('change', () => toast(input.checked ? 'Включено' : 'Выключено')));
+  $('#ruHighlightToggle').addEventListener('change', event => {
+    applyRussianHighlight(event.target.checked, true);
+    toast(event.target.checked ? 'Подсветка включена' : 'Подсветка выключена');
+  });
+  $$('.toggle input:not(#themeToggle):not(#ruHighlightToggle)').forEach(input => input.addEventListener('change', () => toast(input.checked ? 'Включено' : 'Выключено')));
 
   // Swipe back on detail screens:
   // - right-to-left swipe (finger moves left)
