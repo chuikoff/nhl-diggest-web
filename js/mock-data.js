@@ -96,13 +96,18 @@ window.NHL_MOCK = {
   gameDetails: {
     1: {
       venue: 'PPG Paints Arena', attendance: '18 006',
+      threeStars: [
+        { star: 1, name: 'Sidney Crosby', team: 'PIT', nhlId: 8471675, goals: 1, assists: 1, pim: 0, plusMinus: 2, toi: '21:04', isRussian: false },
+        { star: 2, name: 'Jake Guentzel', team: 'PIT', goals: 1, assists: 0, pim: 0, plusMinus: 1, toi: '18:42', isRussian: false },
+        { star: 3, name: 'Artemi Panarin', team: 'NYR', goals: 1, assists: 0, pim: 0, plusMinus: -1, toi: '20:33', isRussian: true }
+      ],
       scoring: [
-        { period: '1st', time: '04:18', team: 'PIT', scorer: 'Jake Guentzel', assists: ['Sidney Crosby', 'Erik Karlsson'] },
-        { period: '1st', time: '12:44', team: 'NYR', scorer: 'Artemi Panarin', assists: ['Vincent Trocheck', 'Adam Fox'] },
-        { period: '2nd', time: '06:02', team: 'PIT', scorer: 'Bryan Rust', assists: ['Evgeni Malkin'] },
-        { period: '2nd', time: '15:36', team: 'NYR', scorer: 'Chris Kreider', assists: ['Mika Zibanejad'] },
-        { period: '3rd', time: '03:17', team: 'PIT', scorer: 'Sidney Crosby', assists: ['Bryan Rust', 'Marcus Pettersson'] },
-        { period: '3rd', time: '18:51', team: 'PIT', scorer: 'Rickard Rakell', assists: ['Erik Karlsson'] }
+        { period: '1st', time: '04:18', team: 'PIT', scorer: 'Jake Guentzel', scorerShort: 'J. Guentzel', assists: [{ name: 'Sidney Crosby', shortName: 'S. Crosby' }, { name: 'Erik Karlsson', shortName: 'E. Karlsson' }], awayScore: 1, homeScore: 0, goalsToDate: 1, strength: 'ev' },
+        { period: '1st', time: '12:44', team: 'NYR', scorer: 'Artemi Panarin', scorerShort: 'A. Panarin', scorerRussian: true, assists: [{ name: 'Vincent Trocheck', shortName: 'V. Trocheck' }, { name: 'Adam Fox', shortName: 'A. Fox' }], awayScore: 1, homeScore: 1, goalsToDate: 1, strength: 'ev' },
+        { period: '2nd', time: '06:02', team: 'PIT', scorer: 'Bryan Rust', scorerShort: 'B. Rust', assists: [{ name: 'Evgeni Malkin', shortName: 'E. Malkin', isRussian: true }], awayScore: 2, homeScore: 1, goalsToDate: 1, strength: 'ev' },
+        { period: '2nd', time: '15:36', team: 'NYR', scorer: 'Chris Kreider', scorerShort: 'C. Kreider', assists: [{ name: 'Mika Zibanejad', shortName: 'M. Zibanejad' }], awayScore: 2, homeScore: 2, goalsToDate: 1, strength: 'pp' },
+        { period: '3rd', time: '03:17', team: 'PIT', scorer: 'Sidney Crosby', scorerShort: 'S. Crosby', assists: [{ name: 'Bryan Rust', shortName: 'B. Rust' }, { name: 'Marcus Pettersson', shortName: 'M. Pettersson' }], awayScore: 3, homeScore: 2, goalsToDate: 1, strength: 'ev' },
+        { period: '3rd', time: '18:51', team: 'PIT', scorer: 'Rickard Rakell', scorerShort: 'R. Rakell', assists: [], awayScore: 4, homeScore: 2, goalsToDate: 1, strength: 'sh' }
       ],
       penalties: [
         { period: '2nd', time: '11:02', team: 'NYR', player: 'Jacob Trouba', minutes: 2, infraction: 'Tripping' },
@@ -146,10 +151,15 @@ window.NHL_MOCK = {
     },
     3: {
       venue: 'Rogers Arena', attendance: '18 870',
+      threeStars: [
+        { star: 1, name: 'Leon Draisaitl', team: 'EDM', goals: 1, assists: 0, pim: 0, plusMinus: 1, toi: '19:40', isRussian: false },
+        { star: 2, name: 'Elias Pettersson', team: 'VAN', goals: 1, assists: 0, pim: 0, plusMinus: 1, toi: '18:12', isRussian: false },
+        { star: 3, name: 'Zach Hyman', team: 'EDM', goals: 1, assists: 0, pim: 0, plusMinus: 1, toi: '16:05', isRussian: false }
+      ],
       scoring: [
-        { period: '1st', time: '05:22', team: 'EDM', scorer: 'Leon Draisaitl', assists: ['Connor McDavid', 'Evan Bouchard'] },
-        { period: '1st', time: '17:40', team: 'VAN', scorer: 'Elias Pettersson', assists: ['Quinn Hughes'] },
-        { period: '2nd', time: '03:18', team: 'EDM', scorer: 'Zach Hyman', assists: ['Ryan Nugent-Hopkins'] }
+        { period: '1st', time: '05:22', team: 'EDM', scorer: 'Leon Draisaitl', scorerShort: 'L. Draisaitl', assists: [{ name: 'Connor McDavid', shortName: 'C. McDavid' }, { name: 'Evan Bouchard', shortName: 'E. Bouchard' }], awayScore: 1, homeScore: 0, goalsToDate: 1, strength: 'ev' },
+        { period: '1st', time: '17:40', team: 'VAN', scorer: 'Elias Pettersson', scorerShort: 'E. Pettersson', assists: [{ name: 'Quinn Hughes', shortName: 'Q. Hughes' }], awayScore: 1, homeScore: 1, goalsToDate: 1, strength: 'ev' },
+        { period: '2nd', time: '03:18', team: 'EDM', scorer: 'Zach Hyman', scorerShort: 'Z. Hyman', assists: [{ name: 'Ryan Nugent-Hopkins', shortName: 'R. Nugent-Hopkins' }], awayScore: 2, homeScore: 1, goalsToDate: 1, strength: 'ev' }
       ],
       penalties: [
         { period: '2nd', time: '06:03', team: 'VAN', player: 'Filip Hronek', minutes: 2, infraction: 'Slashing' }

@@ -977,3 +977,252 @@ h2 { font-size: 29px; }
 .penalties-accordion[open] summary::after { transform: rotate(180deg); }
 .penalties-accordion > .period-groups { padding: 10px; }
 :root[data-theme="light"] .penalties-accordion { background: #ffffff; }
+
+
+/* —— Three Stars of the game —— */
+.three-stars-section .detail-section-title h3 {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  font-weight: 800;
+}
+.three-stars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 2px 2px;
+}
+.three-star-row {
+  display: grid;
+  grid-template-columns: 42px 64px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.three-star-rank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  line-height: 1.1;
+}
+.three-star-icon {
+  color: #f5c518;
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 1px 6px #f5c51855;
+}
+.three-star-copy { min-width: 0; }
+.three-star-name {
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.3px;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.three-star-name .player-name { font-size: inherit; font-weight: inherit; }
+.three-star-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+.three-star-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.three-star-stat strong {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  line-height: 1.1;
+}
+.three-star-stat span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+:root[data-ru-highlight="on"] .three-star-name .player-name.russian-player {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  color: #ffd43d !important;
+}
+
+/* Circular player mug with team logo badge */
+.player-mug {
+  --mug-size: 56px;
+  --logo-size: 20px;
+  position: relative;
+  width: var(--mug-size);
+  height: var(--mug-size);
+  border-radius: 50%;
+  background: var(--mug-color, #2a3d55);
+  border: 2px solid color-mix(in srgb, var(--mug-color, #2a3d55) 70%, #fff 30%);
+  box-shadow: inset 0 0 0 1px #0004;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.player-mug-lg { --mug-size: 64px; --logo-size: 22px; }
+.player-mug-md { --mug-size: 52px; --logo-size: 18px; }
+.player-mug-photo,
+.player-mug-initials {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+.player-mug-initials {
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--mug-color) 80%, #fff), var(--mug-color));
+}
+.player-mug-logo {
+  position: absolute;
+  left: -2px;
+  bottom: -2px;
+  width: var(--logo-size);
+  height: var(--logo-size);
+  object-fit: contain;
+  background: #0b121d;
+  border-radius: 50%;
+  border: 1.5px solid #1e2c3d;
+  padding: 1px;
+  box-shadow: 0 1px 4px #0008;
+}
+.goal-card .player-mug-logo {
+  left: auto;
+  right: -2px;
+  bottom: -2px;
+}
+
+/* —— Redesigned Goals cards —— */
+.goals-section .detail-section-title h3 {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  font-weight: 800;
+}
+.goal-period-groups { gap: 16px; }
+.goal-period-block {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+.goal-period-heading {
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding: 0 2px 8px;
+}
+.goal-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.goal-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #121a27;
+  overflow: hidden;
+}
+.goal-card-top {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 12px 10px;
+}
+.goal-card-copy { min-width: 0; }
+.goal-card-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+.goal-card-name .player-name { font-size: inherit; font-weight: inherit; }
+.goal-card-nth {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+  font-weight: 600;
+}
+.goal-card-score {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-left: 4px;
+}
+.goal-score-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 28px;
+}
+.goal-score-side img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+.goal-score-side strong {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+.goal-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px 11px;
+  border-top: 1px solid #243246;
+}
+.goal-card-assists {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  min-width: 0;
+}
+.goal-card-assists .player-name { color: inherit; font-weight: 650; }
+.goal-card-time {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.goal-card .goal-video-slot { margin: 0 12px 12px; }
+:root[data-ru-highlight="on"] .goal-card-name .player-name.russian-player {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  color: #ffd43d !important;
+}
+:root[data-theme="light"] .goal-card { background: #ffffff; }
+:root[data-theme="light"] .goal-card-bottom { border-top-color: #d7e2ec; }
+:root[data-theme="light"] .player-mug-logo { background: #fff; border-color: #c9d6e3; }
+:root[data-theme="light"] .three-star-icon { color: #e0a800; }
+
+@media (max-width: 370px) {
+  .three-star-row { grid-template-columns: 36px 54px 1fr; gap: 8px; }
+  .player-mug-lg { --mug-size: 54px; }
+  .three-star-name { font-size: 15px; }
+  .three-star-stat strong { font-size: 13px; }
+  .goal-card-top { grid-template-columns: 48px 1fr auto; gap: 8px; }
+  .player-mug-md { --mug-size: 46px; }
+}

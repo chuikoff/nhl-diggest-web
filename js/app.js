@@ -528,6 +528,158 @@
     return `<button type="button" class="goal-play" data-goal-video="${safeUrl}" data-goal-embed="${embed}" aria-label="Смотреть гол" title="Смотреть гол">▶</button>`;
   }
 
+  function periodHeadingText(period) {
+    return live?.periodHeadingLabel?.(period) || period || '—';
+  }
+
+  function starRankLabel(star) {
+    const n = Number(star) || 0;
+    if (n === 1) return '1ST';
+    if (n === 2) return '2ND';
+    if (n === 3) return '3RD';
+    if (n <= 0) return '';
+    const v = n % 100;
+    if (v >= 11 && v <= 13) return `${n}TH`;
+    const ones = n % 10;
+    return `${n}${ones === 1 ? 'ST' : ones === 2 ? 'ND' : ones === 3 ? 'RD' : 'TH'}`;
+  }
+
+  function goalOrdinalLabel(n) {
+    const num = Number(n) || 1;
+    const v = num % 100;
+    let suf = 'th';
+    if (v < 11 || v > 13) {
+      const ones = num % 10;
+      if (ones === 1) suf = 'st';
+      else if (ones === 2) suf = 'nd';
+      else if (ones === 3) suf = 'rd';
+    }
+    return `${num}${suf} Goal`;
+  }
+
+  function teamAccent(abbrev) {
+    return live?.teamColorFor?.(abbrev) || '#2a3d55';
+  }
+
+  function playerMugMarkup(player = {}, { size = 'md' } = {}) {
+    const abbrev = String(player.abbrev || player.team || '').toUpperCase();
+    const logo = live?.logoFor?.(abbrev) || '';
+    const color = teamAccent(abbrev);
+    const headshot = player.headshot || '';
+    const initials = escapeHtml((player.name || '?').split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase());
+    const img = headshot
+      ? `<img class="player-mug-photo" src="${escapeAttr(headshot)}" alt="" loading="lazy" onerror="this.remove()">`
+      : `<span class="player-mug-initials">${initials}</span>`;
+    const badge = logo
+      ? `<img class="player-mug-logo" src="${escapeAttr(logo)}" alt="" loading="lazy">`
+      : '';
+    return `<div class="player-mug player-mug-${size}" style="--mug-color:${escapeAttr(color)}">${img}${badge}</div>`;
+  }
+
+  function goalAssistLineMarkup(event) {
+    const assists = event.assists || [];
+    const names = assists.map(a => (typeof a === 'string' ? a : (a.shortName || a.name || ''))).filter(Boolean);
+    const sh = /^(sh|shg|short)/i.test(String(event.strength || ''));
+    if (!names.length) {
+      return sh ? 'Short-handed goal unassisted' : 'Unassisted';
+    }
+    const linked = assists.map(assist => {
+      const ref = typeof assist === 'string'
+        ? { name: assist, abbrev: event.team }
+        : {
+            name: assist.shortName || assist.name,
+            isRussian: assist.isRussian,
+            nhlId: assist.nhlId,
+            espnId: assist.espnId,
+            abbrev: event.team
+          };
+      return playerMarkup(ref, ref.name, { abbrev: event.team });
+    });
+    const by = linked.length === 1 ? linked[0] : `${linked[0]} and ${linked[1]}`;
+    return `Assisted by ${by}`;
+  }
+
+  function goalsCardsMarkup(events, game) {
+    if (!events?.length) return `<p class="empty-detail">Пока без голов</p>`;
+    const groups = live?.groupByPeriod?.(events) || [{ period: '—', events }];
+    const gameGoalCount = new Map();
+    const away = game?.away || {};
+    const home = game?.home || {};
+    return groups.map(group => {
+      const cards = group.events.map(event => {
+        const key = String(event.scorerId || event.scorer || '');
+        const nth = (gameGoalCount.get(key) || 0) + 1;
+        gameGoalCount.set(key, nth);
+        const short = event.scorerShort || event.scorer || '';
+        const ytd = event.goalsToDate != null ? Number(event.goalsToDate) : null;
+        const ytdSuffix = ytd != null && ytd > 1 ? ` <span class="goal-ytd">(${ytd})</span>` : '';
+        const scorerRef = {
+          name: short || event.scorer || '',
+          isRussian: event.scorerRussian,
+          nhlId: event.scorerEspn ? null : event.scorerId,
+          espnId: event.scorerEspn ? event.scorerId : null,
+          abbrev: event.team,
+          headshot: event.headshot || ''
+        };
+        const awayScore = event.awayScore != null ? event.awayScore : '—';
+        const homeScore = event.homeScore != null ? event.homeScore : '—';
+        const awayLogo = escapeAttr(away.logo || live?.logoFor?.(away.short) || '');
+        const homeLogo = escapeAttr(home.logo || live?.logoFor?.(home.short) || '');
+        return `<article class="goal-card">
+          <div class="goal-card-top">
+            ${playerMugMarkup({ ...scorerRef, team: event.team, name: event.scorer || short })}
+            <div class="goal-card-copy">
+              <div class="goal-card-name">${playerMarkup(scorerRef)}${ytdSuffix}${highlightButtonMarkup(event)}</div>
+              <div class="goal-card-nth">${goalOrdinalLabel(nth)}</div>
+            </div>
+            <div class="goal-card-score" aria-label="Счёт">
+              <div class="goal-score-side"><img src="${awayLogo}" alt=""><strong>${awayScore}</strong></div>
+              <div class="goal-score-side"><img src="${homeLogo}" alt=""><strong>${homeScore}</strong></div>
+            </div>
+          </div>
+          <div class="goal-card-bottom">
+            <span class="goal-card-assists">${goalAssistLineMarkup(event)}</span>
+            <span class="goal-card-time">${escapeHtml(event.time || '')}</span>
+          </div>
+          <div class="goal-video-slot" hidden></div>
+        </article>`;
+      }).join('');
+      return `<div class="period-block goal-period-block"><div class="period-heading goal-period-heading">${periodHeadingText(group.period)}</div><div class="goal-cards period-events">${cards}</div></div>`;
+    }).join('');
+  }
+
+  function threeStarsMarkup(stars = [], game = null) {
+    if (!stars?.length) return '';
+    const rows = stars.map(star => {
+      const rank = starRankLabel(star.star);
+      const ref = {
+        name: star.name,
+        isRussian: star.isRussian,
+        nhlId: star.nhlId,
+        espnId: star.espnId,
+        abbrev: star.team,
+        headshot: star.headshot
+      };
+      const plus = star.plusMinus == null || star.plusMinus === '' ? '—' : star.plusMinus;
+      const stats = [
+        ['G', star.goals ?? 0],
+        ['A', star.assists ?? 0],
+        ['PIM', star.pim ?? 0],
+        ['+/-', plus],
+        ['TOI', star.toi || '—']
+      ].map(([label, value]) => `<div class="three-star-stat"><strong>${escapeHtml(value)}</strong><span>${label}</span></div>`).join('');
+      return `<div class="three-star-row">
+        <div class="three-star-rank"><span>${rank}</span><span class="three-star-icon" aria-hidden="true">★</span></div>
+        ${playerMugMarkup({ ...ref, team: star.team }, { size: 'lg' })}
+        <div class="three-star-copy">
+          <div class="three-star-name">${playerMarkup(ref)}</div>
+          <div class="three-star-stats">${stats}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<section class="detail-section three-stars-section"><div class="detail-section-title"><h3>Три звезды</h3><span>${stars.length}</span></div><div class="three-stars-list">${rows}</div></section>`;
+  }
+
   function periodGroupsMarkup(events, kind, teamAbbrevHint = '') {
     const groups = live?.groupByPeriod?.(events) || [{ period: '—', events: events || [] }];
     if (!events?.length) {
@@ -546,7 +698,7 @@
             return `<div class="scoring-row"><span class="event-time"><strong>${event.time || ''}</strong></span><span class="event-team">${event.team || ''}</span><div class="scoring-copy"><div class="scoring-main"><strong>${playerMarkup(scorerRef)}</strong>${highlightButtonMarkup(event)}</div><small>${event.assists?.length ? `ассисты: ${assistsMarkup(event.assists, event.team)}` : 'без ассистов'}${event.strength ? ` · ${event.strength}` : ''}</small><div class="goal-video-slot" hidden></div></div></div>`;
           }).join('')
         : group.events.map(item => `<div class="penalty-row"><span>${item.time || ''}</span><strong>${item.team} · ${playerMarkup({ name: item.player || '', isRussian: item.playerRussian, nhlId: item.nhlId, espnId: item.espnId, abbrev: item.team })}</strong><small>${item.minutes ? `${item.minutes} мин · ` : ''}${item.infraction || ''}</small></div>`).join('');
-      return `<div class="period-block"><div class="period-heading">${group.period}</div><div class="${kind === 'goals' ? 'scoring-list' : 'penalty-list'} period-events">${rows}</div></div>`;
+      return `<div class="period-block"><div class="period-heading">${periodHeadingText(group.period)}</div><div class="${kind === 'goals' ? 'scoring-list' : 'penalty-list'} period-events">${rows}</div></div>`;
     }).join('');
   }
 
@@ -668,10 +820,12 @@
     const skaters = detail?.skaters || [];
     const teamByShort = { [game.away.short]: game.away, [game.home.short]: game.home };
 
+    const threeStars = detail?.threeStars || [];
     const overviewBody = `
           ${recapMarkup(detail?.recap)}
-          <section class="detail-section"><div class="detail-section-title"><h3>Голы</h3><span>${scoring.length}</span></div>
-            <div class="period-groups">${periodGroupsMarkup(scoring, 'goals')}</div>
+          ${threeStarsMarkup(threeStars, game)}
+          <section class="detail-section goals-section"><div class="detail-section-title"><h3>Голы</h3><span>${scoring.length}</span></div>
+            <div class="period-groups goal-period-groups">${goalsCardsMarkup(scoring, game)}</div>
           </section>
           <section class="detail-section"><div class="detail-section-title"><h3>Командная статистика</h3></div>
             <div class="boxscore-table"><div class="boxscore-head"><span>Команда</span><span>Броски</span><span>Силовые</span><span>Вбрасывания</span><span>Большинство</span></div>${[game.away, game.home].map(team => { const stats = boxscore[team.short] || {}; return `<div class="boxscore-row"><strong><img src="${team.logo}" alt="">${team.short}</strong><span>${stats.shots ?? '—'}</span><span>${stats.hits ?? '—'}</span><span>${stats.faceoff ?? '—'}</span><span>${stats.powerPlay ?? '—'}</span></div>`; }).join('')}</div>
@@ -1345,7 +1499,7 @@
     const url = button.getAttribute('data-goal-video') || '';
     if (!url) return;
     const embed = button.getAttribute('data-goal-embed') === '1';
-    const row = button.closest('.scoring-row');
+    const row = button.closest('.goal-card, .scoring-row');
     const slot = row?.querySelector('.goal-video-slot');
     if (!embed || !slot) {
       openExternal(url);
