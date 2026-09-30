@@ -776,3 +776,18 @@ h2 { font-size: 29px; }
 :root[data-theme="light"] .game-card.has-favorite-team {
   background: linear-gradient(115deg, rgba(245,200,75,0.35), #f7fbff) !important;
 }
+
+/* Telegram Stars tip card in Settings (hidden on Max). */
+.settings-link-card {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 15px !important;
+}
+.settings-link-card:hover,
+.settings-link-card:focus-visible {
+  border-color: #49637f;
+  outline: none;
+}

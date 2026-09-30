@@ -591,6 +591,26 @@
     saveReminderMap(map);
   }
 
+
+  function donateDeepLink() {
+    const bot = window.NHL_TG_BOT || 'nhldig_bot';
+    return `https://t.me/${bot}?start=donate`;
+  }
+
+  function openDonateBot() {
+    const url = donateDeepLink();
+    const opened = bridge.openBotLink?.(url);
+    if (!opened) openExternal(url);
+  }
+
+  function syncDonateSettingsVisibility() {
+    const group = document.getElementById('tgDonateGroup');
+    if (!group) return;
+    // Stars tips are Telegram-only — never show on Max bridge.
+    const show = Boolean(bridge.isTelegram);
+    group.hidden = !show;
+  }
+
   function remindDeepLink(gameId, enable) {
     const payload = `${enable ? 'remind' : 'unremind'}_${gameId}`;
     if (bridge.isTelegram || (!bridge.isMax && !bridge.isBrowser)) {
@@ -1062,7 +1082,7 @@
     if (button.dataset.nav === 'stats') loadStatsLive();
     if (button.dataset.nav === 'alltime') loadAlltimeLive();
     if (button.dataset.nav === 'standings') loadStandingsLive();
-    if (button.dataset.nav === 'settings') renderFavoritesSettings();
+    if (button.dataset.nav === 'settings') { renderFavoritesSettings(); syncDonateSettingsVisibility(); }
   }));
 
   $$('.segment[data-standings-tab]').forEach(button => button.addEventListener('click', () => {
@@ -1229,7 +1249,12 @@
     live?.clearCache?.();
     loadGames(state.selectedDate, { toastOnDone: true });
   });
-  $('#profileButton').addEventListener('click', () => { showPanel('settings'); renderFavoritesSettings(); });
+  $('#profileButton').addEventListener('click', () => { showPanel('settings'); renderFavoritesSettings(); syncDonateSettingsVisibility(); });
+  const donateBtn = document.getElementById('tgDonateBtn');
+  if (donateBtn) {
+    donateBtn.addEventListener('click', () => openDonateBot());
+  }
+  syncDonateSettingsVisibility();
   $('#prevDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, -1), { toastOnDone: true }));
   $('#nextDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, 1), { toastOnDone: true }));
   $('#themeToggle').addEventListener('change', event => applyTheme(event.target.checked ? 'dark' : 'light', true));
