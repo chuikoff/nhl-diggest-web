@@ -72,34 +72,87 @@
     } catch { /* private mode */ }
   }
 
+  function parseFavPlayerKey(raw) {
+    const key = String(raw || '').trim();
+    if (!key) return {};
+    if (key.startsWith('nhl:')) return { nhlId: key.slice(4) };
+    if (key.startsWith('espn:')) return { espnId: key.slice(5) };
+    if (key.startsWith('name:')) return { name: key.slice(5) };
+    return { key };
+  }
+
   function favPlayerKey(ref = {}) {
-    if (ref.nhlId) return `nhl:${ref.nhlId}`;
-    if (ref.espnId) return `espn:${ref.espnId}`;
+    const nhlId = ref.nhlId != null && String(ref.nhlId).trim() ? String(ref.nhlId).trim() : '';
+    if (nhlId) return `nhl:${nhlId}`;
+    const espnId = ref.espnId != null && String(ref.espnId).trim() ? String(ref.espnId).trim() : '';
+    if (espnId) return `espn:${espnId}`;
     const name = String(ref.name || '').trim().toLowerCase();
     return name ? `name:${name}` : '';
   }
 
   function favPlayerKeys(ref = {}) {
     const keys = [];
-    if (ref.nhlId) keys.push(`nhl:${ref.nhlId}`);
-    if (ref.espnId) keys.push(`espn:${ref.espnId}`);
+    const nhlId = ref.nhlId != null && String(ref.nhlId).trim() ? String(ref.nhlId).trim() : '';
+    const espnId = ref.espnId != null && String(ref.espnId).trim() ? String(ref.espnId).trim() : '';
+    if (nhlId) keys.push(`nhl:${nhlId}`);
+    if (espnId) keys.push(`espn:${espnId}`);
     const name = String(ref.name || '').trim().toLowerCase();
     if (name) keys.push(`name:${name}`);
+    // Accept Settings × canonical key / stored key field.
+    const raw = String(ref.key || ref.rawKey || '').trim();
+    if (raw) {
+      keys.push(raw);
+      const parsed = parseFavPlayerKey(raw);
+      for (const k of favPlayerKeys({ ...parsed, key: '', rawKey: '' })) {
+        if (!keys.includes(k)) keys.push(k);
+      }
+    }
     return keys;
   }
 
-  function favoritePlayerIndex(ref = {}, players = []) {
+  function normalizePlayerName(name) {
+    return String(name || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z\s]/g, ' ')
+      .replace(/\b[a-z]\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function playerNamesLooselyMatch(a, b) {
+    const na = normalizePlayerName(a);
+    const nb = normalizePlayerName(b);
+    if (!na || !nb) return false;
+    if (na === nb) return true;
+    if (na.includes(nb) || nb.includes(na)) return true;
+    const ta = na.split(' ').filter(Boolean);
+    const tb = nb.split(' ').filter(Boolean);
+    if (!ta.length || !tb.length) return false;
+    // Same last name (Crosby / S. Crosby / Sidney Crosby).
+    return ta[ta.length - 1] === tb[tb.length - 1] && ta[ta.length - 1].length > 2;
+  }
+
+  function favoritePlayerMatches(ref = {}, item = {}) {
     const want = new Set(favPlayerKeys(ref));
-    if (want.size) {
-      const byIds = players.findIndex(item => favPlayerKeys(item).some(key => want.has(key)));
-      if (byIds >= 0) return byIds;
+    if ([...want].some(key => favPlayerKeys(item).includes(key))) return true;
+    const refAbbrev = String(ref.abbrev || '').toUpperCase();
+    const itemAbbrev = String(item.abbrev || '').toUpperCase();
+    if (refAbbrev && itemAbbrev && refAbbrev === itemAbbrev && playerNamesLooselyMatch(ref.name, item.name)) {
+      return true;
     }
-    // Settings × stores the canonical favPlayerKey string in data-fav-remove-player.
-    const raw = String(ref.key || ref.rawKey || '').trim();
-    if (raw) {
-      return players.findIndex(item => favPlayerKey(item) === raw || favPlayerKeys(item).includes(raw));
+    if (!refAbbrev && playerNamesLooselyMatch(ref.name, item.name)) {
+      // Name-only fallback when both sides lack team abbrev.
+      const rn = normalizePlayerName(ref.name);
+      const iname = normalizePlayerName(item.name);
+      if (rn && rn === iname) return true;
     }
-    return -1;
+    return false;
+  }
+
+  function favoritePlayerIndex(ref = {}, players = []) {
+    return players.findIndex(item => favoritePlayerMatches(ref, item));
   }
 
   function isFavoritePlayer(ref = {}) {
@@ -112,34 +165,43 @@
     return loadFavorites().teams.some(item => String(item.abbrev || '').toUpperCase() === key);
   }
 
-  function toggleFavoritePlayer(ref = {}) {
-    const keys = favPlayerKeys(ref);
-    if (!keys.length) return false;
+  function playerFavRecord(ref = {}) {
+    const nhlId = ref.nhlId != null && String(ref.nhlId).trim() ? String(ref.nhlId).trim() : '';
+    const espnId = ref.espnId != null && String(ref.espnId).trim() ? String(ref.espnId).trim() : '';
+    const name = String(ref.name || '').trim();
+    const abbrev = String(ref.abbrev || '').trim().toUpperCase();
+    const team = String(ref.team || '').trim();
+    const rawKey = String(ref.key || ref.rawKey || '').trim();
+    const parsed = parseFavPlayerKey(rawKey);
+    const mergedNhl = nhlId || (parsed.nhlId ? String(parsed.nhlId).trim() : '');
+    const mergedEspn = espnId || (parsed.espnId ? String(parsed.espnId).trim() : '');
+    const mergedName = name || (parsed.name ? String(parsed.name).trim() : '');
+    const key = favPlayerKey({ nhlId: mergedNhl, espnId: mergedEspn, name: mergedName }) || rawKey;
+    return { key, rawKey, nhlId: mergedNhl, espnId: mergedEspn, name: mergedName, abbrev, team };
+  }
+
+  function toggleFavoritePlayer(ref = {}, { forceRemove = false } = {}) {
+    const record = playerFavRecord(ref);
+    if (!record.key && !record.name) return false;
     const fav = loadFavorites();
-    const idx = favoritePlayerIndex(ref, fav.players);
-    if (idx >= 0) {
-      fav.players.splice(idx, 1);
+    const matched = fav.players.filter(item => favoritePlayerMatches(record, item));
+    if (forceRemove || matched.length) {
+      fav.players = fav.players.filter(item => !favoritePlayerMatches(record, item));
       saveFavorites(fav);
       return false;
     }
-    fav.players.unshift({
-      nhlId: ref.nhlId ? String(ref.nhlId) : '',
-      espnId: ref.espnId ? String(ref.espnId) : '',
-      name: ref.name || '',
-      abbrev: ref.abbrev || '',
-      team: ref.team || ''
-    });
+    fav.players.unshift(record);
     saveFavorites(fav);
     return true;
   }
 
-  function toggleFavoriteTeam(ref = {}) {
+  function toggleFavoriteTeam(ref = {}, { forceRemove = false } = {}) {
     const abbrev = String(ref.abbrev || '').toUpperCase();
     if (!abbrev) return false;
     const fav = loadFavorites();
     const idx = fav.teams.findIndex(item => String(item.abbrev || '').toUpperCase() === abbrev);
-    if (idx >= 0) {
-      fav.teams.splice(idx, 1);
+    if (forceRemove || idx >= 0) {
+      fav.teams = fav.teams.filter(item => String(item.abbrev || '').toUpperCase() !== abbrev);
       saveFavorites(fav);
       return false;
     }
@@ -153,23 +215,18 @@
   }
 
   function removeFavoritePlayer(ref) {
-    const fav = loadFavorites();
-    const idx = favoritePlayerIndex(ref, fav.players);
-    if (idx < 0) {
-      const raw = String(ref?.key || ref?.rawKey || favPlayerKey(ref || {}) || '').trim();
-      if (!raw) return;
-      fav.players = fav.players.filter(item => favPlayerKey(item) !== raw && !favPlayerKeys(item).includes(raw));
-    } else {
-      fav.players.splice(idx, 1);
-    }
-    saveFavorites(fav);
+    toggleFavoritePlayer(ref || {}, { forceRemove: true });
   }
 
   function removeFavoriteTeam(abbrev) {
-    const key = String(abbrev || '').toUpperCase();
-    const fav = loadFavorites();
-    fav.teams = fav.teams.filter(item => String(item.abbrev || '').toUpperCase() !== key);
-    saveFavorites(fav);
+    toggleFavoriteTeam({ abbrev }, { forceRemove: true });
+  }
+
+  function eventElement(event) {
+    const t = event?.target;
+    if (!t) return null;
+    if (t.nodeType === 1) return t;
+    return t.parentElement || null;
   }
 
   function favToggleMarkup(kind, on, attrs = '') {
@@ -210,7 +267,12 @@
             <strong>${escapeHtml(player.name || '')}</strong>
             <span>${escapeHtml(player.team || player.abbrev || 'NHL')}</span>
           </button>
-          <button type="button" class="fav-remove" data-fav-remove-player="${escapeAttr(favPlayerKey(player))}" aria-label="Удалить">×</button>
+          <button type="button" class="fav-remove" data-fav-remove-player="${escapeAttr(player.key || favPlayerKey(player))}"
+            data-nhl-id="${escapeAttr(player.nhlId || '')}"
+            data-espn-id="${escapeAttr(player.espnId || '')}"
+            data-player-name="${escapeAttr(player.name || '')}"
+            data-team-abbrev="${escapeAttr(player.abbrev || '')}"
+            aria-label="Удалить">×</button>
         </div>`).join('');
     }
   }
@@ -1411,18 +1473,19 @@
       });
       return;
     }
-    const favBtn = event.target.closest?.('.fav-toggle');
+    const favBtn = eventElement(event)?.closest?.('.fav-toggle');
     if (favBtn) {
       event.preventDefault();
       event.stopPropagation();
       const kind = favBtn.getAttribute('data-fav-kind');
+      const wasOn = favBtn.classList.contains('is-on') || favBtn.getAttribute('aria-pressed') === 'true';
       if (kind === 'team') {
         const abbrev = favBtn.getAttribute('data-fav-team') || '';
         const on = toggleFavoriteTeam({
           abbrev,
           name: favBtn.getAttribute('data-fav-team-name') || abbrev,
           logo: favBtn.getAttribute('data-fav-team-logo') || ''
-        });
+        }, { forceRemove: wasOn });
         favBtn.classList.toggle('is-on', on);
         favBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
         favBtn.textContent = on ? '★' : '☆';
@@ -1441,7 +1504,7 @@
           abbrev: favBtn.getAttribute('data-team-abbrev') || '',
           team: favBtn.getAttribute('data-fav-team-name') || ''
         };
-        const on = toggleFavoritePlayer(ref);
+        const on = toggleFavoritePlayer(ref, { forceRemove: wasOn });
         favBtn.classList.toggle('is-on', on);
         favBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
         favBtn.textContent = on ? '★' : '☆';
@@ -1506,36 +1569,52 @@
     live?.clearCache?.();
     loadGames(state.selectedDate, { toastOnDone: true });
   });
-  // Settings favorites: × remove + open player/team (panel is outside detailClickHandler roots).
-  document.getElementById('favPlayersList')?.addEventListener('click', event => {
-    const removeBtn = event.target.closest?.('[data-fav-remove-player]');
-    if (removeBtn) {
+  // Settings favorites: capture-phase so × is not swallowed by fav-open / WebView quirks.
+  function handleSettingsFavoritesEvent(event) {
+    const el = eventElement(event);
+    if (!el) return;
+    const removePlayer = el.closest('[data-fav-remove-player]');
+    if (removePlayer) {
       event.preventDefault();
       event.stopPropagation();
-      const key = removeBtn.getAttribute('data-fav-remove-player') || '';
-      removeFavoritePlayer({ key, rawKey: key });
+      event.stopImmediatePropagation?.();
+      const key = removePlayer.getAttribute('data-fav-remove-player') || '';
+      removeFavoritePlayer({
+        key,
+        rawKey: key,
+        nhlId: removePlayer.getAttribute('data-nhl-id') || '',
+        espnId: removePlayer.getAttribute('data-espn-id') || '',
+        name: removePlayer.getAttribute('data-player-name') || '',
+        abbrev: removePlayer.getAttribute('data-team-abbrev') || ''
+      });
       renderFavoritesSettings();
       toast('Игрок убран из избранного');
       return;
     }
-    if (bindPlayerOpen(event.target)) {
-      event.preventDefault();
-    }
-  });
-  document.getElementById('favTeamsList')?.addEventListener('click', event => {
-    const removeBtn = event.target.closest?.('[data-fav-remove-team]');
-    if (removeBtn) {
+    const removeTeam = el.closest('[data-fav-remove-team]');
+    if (removeTeam) {
       event.preventDefault();
       event.stopPropagation();
-      removeFavoriteTeam(removeBtn.getAttribute('data-fav-remove-team') || '');
+      event.stopImmediatePropagation?.();
+      removeFavoriteTeam(removeTeam.getAttribute('data-fav-remove-team') || '');
       renderFavoritesSettings();
       toast('Команда убрана из избранного');
       return;
     }
-    if (bindTeamOpen(event.target)) {
+    // Only handle open on bubble phase to avoid fighting with remove.
+    if (event.eventPhase === Event.CAPTURING_PHASE) return;
+    if (bindPlayerOpen(el)) {
+      event.preventDefault();
+      return;
+    }
+    if (bindTeamOpen(el)) {
       event.preventDefault();
     }
-  });
+  }
+  const settingsFavRoot = document.querySelector('[data-panel="settings"]') || document;
+  settingsFavRoot.addEventListener('click', handleSettingsFavoritesEvent, true);
+  document.getElementById('favPlayersList')?.addEventListener('click', handleSettingsFavoritesEvent);
+  document.getElementById('favTeamsList')?.addEventListener('click', handleSettingsFavoritesEvent);
 
   $('#profileButton').addEventListener('click', () => { showPanel('settings'); renderFavoritesSettings(); syncDonateSettingsVisibility(); });
   const donateBtn = document.getElementById('tgDonateBtn');
