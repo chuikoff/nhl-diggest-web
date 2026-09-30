@@ -1849,7 +1849,7 @@
     const scoring = plays.filter(play => play.scoringPlay).map(play => {
       const participants = play.participants || [];
       const scorer = participants.find(item => item.type === 'scorer') || participants[0];
-      const assists = participants.filter(item => item.type === 'assist').map(item => ({
+      const assists = participants.filter(item => item.type === 'assister' || item.type === 'assist').map(item => ({
         name: item.athlete?.displayName || '',
         espnId: item.athlete?.id || null,
         isRussian: isRussianPlayer(item.athlete || {})
