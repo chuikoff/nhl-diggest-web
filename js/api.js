@@ -1771,10 +1771,21 @@
         return !debut && Number(athlete.age) > 0 && Number(athlete.age) <= 21;
       });
       const needsCore = boardId === 'hits' || boardId === 'blocks';
+      const needsScoring = boardId === 'points' || boardId === 'goals' || boardId === 'assists';
       const players = [];
-      for (const entry of rookies.slice(0, 12)) {
+      for (const entry of rookies) {
         const mapped = skaterFromEspn(entry);
         if (!mapped) continue;
+
+        // Do not show scoreless rookies on offensive boards. ESPN can expose
+        // points and G/A inconsistently, so accept either production signal.
+        const goals = Number(mapped.goals) || 0;
+        const assists = Number(mapped.assists) || 0;
+        const points = Number(mapped.points) || 0;
+        if (needsScoring && (boardId === 'points' ? points <= 0 && goals + assists <= 0 : goals + assists <= 0)) {
+          continue;
+        }
+
         if (needsCore) {
           mapped.value = await coreStat(entry.athlete.id, boardId === 'hits' ? 'hits' : 'blockedShots');
         } else if (boardId === 'toi') {
@@ -1785,6 +1796,7 @@
           mapped.value = mapped[boardId];
         }
         players.push(mapped);
+        if (players.length === 12) break;
       }
       return { source: 'espn', note: `новички · ${seasonNoteEspn()}`, players };
     });
