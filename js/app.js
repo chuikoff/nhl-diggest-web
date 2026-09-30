@@ -731,7 +731,8 @@
       ['До сезона', contract.through]
     ].filter(([, v]) => v);
     if (!rows.length) return '';
-    return `<section class="detail-section player-contract-section"><div class="detail-section-title"><h3>Контракт</h3></div>
+    const src = contract.source === 'puckpedia' ? '<span>PuckPedia</span>' : '';
+    return `<section class="detail-section player-contract-section"><div class="detail-section-title"><h3>Контракт</h3>${src}</div>
       <div class="info-grid">${rows.map(([label, value]) => `<div class="info-row"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}</div>
     </section>`;
   }
@@ -761,7 +762,8 @@
       ['Потолок NHL', cap.ceiling]
     ].filter(([, v]) => v);
     if (!rows.length) return '';
-    return `<section class="detail-section team-cap-section"><div class="detail-section-title"><h3>Зарплатная капа</h3></div>
+    const src = cap.source === 'puckpedia' ? '<span>PuckPedia</span>' : '';
+    return `<section class="detail-section team-cap-section"><div class="detail-section-title"><h3>Зарплатная капа</h3>${src}</div>
       <div class="info-grid">${rows.map(([label, value]) => `<div class="info-row"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}</div>
     </section>`;
   }

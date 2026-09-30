@@ -123,13 +123,13 @@ Endpoint (CORS `*`):
 - флаг страны: emoji + flagcdn fallback; ISO/IOC коды, ESPN `birthCountry`/`citizenship`, провинции/штаты (`ON`→CA, `NY`→US), парсинг `birthCity` / `City, Country`
 - секция **Трофеи** → **Сборная** (Олимпиада / ЧМ / МЧМ U20 / U18 — медали и участие) из `assets/nhl-trophies.json` для **всех национальностей** (CAN/USA/SWE/FIN/CZE/DEU/… + RUS), не только curated-Russia; плюс sparse curated fallback. **Клубные**: Кубок Стэнли (NHL landing + index) и **Кубок Гагарина** KHL
 - **Индивидуальные награды**: Hart, Richard, Calder… из NHL/ESPN. **NHL First All-Star Team** всегда из historical index (Wikipedia / Hockey-Reference) — ESPN часто отдаёт только Second; Second тоже дополняется из index. Curated All-Star — только gap-fill по конкретному award name
-- **Контракт**: cap hit / дата подписания / до сезона — из NHL landing contract fields или ESPN core `/contracts` (soft empty, если API пуст)
+- **Контракт**: cap hit / до сезона (UFA·RFA year) — из **PuckPedia** snapshot `assets/cap-hits.json` (ключ NHL player id); fallback NHL landing / ESPN `/contracts` (часто пусто)
 - пустые группы скрываются; если трофеев нет — мягкий empty state
 
 **На карточке команды:**
 - **Клубные трофеи** по годам: Stanley Cup, Presidents' Trophy, Campbell Bowl, Prince of Wales (из NHL records → `assets/nhl-trophies.json`)
 - **Закреплённые номера** с именем хоноре (Wikipedia NHL retired numbers)
-- **Зарплатная капа** команды (cap hit + cap space / потолок NHL) — soft empty, пока публичные NHL/ESPN payloads не отдают payroll
+- **Зарплатная капа** команды (projected cap hit + cap space / потолок NHL) — из **PuckPedia** `assets/cap-hits.json` по abbrev
 
 Назад: кнопка «Назад», **swipe right-to-left** или **свайп от левого края** (как «к результатам»).
 
@@ -139,6 +139,23 @@ Endpoints (NHL → ESPN fallback, CORS `*` у ESPN):
 | --- | --- | --- |
 | Команда | `/v1/roster/{ABB}/current`, `/v1/club-schedule-season/{ABB}/now`, `/v1/club-stats/{ABB}/now`, `/v1/standings/now` | `/apis/site/v2/sports/hockey/nhl/teams/{slug}`, `/roster`, `/schedule`, `/statistics` |
 | Игрок | `/v1/player/{id}/landing` (включая awards) | `site.web.api` `/apis/common/v3/sports/hockey/nhl/athletes/{id}` + `/overview`; награды — `sports.core.api.espn.com/.../athletes/{id}/awards` |
+
+### Cap hits (PuckPedia)
+
+Публичный API PuckPedia платный; Mini App на GitHub Pages не ходит на puckpedia.com из браузера (CORS). Вместо этого:
+
+1. Скрипт `scripts/fetch_puckpedia_caps.py` скрейпит HTML homepage + `/team/{slug}` (roster `data-extract_ch` + `nhl_id` из embed).
+2. Пишет `assets/cap-hits.json` (`teams` по abbrev, `playersByNhlId`).
+3. `js/api.js` подгружает JSON и заполняет карточку игрока / зарплатную капу команды.
+
+Обновить данные:
+
+```bash
+python3 scripts/fetch_puckpedia_caps.py
+# затем commit + push assets/cap-hits.json
+```
+
+Источник цифр: [puckpedia.com](https://puckpedia.com). Не выдумывать значения вручную.
 
 ### Детали матча
 

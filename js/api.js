@@ -710,6 +710,79 @@
     return trophyIndexPromise;
   }
 
+  let capHitsPromise = null;
+  let capHitsCache = null;
+
+  function capHitsUrl() {
+    try {
+      const base = document.currentScript?.src || window.location.href;
+      return new URL('../assets/cap-hits.json', base.includes('/js/') ? base : './js/api.js').href;
+    } catch {
+      return './assets/cap-hits.json';
+    }
+  }
+
+  async function loadCapHitsIndex() {
+    if (capHitsCache) return capHitsCache;
+    if (capHitsPromise) return capHitsPromise;
+    capHitsPromise = (async () => {
+      try {
+        const response = await fetch('./assets/cap-hits.json', { cache: 'force-cache' });
+        if (!response.ok) throw new Error(`cap-hits ${response.status}`);
+        capHitsCache = await response.json();
+      } catch (error) {
+        console.warn('[NHL Diggest] cap-hits load failed', error);
+        capHitsCache = { teams: {}, playersByNhlId: {}, playersByName: {} };
+      }
+      return capHitsCache;
+    })();
+    return capHitsPromise;
+  }
+
+  function normalizedPlayerKey(name) {
+    return String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  function mapPuckpediaPlayerContract(entry) {
+    if (!entry || entry.capHit == null) return null;
+    const capHit = formatMoneyUsd(entry.capHit);
+    let through = '';
+    if (entry.expiryStatus && entry.expiryYear) through = `${entry.expiryStatus} ${entry.expiryYear}`;
+    else if (entry.expiryYear) through = String(entry.expiryYear);
+    else if (entry.expiryStatus) through = String(entry.expiryStatus);
+    const out = {
+      capHit: capHit || '',
+      signed: '',
+      through,
+      source: 'puckpedia'
+    };
+    return out.capHit || out.through ? out : null;
+  }
+
+  async function loadPuckpediaContract({ nhlId, name } = {}) {
+    const index = await loadCapHitsIndex();
+    const byId = index?.playersByNhlId || {};
+    const idKey = nhlId != null && nhlId !== '' ? String(nhlId) : '';
+    if (idKey && byId[idKey]) return mapPuckpediaPlayerContract(byId[idKey]);
+    const key = normalizedPlayerKey(name);
+    const byName = index?.playersByName || {};
+    if (key && byName[key]) return mapPuckpediaPlayerContract(byName[key]);
+    return null;
+  }
+
+  async function loadPuckpediaTeamCap(abbrev) {
+    const key = String(abbrev || '').toUpperCase();
+    if (!key) return null;
+    const index = await loadCapHitsIndex();
+    const raw = (index?.teams || {})[key];
+    if (!raw) return null;
+    return mapTeamSalaryCap({
+      capHit: raw.capHit,
+      capSpace: raw.capSpace ?? raw.currentSpace,
+      salaryCap: raw.ceiling
+    });
+  }
+
   function lookupStanleySeasons(index, nhlId, name) {
     if (!index) return [];
     const idKey = nhlId != null && nhlId !== '' ? String(nhlId) : '';
@@ -840,15 +913,19 @@
     };
   }
 
-  function formatMoneyUsd(value) {
+  function formatMoneyUsd(value, { allowZero = false, allowNegative = false } = {}) {
     const num = Number(value);
-    if (!Number.isFinite(num) || num <= 0) return '';
-    if (num >= 1_000_000) {
-      const m = num / 1_000_000;
-      return `$${m % 1 === 0 ? m.toFixed(0) : m.toFixed(2)}M`;
+    if (!Number.isFinite(num)) return '';
+    if (num === 0) return (allowZero || allowNegative) ? '$0' : '';
+    if (num < 0 && !allowNegative) return '';
+    const sign = num < 0 ? '-' : '';
+    const abs = Math.abs(num);
+    if (abs >= 1_000_000) {
+      const m = abs / 1_000_000;
+      return `${sign}$${m % 1 === 0 ? m.toFixed(0) : m.toFixed(2)}M`;
     }
-    if (num >= 1_000) return `$${Math.round(num / 1000)}K`;
-    return `$${Math.round(num)}`;
+    if (abs >= 1_000) return `${sign}$${Math.round(abs / 1000)}K`;
+    return `${sign}$${Math.round(abs)}`;
   }
 
   function mapNhlContract(landing = {}) {
@@ -2079,17 +2156,20 @@
       : (Number.isFinite(payroll) ? ceiling - payroll : NaN);
     if (!Number.isFinite(payroll) && !Number.isFinite(space)) return null;
     return {
-      capHit: Number.isFinite(payroll) ? formatMoneyUsd(payroll) : '',
-      capSpace: Number.isFinite(space) ? formatMoneyUsd(space) : '',
+      capHit: Number.isFinite(payroll) ? formatMoneyUsd(payroll, { allowZero: true }) : '',
+      capSpace: Number.isFinite(space) ? formatMoneyUsd(space, { allowZero: true, allowNegative: true }) : '',
       ceiling: formatMoneyUsd(ceiling),
       rawCapHit: Number.isFinite(payroll) ? payroll : null,
-      rawCapSpace: Number.isFinite(space) ? space : null
+      rawCapSpace: Number.isFinite(space) ? space : null,
+      source: raw.source || ''
     };
   }
 
   async function loadTeamSalaryCap(abbrev) {
     const key = String(abbrev || '').toUpperCase();
-    // Try ESPN core team payload fields if ever populated; soft-empty otherwise.
+    // Prefer static PuckPedia snapshot (assets/cap-hits.json); ESPN/NHL public payloads omit payroll.
+    const fromPuck = await loadPuckpediaTeamCap(key).catch(() => null);
+    if (fromPuck) return { ...fromPuck, source: 'puckpedia' };
     try {
       const slug = espnTeamSlug(key);
       const teamPayload = await fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/teams/${slug}`).catch(() => null);
@@ -2749,14 +2829,16 @@
       secondAllStarSeasons: lookupSecondAllStarSeasons(trophyIndex, playerKey, name),
       nationalEntries: lookupNationalEntries(trophyIndex, playerKey, name)
     });
-    let contract = mapNhlContract(landing);
+    const playerNhlId = landing.playerId || nhlId;
+    let contract = await loadPuckpediaContract({ nhlId: playerNhlId, name }).catch(() => null);
+    if (!contract) contract = mapNhlContract(landing);
     if (!contract && espnId) {
       contract = await loadEspnContract(espnId).catch(() => null);
     }
 
     return {
       source: 'nhl',
-      nhlId: landing.playerId || nhlId,
+      nhlId: playerNhlId,
       espnId,
       name,
       number: landing.sweaterNumber ?? '',
@@ -2833,7 +2915,10 @@
       secondAllStarSeasons: lookupSecondAllStarSeasons(trophyIndex, '', name),
       nationalEntries: lookupNationalEntries(trophyIndex, '', name)
     });
-    const contract = await loadEspnContract(athlete.id || espnId).catch(() => null);
+    let contract = await loadPuckpediaContract({ nhlId: null, name }).catch(() => null);
+    if (!contract) {
+      contract = await loadEspnContract(athlete.id || espnId).catch(() => null);
+    }
     return {
       source: 'espn',
       nhlId: null,
