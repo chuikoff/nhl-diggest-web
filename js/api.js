@@ -988,21 +988,23 @@
       if (type === 'SO') return 'SO';
       return clock ? `${num || ''} · ${clock}`.trim() : `${num || ''}`.trim();
     }
+    // Final: only surface OT/SO; regulation stays blank under the score.
     if (game.gameOutcome?.lastPeriodType === 'OT' || type === 'OT') return 'OT';
     if (game.gameOutcome?.lastPeriodType === 'SO' || type === 'SO') return 'SO';
-    return num ? `${num}` : '';
+    return '';
   }
 
   function mapNhlTeam(team) {
     const short = loc(team?.abbrev).toUpperCase();
-    const place = loc(team?.placeName) || loc(team?.commonName) || short;
-    const nick = loc(team?.commonName) || loc(team?.teamName) || short;
+    // Scoreboard uses { name: { default } }; schedule uses placeName/commonName.
+    const place = loc(team?.placeName) || loc(team?.commonName) || loc(team?.name) || short;
+    const nick = loc(team?.commonName) || loc(team?.teamName) || loc(team?.name) || short;
     return {
       name: place,
       nick,
       short,
       logo: logoFor(short),
-      score: team?.score == null ? null : Number(team.score)
+      score: team?.score == null || team?.score === '' ? null : Number(team.score)
     };
   }
 
@@ -1040,17 +1042,34 @@
     return games.map(mapNhlGame);
   }
 
+  function parseEspnScore(rawScore, { allowZero = true } = {}) {
+    if (rawScore == null || rawScore === '') return null;
+    if (typeof rawScore === 'object') {
+      const nested = rawScore.value ?? rawScore.displayValue ?? rawScore.score;
+      return parseEspnScore(nested, { allowZero });
+    }
+    const scoreNum = Number(rawScore);
+    if (!Number.isFinite(scoreNum)) return null;
+    if (!allowZero && scoreNum === 0) return null;
+    return scoreNum;
+  }
+
   function mapEspnEvent(event) {
     const comp = (event.competitions || [])[0] || {};
     const competitors = comp.competitors || [];
     const awayRaw = competitors.find(c => c.homeAway === 'away') || competitors[1] || {};
     const homeRaw = competitors.find(c => c.homeAway === 'home') || competitors[0] || {};
-    const typeName = String(event.status?.type?.name || comp.status?.type?.name || '');
-    const state = event.status?.type?.state || comp.status?.type?.state || '';
+    const statusType = event.status?.type || comp.status?.type || {};
+    const typeName = String(statusType.name || '');
+    const state = String(statusType.state || '');
+    const completed = Boolean(statusType.completed);
     let status = 'FUT';
-    if (state === 'in' || /IN_PROGRESS|STATUS_IN_PROGRESS/.test(typeName)) status = 'Live';
-    else if (state === 'post' || /FINAL|STATUS_FINAL/.test(typeName)) status = 'Final';
-    const seasonType = Number(event.season?.type);
+    if (completed || state === 'post' || /FINAL|STATUS_FINAL/.test(typeName)) status = 'Final';
+    else if (
+      state === 'in'
+      || /IN_PROGRESS|STATUS_IN_PROGRESS|STATUS_END_PERIOD|HALFTIME|STATUS_HALFTIME/.test(typeName)
+    ) status = 'Live';
+    const seasonType = Number(event.season?.type || event.seasonType?.type || event.seasonType);
     const mapSide = raw => {
       const team = raw.team || {};
       const short = String(team.abbreviation || '').toUpperCase();
@@ -1058,21 +1077,27 @@
       const parts = display.split(' ');
       const nick = team.shortDisplayName || team.name || parts[parts.length - 1] || short;
       const place = display.replace(new RegExp(`\\s*${nick}$`), '') || display;
-      const scoreNum = raw.score == null || raw.score === '' ? null : Number(raw.score);
-      return { name: place || display, nick, short, logo: logoFor(short), score: Number.isFinite(scoreNum) ? scoreNum : null };
+      // Scoreboard uses string scores; team schedule uses { value, displayValue }.
+      // Scheduled games often send "0" — keep null so UI shows tip-off time, not 0:0.
+      const scoreNum = parseEspnScore(raw.score, { allowZero: status !== 'FUT' });
+      return { name: place || display, nick, short, logo: logoFor(short), score: scoreNum };
     };
-    const period = status === 'Live'
-      ? (event.status?.type?.shortDetail || event.status?.type?.detail || 'LIVE')
-      : status === 'Final'
-        ? (event.status?.type?.shortDetail || '')
-        : '';
+    let period = '';
+    if (status === 'Live') {
+      period = statusType.shortDetail || statusType.detail || 'LIVE';
+    } else if (status === 'Final') {
+      const detail = String(statusType.shortDetail || statusType.altDetail || '');
+      if (/SO/i.test(detail)) period = 'SO';
+      else if (/OT/i.test(detail)) period = 'OT';
+      else period = '';
+    }
     return {
       id: event.id,
       gameType: seasonType,
       preseason: seasonType === 1,
       status,
       time: status === 'Final' ? 'Завершён' : status === 'Live' ? 'LIVE' : formatMskTime(event.date),
-      period: status === 'FUT' ? '' : period,
+      period,
       venue: loc(comp.venue?.fullName) || loc(comp.venue?.displayName),
       startTimeUTC: event.date || '',
       away: mapSide(awayRaw),
@@ -1095,31 +1120,60 @@
     return (data.events || []).map(mapEspnEvent);
   }
 
-  async function gamesForDate(dateKey) {
-    return cached(`games:${dateKey}`, async () => {
-      let source = 'mock';
-      let games = [];
+  async function fetchGamesEtDate(dateKey) {
+    return cached(`games-et:${dateKey}`, async () => {
       try {
         const payload = await scoreNhl(dateKey);
-        games = extractNhlGames(payload, dateKey);
-        source = 'nhl';
+        return { games: extractNhlGames(payload, dateKey), source: 'nhl', error: false };
       } catch (nhlError) {
         try {
           const payload = await scheduleNhl(dateKey);
-          games = extractNhlGames(payload, dateKey);
-          source = 'nhl';
+          return { games: extractNhlGames(payload, dateKey), source: 'nhl', error: false };
         } catch {
           try {
-            games = await scoreEspn(dateKey);
-            source = 'espn';
+            return { games: await scoreEspn(dateKey), source: 'espn', error: false };
           } catch (espnError) {
             console.warn('[NHL Diggest] schedule fetch failed', nhlError, espnError);
             return { games: null, source: 'mock', error: true };
           }
         }
       }
-      // Use NHL/ESPN date bucket as-is; tip-off times are shown in MSK.
-      // Overnight ET games may display as 00:00–05:30 MSK next calendar morning.
+    });
+  }
+
+  function gameBelongsToMskDate(game, dateKey) {
+    const iso = game?.startTimeUTC || '';
+    if (!iso) return false;
+    const tip = new Date(iso);
+    if (Number.isNaN(tip.getTime())) return false;
+    return mskDateKey(tip) === dateKey;
+  }
+
+  async function gamesForDate(dateKey) {
+    return cached(`games:${dateKey}`, async () => {
+      // NHL/ESPN bucket by North-American game date, but the Mini App day switcher
+      // is Europe/Moscow. Overnight ET tip-offs (00:00–06:00 MSK) belong on the
+      // next MSK calendar day — fetch adjacent ET dates and filter by MSK start.
+      const etDates = [shiftDate(dateKey, -1), dateKey, shiftDate(dateKey, 1)];
+      const results = await Promise.all(etDates.map(fetchGamesEtDate));
+      const seen = new Set();
+      const games = [];
+      let source = 'mock';
+      let anyOk = false;
+      results.forEach(result => {
+        if (!result || result.error || !Array.isArray(result.games)) return;
+        anyOk = true;
+        source = result.source || source;
+        result.games.forEach(game => {
+          const id = String(game.id ?? '');
+          if (!id || seen.has(id)) return;
+          if (!gameBelongsToMskDate(game, dateKey)) return;
+          seen.add(id);
+          games.push(game);
+        });
+      });
+      if (!anyOk) return { games: null, source: 'mock', error: true };
+      games.sort((a, b) => String(a.startTimeUTC || '').localeCompare(String(b.startTimeUTC || '')));
       return { games, source, error: false };
     });
   }
