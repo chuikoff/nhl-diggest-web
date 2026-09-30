@@ -3089,11 +3089,51 @@
   }
 
 
+
+  async function gameStubFromId(gameId) {
+    const id = String(gameId || '').trim();
+    if (!id) return null;
+    try {
+      const landing = await fetchJson(`${NHL()}/v1/gamecenter/${id}/landing`);
+      if (landing && (landing.id || landing.awayTeam || landing.homeTeam)) {
+        const mapped = mapNhlGame({ ...landing, id: landing.id || Number(id) || id });
+        return mapped;
+      }
+    } catch (error) {
+      console.warn('[NHL Diggest] gameStubFromId NHL failed', error);
+    }
+    try {
+      const summary = await fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/summary?event=${id}`);
+      const header = summary?.header || {};
+      const competitions = header.competitions || summary?.competitions || [];
+      const event = {
+        id,
+        date: header.competitions?.[0]?.date || summary?.gameInfo?.date || '',
+        season: header.season || {},
+        status: header.competitions?.[0]?.status || {},
+        competitions: competitions.length ? competitions : [{
+          competitors: summary?.boxscore?.teams || [],
+          status: header.competitions?.[0]?.status || {},
+          venue: summary?.gameInfo?.venue
+        }]
+      };
+      // Prefer mapping via competitors if present on header
+      if (header.competitions?.[0]) {
+        return mapEspnEvent({ ...header, id });
+      }
+      return mapEspnEvent(event);
+    } catch (error) {
+      console.warn('[NHL Diggest] gameStubFromId ESPN failed', error);
+      return null;
+    }
+  }
+
   window.NHL_LIVE = {
     mskDateKey,
     shiftDate,
     logoFor,
     gamesForDate,
+    gameStubFromId,
     loadStandings,
     loadBoard,
     loadRookies,

@@ -507,9 +507,62 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+
+  function readDeepLinkMatchId() {
+    const strip = raw => {
+      const text = String(raw || '').trim();
+      if (!text) return null;
+      const m = text.match(/(?:^|\b)(?:match[_=-]?)?(\d{6,14})\b/i);
+      return m ? m[1] : null;
+    };
+    try {
+      const query = new URLSearchParams(location.search || '');
+      const fromQuery = strip(query.get('match') || query.get('game') || query.get('startapp'));
+      if (fromQuery) return fromQuery;
+    } catch { /* ignore */ }
+    try {
+      const hashRaw = (location.hash || '').replace(/^#/, '');
+      if (hashRaw) {
+        if (hashRaw.includes('=')) {
+          const hp = new URLSearchParams(hashRaw);
+          const fromHash = strip(hp.get('match') || hp.get('game') || hp.get('startapp'));
+          if (fromHash) return fromHash;
+        }
+        const fromBare = strip(hashRaw);
+        if (fromBare) return fromBare;
+      }
+    } catch { /* ignore */ }
+    try {
+      const start =
+        window.Telegram?.WebApp?.initDataUnsafe?.start_param ||
+        window.WebApp?.initDataUnsafe?.start_param ||
+        window.WebApp?.initDataUnsafe?.payload ||
+        '';
+      const fromStart = strip(start);
+      if (fromStart) return fromStart;
+    } catch { /* ignore */ }
+    return null;
+  }
+
   async function openGameDetail(gameId) {
-    const game = state.games.find(item => String(item.id) === String(gameId));
-    if (!game) return;
+    let game = state.games.find(item => String(item.id) === String(gameId));
+    if (!game && live?.gameStubFromId) {
+      try {
+        game = await live.gameStubFromId(gameId);
+        if (game) {
+          // Keep deep-linked match available for back-navigation / re-open.
+          if (!state.games.some(item => String(item.id) === String(game.id))) {
+            state.games = [game, ...state.games];
+          }
+        }
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+    if (!game) {
+      toast('Матч не найден');
+      return;
+    }
     showPanel('game-detail', { push: true });
     $('#gameDetailContent').innerHTML = `<div class="detail-notice"><strong>Загрузка матча…</strong><span>${game.away.name} — ${game.home.name}</span></div>`;
     let detail = null;
@@ -1479,10 +1532,18 @@
 
   (async function boot() {
     renderDayNavigation();
+    const deepMatchId = readDeepLinkMatchId();
     await Promise.all([
       loadGames(state.selectedDate),
       loadStandingsLive(),
       loadStatsLive()
     ]);
+    if (deepMatchId) {
+      try {
+        await openGameDetail(deepMatchId);
+      } catch (error) {
+        console.warn('[NHL Diggest] deep-link match open failed', error);
+      }
+    }
   })();
 })();
