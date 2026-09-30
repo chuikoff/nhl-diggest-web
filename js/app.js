@@ -396,13 +396,12 @@
   }
 
   function teamMarkup(team, side) {
-    const abbrev = escapeAttr(team.short || '');
+    // Results row: teams are display-only. Card tap always opens match detail;
+    // team pages open only from logo/name inside match detail (.match-card).
     const fav = isFavoriteTeam(team.short) ? ' is-favorite' : '';
-    return `<div class="team ${side}">
-      <button type="button" class="team-hit${fav}" data-team-abbrev="${abbrev}" aria-label="Команда ${escapeAttr(team.name)}">
-        <div class="team-info"><span class="team-name">${team.name}</span><span class="team-nick">${team.nick}</span></div>
-        <img class="logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
-      </button>
+    return `<div class="team ${side}${fav}">
+      <div class="team-info"><span class="team-name">${team.name}</span><span class="team-nick">${team.nick}</span></div>
+      <img class="logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
     </div>`;
   }
 
@@ -693,10 +692,14 @@
             ${playerBoxscoreMarkup(game, skaters, goalies)}
           </div>
         </div>`;
+    const remindControl = remindButtonMarkup(game, { labelOff: '🔔 Напомнить', labelOn: '🔔 Вкл' });
     $('#gameDetailContent').innerHTML = `
       <article class="match-card">
         <div class="detail-hero">
-          <div class="detail-status status ${game.status === 'Live' ? 'live' : isScheduled ? (game.preseason ? 'preseason' : 'future') : 'final'}">${statusLabel(game.status, game.preseason)}</div>
+          <div class="detail-status-row">
+            <div class="detail-status status ${game.status === 'Live' ? 'live' : isScheduled ? (game.preseason ? 'preseason' : 'future') : 'final'}">${statusLabel(game.status, game.preseason)}</div>
+            ${remindControl}
+          </div>
           <div class="detail-scoreboard">${detailTeamMarkup(game.away)}<div class="detail-score"><strong>${score}</strong><span>${isScheduled ? game.time : game.period || ''}</span></div>${detailTeamMarkup(game.home)}</div>
           <div class="detail-venue">${detail?.venue || game.venue || 'NHL Arena'}${detail?.attendance ? ` · ${detail.attendance} зрителей` : ''}</div>
         </div>
@@ -918,7 +921,15 @@
 
   function canRemindGame(game) {
     if (!game?.id) return false;
-    return game.status === 'FUT' || game.status === 'Preseason';
+    // Any not-yet-started game (FUT / upcoming), including preseason.
+    const status = String(game.status || '');
+    return status !== 'Live' && status !== 'Final';
+  }
+
+  function remindButtonMarkup(game, { labelOff = '🔔', labelOn = '🔔 Вкл' } = {}) {
+    if (!canRemindGame(game)) return '';
+    const on = isReminderOn(game.id);
+    return `<button type="button" class="remind-btn${on ? ' is-on' : ''}" data-remind-game="${escapeAttr(String(game.id))}" data-remind-on="${on ? '1' : '0'}" data-remind-start="${escapeAttr(game.startTimeUTC || '')}" data-remind-away="${escapeAttr(game.away?.short || '')}" data-remind-home="${escapeAttr(game.home?.short || '')}" aria-pressed="${on ? 'true' : 'false'}" aria-label="${on ? 'Отключить напоминание' : 'Напомнить о начале матча'}">${on ? labelOn : labelOff}</button>`;
   }
 
   function scheduleListMarkup(title, games, emptyText, { remindable = false } = {}) {
@@ -927,11 +938,8 @@
       <div class="team-schedule">${games.map(game => {
         const opp = game.opponent || {};
         const prefix = game.isHome ? 'vs' : '@';
-        const showRemind = remindable && canRemindGame(game);
-        const on = showRemind && isReminderOn(game.id);
-        const remind = showRemind
-          ? `<button type="button" class="remind-btn${on ? ' is-on' : ''}" data-remind-game="${escapeAttr(String(game.id))}" data-remind-on="${on ? '1' : '0'}" data-remind-start="${escapeAttr(game.startTimeUTC || '')}" data-remind-away="${escapeAttr(game.away?.short || '')}" data-remind-home="${escapeAttr(game.home?.short || '')}" aria-pressed="${on ? 'true' : 'false'}">${on ? '🔔 Вкл' : '🔔'}</button>`
-          : '';
+        const remind = remindable ? remindButtonMarkup(game) : '';
+        const showRemind = Boolean(remind);
         return `<div class="schedule-row${showRemind ? ' has-remind' : ''}">
           <span class="schedule-date">${formatShortDate(game.startTimeUTC || '')}</span>
           <div class="schedule-copy"><strong>${prefix} ${opp.short || opp.name || '—'}</strong><small>${statusLabel(game.status, game.preseason)}</small></div>
@@ -1409,21 +1417,12 @@
     loadAlltimeLive();
   });
 
+  // Results: any tap/key on a match card opens match detail — never team pages.
   $('#gamesList').addEventListener('click', event => {
-    if (bindTeamOpen(event.target)) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
     const card = event.target.closest('[data-game-id]');
     if (card) openGameDetail(card.dataset.gameId);
   });
   $('#gamesList').addEventListener('keydown', event => {
-    if (event.target.closest?.('.team-hit') && (event.key === 'Enter' || event.key === ' ')) {
-      event.preventDefault();
-      bindTeamOpen(event.target);
-      return;
-    }
     const card = event.target.closest('[data-game-id]');
     if (card && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();

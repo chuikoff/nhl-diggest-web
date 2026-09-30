@@ -471,6 +471,20 @@
   color: var(--accent);
 }
 
+.detail-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.match-card .detail-status-row .remind-btn {
+  flex: 0 0 auto;
+}
+.match-card .detail-hero .detail-status-row {
+  margin-bottom: 2px;
+}
+
 /* Type scale bump (+1–2px) — layout-safe overrides */
 .brand-copy h1 { font-size: 19px; }
 h2 { font-size: 29px; }
@@ -741,6 +755,7 @@ h2 { font-size: 29px; }
   box-shadow: inset 3px 0 0 var(--fav-glow);
 }
 .team-hit.is-favorite .team-name,
+.team.is-favorite .team-name,
 .detail-team.is-favorite strong,
 .player-name.is-favorite {
   color: var(--fav-glow) !important;
