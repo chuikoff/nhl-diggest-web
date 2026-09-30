@@ -946,3 +946,34 @@ h2 { font-size: 29px; }
   text-overflow: ellipsis;
 }
 .player-box-row .col-toi { white-space: nowrap; }
+
+/* Penalties stay compact in the match overview until expanded. */
+.penalties-accordion {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #111a27;
+  overflow: hidden;
+}
+.penalties-accordion summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+.penalties-accordion summary::-webkit-details-marker { display: none; }
+.penalties-accordion summary::after {
+  content: '⌄';
+  float: right;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  transition: transform .18s ease;
+}
+.penalties-accordion[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+.penalties-accordion[open] summary::after { transform: rotate(180deg); }
+.penalties-accordion > .period-groups { padding: 10px; }
+:root[data-theme="light"] .penalties-accordion { background: #ffffff; }
