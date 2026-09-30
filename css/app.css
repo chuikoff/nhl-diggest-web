@@ -1140,7 +1140,7 @@ h2 { font-size: 29px; }
 }
 .goal-card-top {
   display: grid;
-  grid-template-columns: 56px 1fr auto;
+  grid-template-columns: 56px 1fr;
   gap: 12px;
   align-items: center;
   padding: 12px 12px 10px;
@@ -1161,29 +1161,6 @@ h2 { font-size: 29px; }
   font-size: 12px;
   margin-top: 3px;
   font-weight: 600;
-}
-.goal-card-score {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding-left: 4px;
-}
-.goal-score-side {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-width: 28px;
-}
-.goal-score-side img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-.goal-score-side strong {
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1;
 }
 .goal-card-bottom {
   display: flex;
@@ -1223,6 +1200,6 @@ h2 { font-size: 29px; }
   .player-mug-lg { --mug-size: 54px; }
   .three-star-name { font-size: 15px; }
   .three-star-stat strong { font-size: 13px; }
-  .goal-card-top { grid-template-columns: 48px 1fr auto; gap: 8px; }
+  .goal-card-top { grid-template-columns: 48px 1fr; gap: 8px; }
   .player-mug-md { --mug-size: 46px; }
 }

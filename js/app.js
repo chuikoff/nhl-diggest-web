@@ -603,8 +603,6 @@
     if (!events?.length) return `<p class="empty-detail">Пока без голов</p>`;
     const groups = live?.groupByPeriod?.(events) || [{ period: '—', events }];
     const gameGoalCount = new Map();
-    const away = game?.away || {};
-    const home = game?.home || {};
     return groups.map(group => {
       const cards = group.events.map(event => {
         const key = String(event.scorerId || event.scorer || '');
@@ -621,20 +619,12 @@
           abbrev: event.team,
           headshot: event.headshot || ''
         };
-        const awayScore = event.awayScore != null ? event.awayScore : '—';
-        const homeScore = event.homeScore != null ? event.homeScore : '—';
-        const awayLogo = escapeAttr(away.logo || live?.logoFor?.(away.short) || '');
-        const homeLogo = escapeAttr(home.logo || live?.logoFor?.(home.short) || '');
         return `<article class="goal-card">
           <div class="goal-card-top">
             ${playerMugMarkup({ ...scorerRef, team: event.team, name: event.scorer || short })}
             <div class="goal-card-copy">
               <div class="goal-card-name">${playerMarkup(scorerRef)}${ytdSuffix}${highlightButtonMarkup(event)}</div>
               <div class="goal-card-nth">${goalOrdinalLabel(nth)}</div>
-            </div>
-            <div class="goal-card-score" aria-label="Счёт">
-              <div class="goal-score-side"><img src="${awayLogo}" alt=""><strong>${awayScore}</strong></div>
-              <div class="goal-score-side"><img src="${homeLogo}" alt=""><strong>${homeScore}</strong></div>
             </div>
           </div>
           <div class="goal-card-bottom">
