@@ -144,7 +144,9 @@
     'yegor shangovich', 'alexander alexeyev', 'alex alexeyev', 'dmitri voronkov',
     'dmitry voronkov', 'vasiliy glotov', 'nikita okhotyuk', 'arsenii gritsyuk',
     'nikolai kovalenko', 'alexander romanov', 'alex romanov', 'vladislav kolyachonok',
-    'bogdan konyushkov', 'danila yurov', 'matvei blinovsky', 'prokhor poltapov'
+    'bogdan konyushkov', 'danila yurov', 'matvei blinovsky', 'prokhor poltapov',
+    // Ivan Demidov (Montreal; NHL ID 8484984), including boxscore name variants.
+    'ivan demidov', 'i demidov', 'demidov ivan', 'иван демидов', 'и демидов'
   ]);
 
   // NHL playerIds for Russian nationals (boxscore rows often lack birthCountry).
@@ -152,7 +154,7 @@
     '8471214', '8471215', '8478864', '8478550', '8476883', '8476453', '8478048',
     '8478009', '8480830', '8479410', '8484387', '8477507', '8481617', '8481604',
     '8482177', '8478882', '8482142', '8480839', '8481554', '8482158', '8480012',
-    '8481032', '8477424', '8477942', '8480009'
+    '8481032', '8477424', '8477942', '8480009', '8484984'
   ]);
 
   function normalizedName(value) {
