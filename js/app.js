@@ -395,12 +395,22 @@
     return { Final: 'Завершён', Live: 'LIVE', FUT: 'Запланирован', Preseason: 'Предсезон' }[status] || status;
   }
 
+  function teamFullName(team = {}) {
+    const explicit = String(team.fullName || '').trim();
+    if (explicit) return explicit;
+    const name = String(team.name || '').trim();
+    const nick = String(team.nick || '').trim();
+    if (!name) return nick || String(team.short || '').trim();
+    if (!nick || name.toLocaleLowerCase().endsWith(nick.toLocaleLowerCase())) return name;
+    return `${name} ${nick}`;
+  }
+
   function teamMarkup(team, side) {
     // Results row: teams are display-only. Card tap always opens match detail;
     // team pages open only from logo/name inside match detail (.match-card).
     const fav = isFavoriteTeam(team.short) ? ' is-favorite' : '';
     return `<div class="team ${side}${fav}">
-      <div class="team-info"><span class="team-name">${team.name}</span><span class="team-nick">${team.nick}</span></div>
+      <div class="team-info"><span class="team-name">${escapeHtml(teamFullName(team))}</span></div>
       <img class="logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
     </div>`;
   }
@@ -427,8 +437,7 @@
         ? `<span class="score time">${game.time}</span>`
         : `<span class="score">${game.away.score ?? 0}<span class="score-divider">:</span>${game.home.score ?? 0}</span>`;
       const statusClass = game.status === 'Live' ? 'live' : game.preseason ? 'preseason' : isFuture ? 'future' : 'final';
-      const hasFavTeam = isFavoriteTeam(game.away?.short) || isFavoriteTeam(game.home?.short);
-      return `<article class="game-card${hasFavTeam ? ' has-favorite-team' : ''}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="Открыть матч ${game.away.name} — ${game.home.name}">
+      return `<article class="game-card" data-game-id="${game.id}" tabindex="0" role="button" aria-label="Открыть матч ${game.away.name} — ${game.home.name}">
         <div class="game-meta"><span>${game.time}</span><span class="status ${statusClass}">${statusLabel(game.status, game.preseason)}</span></div>
         <div class="game-body">${teamMarkup(game.away, 'away')}<div class="game-score">${score}${game.period ? `<div class="period">${game.period}</div>` : ''}</div>${teamMarkup(game.home, 'home')}</div>
         <div class="game-open-label">Подробности <span>›</span></div>
