@@ -1,6 +1,6 @@
 {
-  "source": "NHL records.nhl.com award-details + Wikipedia List of NHL retired numbers / List of Stanley Cup champions; Hockey-Reference/Wikipedia NHL All-Star Teams; IIHF/Wikipedia national medals (multi-nationality). Team club trophies: Stanley Cup championships only.",
-  "updated": "2026-10-02",
+  "source": "NHL records.nhl.com award-details + Wikipedia List of NHL retired numbers / List of Stanley Cup champions; Hockey-Reference/Wikipedia NHL All-Star Teams; IIHF/Wikipedia national medals (multi-nationality). Team club trophies: Stanley Cup championships only.; UTA=expansion (no ARI retirements on Mammoth cards)",
+  "updated": "2026-10-02T23:55:00+03:00",
   "stanleyByPlayerId": {
     "8474567": [
       "2019/20"
@@ -19203,5 +19203,6 @@
         ]
       }
     ]
-  }
+  },
+  "utaPolicy": "Utah Mammoth is treated as a 2024 NHL expansion franchise with no Coyotes/Jets continuity for team cards: teamTrophiesByAbbrev.UTA and retiredNumbersByAbbrev.UTA are intentionally empty (no Stanley Cups; no inherited Arizona retirements)."
 }

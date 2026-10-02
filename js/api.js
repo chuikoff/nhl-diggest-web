@@ -16,6 +16,23 @@
   const ESPN_WEB = () => (window.ESPN_WEB_API || 'https://site.web.api.espn.com').replace(/\/$/, '');
   const ESPN_CORE = () => (window.ESPN_CORE_API || 'https://sports.core.api.espn.com').replace(/\/$/, '');
 
+  // ESPN scoreboard/standings/athletes use short codes (LA, TB, NJ, SJ, UTAH).
+  // NHL api-web + assets/nhl-trophies.json + cap-hits.json use LAK, TBL, NJD, SJS, UTA.
+  // Without this map, team cards opened from ESPN fallbacks miss Cups / retired #s.
+  const ESPN_TO_NHL_ABBREV = {
+    LA: 'LAK',
+    TB: 'TBL',
+    NJ: 'NJD',
+    SJ: 'SJS',
+    UTAH: 'UTA'
+  };
+
+  function canonicalNhlAbbrev(abbrev) {
+    const key = String(abbrev || '').trim().toUpperCase();
+    if (!key) return '';
+    return ESPN_TO_NHL_ABBREV[key] || key;
+  }
+
   const ESPN_SLUG = { LAK: 'la', TBL: 'tb', NJD: 'nj', SJS: 'sj', WSH: 'wsh', MTL: 'mtl', UTA: 'utah' };
   const LIVE = new Set(['LIVE', 'CRIT']);
   const FINAL = new Set(['OFF', 'FINAL', 'OVER']);
@@ -949,7 +966,7 @@
   }
 
   async function loadPuckpediaTeamCap(abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     if (!key) return null;
     const index = await loadCapHitsIndex();
     const raw = (index?.teams || {})[key];
@@ -999,7 +1016,7 @@
   }
 
   function teamTrophiesForAbbrev(index, abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     const rows = (index?.teamTrophiesByAbbrev || {})[key] || [];
     // Team cards: Stanley Cup championships only (no conference/presidents trophies).
     return rows.filter(row => {
@@ -1014,7 +1031,7 @@
   }
 
   function retiredNumbersForAbbrev(index, abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     return (index?.retiredNumbersByAbbrev || {})[key] || [];
   }
 
@@ -1178,7 +1195,7 @@
   }
 
   function logoFor(abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     const slug = ESPN_SLUG[key] || key.toLowerCase();
     if (!slug) return '';
     return `https://a.espncdn.com/i/teamlogos/nhl/500/${slug}.png`;
@@ -1198,7 +1215,7 @@
   };
 
   function teamColorFor(abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     return TEAM_COLORS[key] || '#2a3d55';
   }
 
@@ -1355,7 +1372,7 @@
     const seasonType = Number(event.season?.type || event.seasonType?.type || event.seasonType);
     const mapSide = raw => {
       const team = raw.team || {};
-      const short = String(team.abbreviation || '').toUpperCase();
+      const short = canonicalNhlAbbrev(team.abbreviation);
       const display = team.displayName || team.name || short;
       const parts = display.split(' ');
       const nick = team.shortDisplayName || team.name || parts[parts.length - 1] || short;
@@ -1520,7 +1537,7 @@
         ((div.standings || {}).entries || []).forEach(entry => {
           const stats = Object.fromEntries((entry.stats || []).map(stat => [stat.name, stat.value]));
           const team = entry.team || {};
-          const abbrev = String(team.abbreviation || '').toUpperCase();
+          const abbrev = canonicalNhlAbbrev(team.abbreviation);
           rows.push({
             name: team.displayName || team.name || abbrev,
             abbrev,
@@ -1593,7 +1610,7 @@
       name,
       nhlId: row.id || row.playerId || null,
       team: loc(row.teamName) || loc(row.teamAbbrev),
-      abbrev: loc(row.teamAbbrev).toUpperCase(),
+      abbrev: canonicalNhlAbbrev(row.teamAbbrev),
       position: row.position || '',
       value,
       headshot: row.headshot || '',
@@ -1689,11 +1706,12 @@
       const athlete = entry.athlete || {};
       if ((athlete.position || {}).abbreviation === 'G') return null;
       const value = await coreStat(athlete.id, statName);
+      const abbrev = canonicalNhlAbbrev(athlete.team?.abbreviation || athlete.teamAbbreviation || '');
       return {
         name: athlete.displayName,
         espnId: athlete.id || null,
-        team: athlete.teamShortName || athlete.teamName || '',
-        abbrev: '',
+        team: athlete.teamShortName || athlete.teamName || abbrev,
+        abbrev,
         position: (athlete.position || {}).abbreviation || '',
         value: value ?? '—',
         headshot: athlete.headshot?.href || '',
@@ -1713,10 +1731,12 @@
       penalties: ['penaltyMinutes']
     };
     const pick = (bucket, index) => (buckets[bucket]?.totals || [])[index];
+    const abbrev = canonicalNhlAbbrev(athlete.team?.abbreviation || athlete.teamAbbreviation || '');
     return {
       name: athlete.displayName,
       espnId: athlete.id || null,
-      team: athlete.teamShortName || athlete.teamName || '',
+      team: athlete.teamShortName || athlete.teamName || abbrev,
+      abbrev,
       position: (athlete.position || {}).abbreviation || '',
       headshot: athlete.headshot?.href || '',
       debutYear: athlete.debutYear || null,
@@ -1764,7 +1784,8 @@
             players.push({
               name: athlete.displayName || '—',
               espnId: athlete.id || null,
-              team: team.abbreviation || team.shortDisplayName || '',
+              team: team.shortDisplayName || team.displayName || team.abbreviation || '',
+              abbrev: canonicalNhlAbbrev(team.abbreviation),
               position: 'G',
               value: board.format ? board.format(raw) : raw,
               headshot: athlete.headshot?.href || '',
@@ -2235,7 +2256,7 @@
     const box = summary.boxscore || {};
     const boxscore = {};
     (box.teams || []).forEach(teamBlock => {
-      const short = String(teamBlock.team?.abbreviation || '').toUpperCase();
+      const short = canonicalNhlAbbrev(teamBlock.team?.abbreviation);
       const stats = Object.fromEntries((teamBlock.statistics || []).map(stat => [stat.name, stat.displayValue]));
       const pp = stats.powerPlayGoals != null && stats.powerPlayOpportunities != null
         ? `${stats.powerPlayGoals}/${stats.powerPlayOpportunities}`
@@ -2249,7 +2270,7 @@
     });
     const teamIdToAbbrev = {};
     (box.players || []).forEach(block => {
-      teamIdToAbbrev[String(block.team?.id)] = String(block.team?.abbreviation || '').toUpperCase();
+      teamIdToAbbrev[String(block.team?.id)] = canonicalNhlAbbrev(block.team?.abbreviation);
     });
     scoring.forEach(goal => {
       if (teamIdToAbbrev[goal.team]) goal.team = teamIdToAbbrev[goal.team];
@@ -2257,7 +2278,7 @@
     const skaters = [];
     const goalies = [];
     (box.players || []).forEach(block => {
-      const short = String(block.team?.abbreviation || '').toUpperCase();
+      const short = canonicalNhlAbbrev(block.team?.abbreviation);
       (block.statistics || []).forEach(group => {
         const keys = group.keys || group.names || [];
         const index = name => keys.indexOf(name);
@@ -2484,7 +2505,7 @@
     const idToAbbrev = { ...teamIdToAbbrev };
     (summary?.header?.competitions?.[0]?.competitors || []).forEach(comp => {
       const id = String(comp.team?.id || comp.id || '');
-      const abbr = String(comp.team?.abbreviation || '').toUpperCase();
+      const abbr = canonicalNhlAbbrev(comp.team?.abbreviation);
       if (id && abbr) idToAbbrev[id] = abbr;
     });
     ['away', 'home'].forEach(side => {
@@ -2496,7 +2517,7 @@
       if (!rank) return null;
       const ath = item.athlete || {};
       const teamBlock = item.team || {};
-      const team = String(teamBlock.abbreviation || idToAbbrev[String(teamBlock.id || '')] || '').toUpperCase();
+      const team = canonicalNhlAbbrev(teamBlock.abbreviation || idToAbbrev[String(teamBlock.id || '')] || '');
       const name = ath.fullName || ath.displayName || ath.shortName || '';
       const espnId = ath.id || item.playerId || null;
       const identity = mergePlayerIdentity(ath, rosterIndex);
@@ -2582,7 +2603,7 @@
     if (teamRef) {
       try {
         const team = await fetchJson(teamRef);
-        teamAbbr = String(team.abbreviation || '').toUpperCase();
+        teamAbbr = canonicalNhlAbbrev(team.abbreviation);
         teamName = team.shortDisplayName || team.displayName || teamAbbr;
       } catch { /* team optional for retired players */ }
     }
@@ -2721,7 +2742,7 @@
   }
 
   async function loadTeamSalaryCap(abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     // Prefer static PuckPedia snapshot (assets/cap-hits.json); ESPN/NHL public payloads omit payroll.
     const fromPuck = await loadPuckpediaTeamCap(key).catch(() => null);
     if (fromPuck) return { ...fromPuck, source: 'puckpedia' };
@@ -2748,7 +2769,7 @@
 
 
   function espnTeamSlug(abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     return ESPN_SLUG[key] || key.toLowerCase();
   }
 
@@ -2905,7 +2926,7 @@
   }
 
   async function loadTeamNhl(abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     await ensureSeason();
     const [rosterPayload, schedulePayload, clubStats, standingsPayload] = await Promise.all([
       fetchJson(`${NHL()}/v1/roster/${key}/current`),
@@ -2976,7 +2997,7 @@
   }
 
   async function loadTeamEspn(abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     const slug = espnTeamSlug(key);
     const [teamPayload, rosterPayload, schedulePayload, statsPayload] = await Promise.all([
       fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/teams/${slug}`),
@@ -3017,7 +3038,7 @@
   }
 
   async function loadTeam(abbrev) {
-    const key = String(abbrev || '').toUpperCase();
+    const key = canonicalNhlAbbrev(abbrev);
     if (!key) return null;
     return cached(`team:${key}`, async () => {
       let team = null;
@@ -3562,7 +3583,7 @@
       number: athlete.jersey || athlete.displayJersey || '',
       position,
       team: team.displayName || team.shortDisplayName || '',
-      abbrev: String(team.abbreviation || '').toUpperCase(),
+      abbrev: canonicalNhlAbbrev(team.abbreviation),
       logo: logoFor(team.abbreviation),
       headshot: athlete.headshot?.href || '',
       height: athlete.displayHeight || '',
