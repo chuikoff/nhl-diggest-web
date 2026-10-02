@@ -400,7 +400,7 @@
     // team pages open only from logo/name inside match detail (.match-card).
     const fav = isFavoriteTeam(team.short) ? ' is-favorite' : '';
     return `<div class="team ${side}${fav}">
-      <div class="team-info"><span class="team-name">${escapeHtml(team.name || '')}</span><span class="team-nick">${escapeHtml(team.nick || '')}</span></div>
+      <div class="team-info"><span class="team-name">${team.name}</span><span class="team-nick">${team.nick}</span></div>
       <img class="logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
     </div>`;
   }
@@ -427,7 +427,8 @@
         ? `<span class="score time">${game.time}</span>`
         : `<span class="score">${game.away.score ?? 0}<span class="score-divider">:</span>${game.home.score ?? 0}</span>`;
       const statusClass = game.status === 'Live' ? 'live' : game.preseason ? 'preseason' : isFuture ? 'future' : 'final';
-      return `<article class="game-card" data-game-id="${game.id}" tabindex="0" role="button" aria-label="Открыть матч ${game.away.name} — ${game.home.name}">
+      const hasFavTeam = isFavoriteTeam(game.away?.short) || isFavoriteTeam(game.home?.short);
+      return `<article class="game-card${hasFavTeam ? ' has-favorite-team' : ''}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="Открыть матч ${game.away.name} — ${game.home.name}">
         <div class="game-meta"><span>${game.time}</span><span class="status ${statusClass}">${statusLabel(game.status, game.preseason)}</span></div>
         <div class="game-body">${teamMarkup(game.away, 'away')}<div class="game-score">${score}${game.period ? `<div class="period">${game.period}</div>` : ''}</div>${teamMarkup(game.home, 'home')}</div>
         <div class="game-open-label">Подробности <span>›</span></div>
