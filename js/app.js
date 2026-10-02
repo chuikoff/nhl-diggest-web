@@ -783,7 +783,7 @@
     return null;
   }
 
-  async function openGameDetail(gameId) {
+  async function openGameDetail(gameId, { silent = false } = {}) {
     let game = state.games.find(item => String(item.id) === String(gameId));
     if (!game && live?.gameStubFromId) {
       try {
@@ -799,7 +799,11 @@
       }
     }
     if (!game) {
-      toast('Матч не найден');
+      if (silent) {
+        console.warn('[NHL Diggest] match not found (silent)', gameId);
+      } else {
+        toast('Матч не найден');
+      }
       return;
     }
     showPanel('game-detail', { push: true });
@@ -1845,6 +1849,8 @@
     }, { passive: true });
   })();
 
+  const DEEPLINK_HANDLED_KEY = 'nhl-diggest-deeplink-handled';
+
   (async function boot() {
     renderDayNavigation();
     const deepMatchId = readDeepLinkMatchId();
@@ -1854,10 +1860,21 @@
       loadStatsLive()
     ]);
     if (deepMatchId) {
+      let alreadyHandled = false;
       try {
-        await openGameDetail(deepMatchId);
-      } catch (error) {
-        console.warn('[NHL Diggest] deep-link match open failed', error);
+        alreadyHandled = sessionStorage.getItem(DEEPLINK_HANDLED_KEY) === String(deepMatchId);
+      } catch { /* private mode */ }
+      if (alreadyHandled) {
+        // Stale Telegram start_param on reopen — skip auto-open (no toast).
+      } else {
+        try {
+          await openGameDetail(deepMatchId, { silent: true });
+        } catch (error) {
+          console.warn('[NHL Diggest] deep-link match open failed', error);
+        }
+        try {
+          sessionStorage.setItem(DEEPLINK_HANDLED_KEY, String(deepMatchId));
+        } catch { /* private mode */ }
       }
     }
   })();
