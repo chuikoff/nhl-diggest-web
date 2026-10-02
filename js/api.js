@@ -2279,7 +2279,7 @@
     } catch (error) {
       console.warn('[NHL Diggest] ESPN highlight attach failed', error);
     }
-    const threeStars = mapEspnThreeStars(summary, skaters, goalies, game, rosterIndex, teamIdToAbbrev);
+    const threeStars = mapEspnThreeStars(summary, skaters, goalies, game, rosterIndex, teamIdToAbbrev, scoring);
     return {
       venue: summary.gameInfo?.venue?.fullName || game.venue || '',
       attendance: summary.gameInfo?.attendance ? String(summary.gameInfo.attendance) : '',
@@ -2310,17 +2310,72 @@
     { id: 'sv', label: 'SV%', derived: 'savePct', format: formatSv, asc: false }
   ];
 
-  function findSkaterStats(skaters, goalies, { nhlId, espnId, name, team }) {
+  function findPlayerInPool(pool, { nhlId, espnId, name, team }) {
     const idNhl = nhlId != null && nhlId !== '' ? String(nhlId) : '';
     const idEspn = espnId != null && espnId !== '' ? String(espnId) : '';
     const nameKey = normalizedName(name);
-    const pool = [...(skaters || []), ...(goalies || [])];
-    return pool.find(row => {
+    return (pool || []).find(row => {
       if (idNhl && String(row.nhlId || '') === idNhl) return true;
       if (idEspn && String(row.espnId || '') === idEspn) return true;
       if (nameKey && normalizedName(row.name) === nameKey && (!team || row.team === team)) return true;
       return false;
     }) || null;
+  }
+
+  function findSkaterStats(skaters, goalies, ids) {
+    return findPlayerInPool(skaters, ids) || findPlayerInPool(goalies, ids);
+  }
+
+  function findGoalieRow(goalies, ids) {
+    return findPlayerInPool(goalies, ids);
+  }
+
+  function isGoaliePosition(pos) {
+    const p = String(pos || '').trim().toUpperCase();
+    return p === 'G' || p === 'GOALIE' || p === 'GK';
+  }
+
+  function countScoringGoals(scoring, { nhlId, espnId, name }) {
+    const idNhl = nhlId != null && nhlId !== '' ? String(nhlId) : '';
+    const idEspn = espnId != null && espnId !== '' ? String(espnId) : '';
+    const nameKey = normalizedName(name);
+    let count = 0;
+    (scoring || []).forEach(goal => {
+      const sid = goal.scorerId != null && goal.scorerId !== '' ? String(goal.scorerId) : '';
+      if (idNhl && sid === idNhl) {
+        count += 1;
+        return;
+      }
+      if (idEspn && sid === idEspn) {
+        count += 1;
+        return;
+      }
+      if (!nameKey) return;
+      const names = [goal.scorer, goal.scorerShort].filter(Boolean);
+      if (names.some(n => normalizedName(n) === nameKey)) count += 1;
+    });
+    return count;
+  }
+
+  function attachGoalieStarFields(base, goalieRow, scoring, ids, starGoals) {
+    const fromScoring = countScoringGoals(scoring, ids);
+    const declared = starGoals != null && starGoals !== '' ? Number(starGoals) : null;
+    const goals = Math.max(Number.isFinite(declared) ? declared : 0, fromScoring);
+    return {
+      ...base,
+      isGoalie: true,
+      saves: goalieRow?.saves != null && goalieRow.saves !== '' ? goalieRow.saves : '—',
+      goalsAgainst: goalieRow?.goalsAgainst != null && goalieRow.goalsAgainst !== ''
+        ? goalieRow.goalsAgainst
+        : '—',
+      sv: goalieRow?.sv || '',
+      toi: goalieRow?.toi || '—',
+      decision: goalieRow?.decision || '',
+      goals,
+      assists: 0,
+      pim: 0,
+      plusMinus: '—'
+    };
   }
 
   function mapNhlThreeStars(rawStars, skaters, goalies, scoring, rosterIndex) {
@@ -2336,26 +2391,38 @@
       const fullName = playerName(identity.firstName, identity.lastName)
         || (nhlId != null ? nameById.get(String(nhlId)) : '')
         || shortName;
-      const stats = findSkaterStats(skaters, goalies, { nhlId, name: fullName || shortName, team });
-      return {
+      const displayName = fullName || shortName || '—';
+      const ids = { nhlId, name: fullName || shortName, team };
+      const goalieRow = findGoalieRow(goalies, ids);
+      const position = star.position || identity.position || identity.positionCode || '';
+      const isGoalie = !!goalieRow || isGoaliePosition(position);
+      const base = {
         star: Number(star.star) || 0,
-        name: fullName || shortName || '—',
+        name: displayName,
         team,
         nhlId,
         espnId: null,
         headshot: star.headshot || '',
+        isRussian: isRussianPlayer({ ...identity, name: fullName || shortName, nhlId, playerId: nhlId })
+      };
+      if (isGoalie) {
+        return attachGoalieStarFields(base, goalieRow, scoring, ids, star.goals);
+      }
+      const stats = findSkaterStats(skaters, goalies, ids);
+      return {
+        ...base,
+        isGoalie: false,
         goals: star.goals != null ? Number(star.goals) : (stats?.goals ?? 0),
         assists: star.assists != null ? Number(star.assists) : (stats?.assists ?? 0),
         pim: stats?.pim != null && stats.pim !== '' ? Number(stats.pim) : 0,
         plusMinus: stats?.plusMinus != null && stats.plusMinus !== '' ? stats.plusMinus : '—',
-        toi: stats?.toi || '—',
-        isRussian: isRussianPlayer({ ...identity, name: fullName || shortName, nhlId, playerId: nhlId })
+        toi: stats?.toi || '—'
       };
     }).filter(row => row.star > 0 && row.name && row.name !== '—')
       .sort((a, b) => a.star - b.star);
   }
 
-  function mapEspnThreeStars(summary, skaters, goalies, game, rosterIndex, teamIdToAbbrev = {}) {
+  function mapEspnThreeStars(summary, skaters, goalies, game, rosterIndex, teamIdToAbbrev = {}, scoring = []) {
     const featured = summary?.header?.competitions?.[0]?.status?.featuredAthletes || [];
     const rankOf = { firstStar: 1, secondStar: 2, thirdStar: 3 };
     const idToAbbrev = { ...teamIdToAbbrev };
@@ -2377,20 +2444,31 @@
       const name = ath.fullName || ath.displayName || ath.shortName || '';
       const espnId = ath.id || item.playerId || null;
       const identity = mergePlayerIdentity(ath, rosterIndex);
-      const stats = findSkaterStats(skaters, goalies, { espnId, name, team });
-      return {
+      const ids = { espnId, name, team };
+      const goalieRow = findGoalieRow(goalies, ids);
+      const position = ath.position?.abbreviation || ath.position?.name || ath.position || identity.position || '';
+      const isGoalie = !!goalieRow || isGoaliePosition(position);
+      const base = {
         star: rank,
         name,
         team,
         nhlId: null,
         espnId,
         headshot: ath.headshot?.href || '',
+        isRussian: isRussianPlayer({ ...identity, name, espnId })
+      };
+      if (isGoalie) {
+        return attachGoalieStarFields(base, goalieRow, scoring, ids, null);
+      }
+      const stats = findSkaterStats(skaters, goalies, ids);
+      return {
+        ...base,
+        isGoalie: false,
         goals: stats?.goals ?? 0,
         assists: stats?.assists ?? 0,
         pim: stats?.pim != null && stats.pim !== '' ? Number(stats.pim) : 0,
         plusMinus: stats?.plusMinus != null && stats.plusMinus !== '' ? stats.plusMinus : '—',
-        toi: stats?.toi || '—',
-        isRussian: isRussianPlayer({ ...identity, name, espnId })
+        toi: stats?.toi || '—'
       };
     }).filter(Boolean).sort((a, b) => a.star - b.star);
   }

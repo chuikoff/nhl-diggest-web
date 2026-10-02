@@ -651,13 +651,23 @@
         headshot: star.headshot
       };
       const plus = star.plusMinus == null || star.plusMinus === '' ? '—' : star.plusMinus;
-      const stats = [
-        ['G', star.goals ?? 0],
-        ['A', star.assists ?? 0],
-        ['PIM', star.pim ?? 0],
-        ['+/-', plus],
-        ['TOI', star.toi || '—']
-      ].map(([label, value]) => `<div class="three-star-stat"><strong>${escapeHtml(value)}</strong><span>${label}</span></div>`).join('');
+      const statsPairs = star.isGoalie
+        ? [
+            ...(Number(star.goals) > 0 ? [['G', star.goals]] : []),
+            ['SV', star.saves != null && star.saves !== '' ? star.saves : '—'],
+            ['GA', star.goalsAgainst != null && star.goalsAgainst !== '' ? star.goalsAgainst : '—'],
+            ['SV%', star.sv || '—'],
+            ['TOI', star.toi || '—']
+          ]
+        : [
+            ['G', star.goals ?? 0],
+            ['A', star.assists ?? 0],
+            ['PIM', star.pim ?? 0],
+            ['+/-', plus],
+            ['TOI', star.toi || '—']
+          ];
+      const stats = statsPairs
+        .map(([label, value]) => `<div class="three-star-stat"><strong>${escapeHtml(value)}</strong><span>${label}</span></div>`).join('');
       return `<div class="three-star-row">
         <div class="three-star-rank"><span>${rank}</span><span class="three-star-icon" aria-hidden="true">★</span></div>
         ${playerMugMarkup({ ...ref, team: star.team }, { size: 'lg' })}
