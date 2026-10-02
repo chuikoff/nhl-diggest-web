@@ -439,7 +439,7 @@
       const statusClass = game.status === 'Live' ? 'live' : game.preseason ? 'preseason' : isFuture ? 'future' : 'final';
       return `<article class="game-card" data-game-id="${game.id}" tabindex="0" role="button" aria-label="Открыть матч ${game.away.name} — ${game.home.name}">
         <div class="game-meta"><span>${game.time}</span><span class="status ${statusClass}">${statusLabel(game.status, game.preseason)}</span></div>
-        <div class="game-body">${teamMarkup(game.away, 'away')}<div class="game-score">${score}${game.period ? `<div class="period">${game.period}</div>` : ''}</div>${teamMarkup(game.home, 'home')}</div>
+        <div class="game-body"><div class="game-teams">${teamMarkup(game.away, 'away')}${teamMarkup(game.home, 'home')}</div><div class="game-score">${score}${game.period ? `<div class="period">${game.period}</div>` : ''}</div></div>
         <div class="game-open-label">Подробности <span>›</span></div>
       </article>`;
     }).join('');

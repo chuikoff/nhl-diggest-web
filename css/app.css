@@ -1253,3 +1253,31 @@ h2 { font-size: 29px; }
   .detail-logo { width: 32px; height: 32px; flex-basis: 32px; }
   .detail-team.team-hit { gap: 5px; }
 }
+
+
+/* Results list: stack away above home and keep complete team names visible. */
+.game-body {
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+.game-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.game-body .team {
+  width: 100%;
+  min-width: 0;
+  flex-direction: row;
+  text-align: left;
+}
+.game-body .team-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.game-body .team-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.15;
+}
