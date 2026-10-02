@@ -1000,7 +1000,17 @@
 
   function teamTrophiesForAbbrev(index, abbrev) {
     const key = String(abbrev || '').toUpperCase();
-    return (index?.teamTrophiesByAbbrev || {})[key] || [];
+    const rows = (index?.teamTrophiesByAbbrev || {})[key] || [];
+    // Team cards: Stanley Cup championships only (no conference/presidents trophies).
+    return rows.filter(row => {
+      const k = String(row?.key || '').toLowerCase();
+      const n = String(row?.name || '').toLowerCase();
+      return k === 'stanley' || /stanley|стэнли|стенли/.test(n);
+    }).map(row => ({
+      key: 'stanley',
+      name: row.name || 'Кубок Стэнли',
+      seasons: Array.isArray(row.seasons) ? row.seasons.slice() : []
+    })).filter(row => row.seasons.length);
   }
 
   function retiredNumbersForAbbrev(index, abbrev) {

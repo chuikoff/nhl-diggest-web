@@ -1,6 +1,6 @@
 {
-  "source": "NHL records.nhl.com award-details + Wikipedia List of NHL retired numbers; Hockey-Reference/Wikipedia NHL All-Star Teams; IIHF/Wikipedia national medals (multi-nationality)",
-  "updated": "2026-09-30",
+  "source": "NHL records.nhl.com award-details + Wikipedia List of NHL retired numbers / List of Stanley Cup champions; Hockey-Reference/Wikipedia NHL All-Star Teams; IIHF/Wikipedia national medals (multi-nationality). Team club trophies: Stanley Cup championships only.",
+  "updated": "2026-10-02",
   "stanleyByPlayerId": {
     "8474567": [
       "2019/20"
@@ -9386,177 +9386,12 @@
     ]
   },
   "teamTrophiesByAbbrev": {
-    "TBL": [
+    "ANA": [
       {
         "key": "stanley",
         "name": "Кубок Стэнли",
         "seasons": [
-          "2020/21",
-          "2019/20",
-          "2003/04"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2018/19"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "2021/22",
-          "2020/21",
-          "2019/20",
-          "2014/15",
-          "2003/04"
-        ]
-      }
-    ],
-    "STL": [
-      {
-        "key": "stanley",
-        "name": "Кубок Стэнли",
-        "seasons": [
-          "2018/19"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "1999/00"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2018/19",
-          "1969/70",
-          "1968/69"
-        ]
-      }
-    ],
-    "WSH": [
-      {
-        "key": "stanley",
-        "name": "Кубок Стэнли",
-        "seasons": [
-          "2017/18"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2016/17",
-          "2015/16",
-          "2009/10"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "2017/18",
-          "1997/98"
-        ]
-      }
-    ],
-    "PIT": [
-      {
-        "key": "stanley",
-        "name": "Кубок Стэнли",
-        "seasons": [
-          "2016/17",
-          "2015/16",
-          "2008/09",
-          "1991/92",
-          "1990/91"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "1992/93"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "2016/17",
-          "2015/16",
-          "2008/09",
-          "2007/08",
-          "1991/92",
-          "1990/91"
-        ]
-      }
-    ],
-    "CHI": [
-      {
-        "key": "stanley",
-        "name": "Кубок Стэнли",
-        "seasons": [
-          "2014/15",
-          "2012/13",
-          "2009/10",
-          "1960/61",
-          "1937/38",
-          "1933/34"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2012/13",
-          "1990/91"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2014/15",
-          "2012/13",
-          "2009/10",
-          "1991/92",
-          "1972/73",
-          "1971/72",
-          "1970/71"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "1969/70",
-          "1966/67"
-        ]
-      }
-    ],
-    "LAK": [
-      {
-        "key": "stanley",
-        "name": "Кубок Стэнли",
-        "seasons": [
-          "2013/14",
-          "2011/12"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2013/14",
-          "2011/12",
-          "1992/93"
+          "2006/07"
         ]
       }
     ],
@@ -9572,39 +9407,60 @@
           "1938/39",
           "1928/29"
         ]
-      },
+      }
+    ],
+    "BUF": [],
+    "CAR": [
       {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
+        "key": "stanley",
+        "name": "Кубок Стэнли",
         "seasons": [
-          "2022/23",
-          "2019/20",
-          "2013/14",
-          "1989/90"
+          "2025/26",
+          "2005/06"
         ]
-      },
+      }
+    ],
+    "CBJ": [],
+    "CGY": [
       {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
+        "key": "stanley",
+        "name": "Кубок Стэнли",
         "seasons": [
-          "2018/19",
+          "1988/89"
+        ]
+      }
+    ],
+    "CHI": [
+      {
+        "key": "stanley",
+        "name": "Кубок Стэнли",
+        "seasons": [
+          "2014/15",
           "2012/13",
-          "2010/11",
-          "1989/90",
-          "1987/88",
-          "1973/74",
-          "1971/72",
-          "1970/71",
-          "1940/41",
-          "1939/40",
-          "1938/39",
+          "2009/10",
+          "1960/61",
           "1937/38",
-          "1934/35",
-          "1932/33",
-          "1930/31",
-          "1929/30",
-          "1928/29",
-          "1927/28"
+          "1933/34"
+        ]
+      }
+    ],
+    "COL": [
+      {
+        "key": "stanley",
+        "name": "Кубок Стэнли",
+        "seasons": [
+          "2021/22",
+          "2000/01",
+          "1995/96"
+        ]
+      }
+    ],
+    "DAL": [
+      {
+        "key": "stanley",
+        "name": "Кубок Стэнли",
+        "seasons": [
+          "1998/99"
         ]
       }
     ],
@@ -9625,197 +9481,42 @@
           "1936/37",
           "1935/36"
         ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2007/08",
-          "2005/06",
-          "2003/04",
-          "2001/02",
-          "1995/96",
-          "1994/95"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2008/09",
-          "2007/08",
-          "2001/02",
-          "1997/98",
-          "1996/97",
-          "1994/95"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "1964/65",
-          "1956/57",
-          "1954/55",
-          "1953/54",
-          "1952/53",
-          "1951/52",
-          "1950/51",
-          "1949/50",
-          "1948/49",
-          "1942/43",
-          "1936/37",
-          "1935/36",
-          "1933/34"
-        ]
       }
     ],
-    "ANA": [
+    "EDM": [
       {
         "key": "stanley",
         "name": "Кубок Стэнли",
         "seasons": [
-          "2006/07"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2006/07",
-          "2002/03"
+          "1989/90",
+          "1987/88",
+          "1986/87",
+          "1984/85",
+          "1983/84"
         ]
       }
     ],
-    "CAR": [
+    "FLA": [
       {
         "key": "stanley",
         "name": "Кубок Стэнли",
         "seasons": [
-          "2025/26",
-          "2005/06"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "2025/26",
-          "2005/06",
-          "2001/02"
+          "2024/25",
+          "2023/24"
         ]
       }
     ],
-    "NJD": [
+    "LAK": [
       {
         "key": "stanley",
         "name": "Кубок Стэнли",
-        "seasons": [
-          "2002/03",
-          "1999/00",
-          "1994/95"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "2011/12",
-          "2002/03",
-          "2000/01",
-          "1999/00",
-          "1994/95"
-        ]
-      }
-    ],
-    "COL": [
-      {
-        "key": "stanley",
-        "name": "Кубок Стэнли",
-        "seasons": [
-          "2021/22",
-          "2000/01",
-          "1995/96"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2025/26",
-          "2020/21",
-          "2000/01",
-          "1996/97"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2021/22",
-          "2000/01",
-          "1995/96"
-        ]
-      }
-    ],
-    "DAL": [
-      {
-        "key": "stanley",
-        "name": "Кубок Стэнли",
-        "seasons": [
-          "1998/99"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "1998/99",
-          "1997/98"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2019/20",
-          "1999/00",
-          "1998/99"
-        ]
-      }
-    ],
-    "NYR": [
-      {
-        "key": "stanley",
-        "name": "Кубок Стэнли",
-        "seasons": [
-          "1993/94",
-          "1939/40",
-          "1932/33",
-          "1927/28"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2023/24",
-          "2014/15",
-          "1993/94",
-          "1991/92"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
         "seasons": [
           "2013/14",
-          "1993/94",
-          "1941/42",
-          "1931/32"
+          "2011/12"
         ]
       }
     ],
+    "MIN": [],
     "MTL": [
       {
         "key": "stanley",
@@ -9843,108 +9544,23 @@
           "1943/44",
           "1930/31",
           "1929/30",
-          "1923/24"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2020/21"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "1992/93",
-          "1988/89",
-          "1985/86",
-          "1980/81",
-          "1978/79",
-          "1977/78",
-          "1976/77",
-          "1975/76",
-          "1972/73",
-          "1968/69",
-          "1967/68",
-          "1965/66",
-          "1963/64",
-          "1961/62",
-          "1960/61",
-          "1959/60",
-          "1958/59",
-          "1957/58",
-          "1955/56",
-          "1946/47",
-          "1945/46",
-          "1944/45",
-          "1943/44"
+          "1923/24",
+          "1915/16"
         ]
       }
     ],
-    "EDM": [
+    "NJD": [
       {
         "key": "stanley",
         "name": "Кубок Стэнли",
         "seasons": [
-          "1989/90",
-          "1987/88",
-          "1986/87",
-          "1984/85",
-          "1983/84"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "1986/87",
-          "1985/86"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2024/25",
-          "2023/24",
-          "2005/06",
-          "1989/90",
-          "1987/88",
-          "1986/87",
-          "1984/85",
-          "1983/84",
-          "1982/83"
+          "2002/03",
+          "1999/00",
+          "1994/95"
         ]
       }
     ],
-    "CGY": [
-      {
-        "key": "stanley",
-        "name": "Кубок Стэнли",
-        "seasons": [
-          "1988/89"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "1988/89",
-          "1987/88"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2003/04",
-          "1988/89",
-          "1985/86"
-        ]
-      }
-    ],
+    "NSH": [],
     "NYI": [
       {
         "key": "stanley",
@@ -9955,26 +9571,21 @@
           "1980/81",
           "1979/80"
         ]
-      },
+      }
+    ],
+    "NYR": [
       {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
+        "key": "stanley",
+        "name": "Кубок Стэнли",
         "seasons": [
-          "1980/81",
-          "1978/79",
-          "1977/78"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "1983/84",
-          "1982/83",
-          "1981/82"
+          "1993/94",
+          "1939/40",
+          "1932/33",
+          "1927/28"
         ]
       }
     ],
+    "OTT": [],
     "PHI": [
       {
         "key": "stanley",
@@ -9983,27 +9594,40 @@
           "1974/75",
           "1973/74"
         ]
-      },
+      }
+    ],
+    "PIT": [
       {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
+        "key": "stanley",
+        "name": "Кубок Стэнли",
         "seasons": [
-          "1979/80",
-          "1976/77",
-          "1975/76",
-          "1974/75",
-          "1973/74",
-          "1967/68"
+          "2016/17",
+          "2015/16",
+          "2008/09",
+          "1991/92",
+          "1990/91"
         ]
-      },
+      }
+    ],
+    "SEA": [],
+    "SJS": [],
+    "STL": [
       {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
+        "key": "stanley",
+        "name": "Кубок Стэнли",
         "seasons": [
-          "2009/10",
-          "1996/97",
-          "1986/87",
-          "1984/85"
+          "2018/19"
+        ]
+      }
+    ],
+    "TBL": [
+      {
+        "key": "stanley",
+        "name": "Кубок Стэнли",
+        "seasons": [
+          "2020/21",
+          "2019/20",
+          "2003/04"
         ]
       }
     ],
@@ -10022,18 +9646,14 @@
           "1946/47",
           "1944/45",
           "1941/42",
-          "1931/32"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "1962/63",
-          "1947/48"
+          "1931/32",
+          "1921/22",
+          "1917/18"
         ]
       }
     ],
+    "UTA": [],
+    "VAN": [],
     "VGK": [
       {
         "key": "stanley",
@@ -10041,135 +9661,15 @@
         "seasons": [
           "2022/23"
         ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2025/26",
-          "2022/23",
-          "2017/18"
-        ]
       }
     ],
-    "FLA": [
+    "WPG": [],
+    "WSH": [
       {
         "key": "stanley",
         "name": "Кубок Стэнли",
         "seasons": [
-          "2024/25",
-          "2023/24"
-        ]
-      },
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2021/22"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "2024/25",
-          "2023/24",
-          "2022/23",
-          "1995/96"
-        ]
-      }
-    ],
-    "NSH": [
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
           "2017/18"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2016/17"
-        ]
-      }
-    ],
-    "SJS": [
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2008/09"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2015/16"
-        ]
-      }
-    ],
-    "VAN": [
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2011/12",
-          "2010/11"
-        ]
-      },
-      {
-        "key": "campbell",
-        "name": "Clarence S. Campbell Bowl",
-        "seasons": [
-          "2010/11",
-          "1993/94",
-          "1981/82"
-        ]
-      }
-    ],
-    "BUF": [
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2006/07"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "1998/99",
-          "1979/80",
-          "1974/75"
-        ]
-      }
-    ],
-    "OTT": [
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2002/03"
-        ]
-      },
-      {
-        "key": "wales",
-        "name": "Prince of Wales Trophy",
-        "seasons": [
-          "2006/07"
-        ]
-      }
-    ],
-    "WPG": [
-      {
-        "key": "presidents",
-        "name": "Presidents' Trophy",
-        "seasons": [
-          "2024/25"
         ]
       }
     ]
@@ -10179,6 +9679,10 @@
       {
         "number": "1",
         "name": "Terry Sawchuk"
+      },
+      {
+        "number": "4",
+        "name": "Red Kelly"
       },
       {
         "number": "5",
@@ -10235,6 +9739,10 @@
         "name": "Chris Phillips"
       },
       {
+        "number": "8",
+        "name": "Frank Finnigan"
+      },
+      {
         "number": "11",
         "name": "Daniel Alfredsson"
       },
@@ -10261,6 +9769,10 @@
         "name": "Glenn Anderson"
       },
       {
+        "number": "11",
+        "name": "Mark Messier"
+      },
+      {
         "number": "12",
         "name": "Colby Cave"
       },
@@ -10275,6 +9787,10 @@
       {
         "number": "94",
         "name": "Ryan Smyth"
+      },
+      {
+        "number": "99",
+        "name": "Wayne Gretzky"
       }
     ],
     "PHI": [
@@ -10337,12 +9853,24 @@
         "name": "King Clancy"
       },
       {
+        "number": "7",
+        "name": "Tim Horton"
+      },
+      {
         "number": "9",
         "name": "Charlie Conacher"
       },
       {
         "number": "9",
         "name": "Ted Kennedy"
+      },
+      {
+        "number": "10",
+        "name": "George Armstrong"
+      },
+      {
+        "number": "10",
+        "name": "Syl Apps"
       },
       {
         "number": "13",
@@ -10362,11 +9890,11 @@
       },
       {
         "number": "27",
-        "name": "Frank Mahovlich"
+        "name": "Darryl Sittler"
       },
       {
         "number": "27",
-        "name": "Darryl Sittler"
+        "name": "Frank Mahovlich"
       },
       {
         "number": "93",
@@ -10458,11 +9986,11 @@
       },
       {
         "number": "12",
-        "name": "Yvan Cournoyer"
+        "name": "Dickie Moore"
       },
       {
         "number": "12",
-        "name": "Dickie Moore"
+        "name": "Yvan Cournoyer"
       },
       {
         "number": "16",
@@ -10487,6 +10015,10 @@
       {
         "number": "29",
         "name": "Ken Dryden"
+      },
+      {
+        "number": "33",
+        "name": "Patrick Roy"
       }
     ],
     "LAK": [
@@ -10513,6 +10045,10 @@
       {
         "number": "30",
         "name": "Rogie Vachon"
+      },
+      {
+        "number": "99",
+        "name": "Wayne Gretzky"
       }
     ],
     "NYI": [
@@ -10535,6 +10071,10 @@
       {
         "number": "23",
         "name": "Bob Nystrom"
+      },
+      {
+        "number": "27",
+        "name": "John Tonelli"
       },
       {
         "number": "31",
@@ -10615,6 +10155,10 @@
         "name": "Patrik Elias"
       },
       {
+        "number": "27",
+        "name": "Scott Niedermayer"
+      },
+      {
         "number": "30",
         "name": "Martin Brodeur"
       }
@@ -10683,12 +10227,20 @@
         "name": "Rick Middleton"
       },
       {
+        "number": "22",
+        "name": "Willie O'Ree"
+      },
+      {
         "number": "24",
         "name": "Terry O'Reilly"
       },
       {
         "number": "33",
         "name": "Zdeno Chara"
+      },
+      {
+        "number": "77",
+        "name": "Ray Bourque"
       }
     ],
     "VAN": [
@@ -10713,8 +10265,16 @@
         "name": "Markus Naslund"
       },
       {
+        "number": "22",
+        "name": "Daniel Sedin"
+      },
+      {
         "number": "28",
         "name": "Luc Bourdon"
+      },
+      {
+        "number": "33",
+        "name": "Henrik Sedin"
       },
       {
         "number": "37",
@@ -10835,8 +10395,16 @@
         "name": "Peter Stastny"
       },
       {
+        "number": "33",
+        "name": "Patrick Roy"
+      },
+      {
         "number": "52",
         "name": "Adam Foote"
+      },
+      {
+        "number": "77",
+        "name": "Ray Bourque"
       }
     ],
     "BUF": [
@@ -10935,11 +10503,19 @@
         "name": "Paul Kariya"
       },
       {
+        "number": "27",
+        "name": "Scott Niedermayer"
+      },
+      {
         "number": "35",
         "name": "Jean-Sebastien Giguere"
       }
     ],
     "MIN": [
+      {
+        "number": "1",
+        "name": "Minnesota Wild fans"
+      },
       {
         "number": "9",
         "name": "Mikko Koivu"
@@ -10959,6 +10535,14 @@
       {
         "number": "1",
         "name": "Roberto Luongo"
+      },
+      {
+        "number": "37",
+        "name": "Wayne Huizenga"
+      },
+      {
+        "number": "93",
+        "name": "Bill Torrey"
       }
     ],
     "SJS": [
@@ -11033,38 +10617,17 @@
         "name": "Teppo Numminen"
       }
     ],
-    "UTA": [
+    "UTA": [],
+    "SEA": [
       {
-        "number": "7",
-        "name": "Keith Tkachuk"
-      },
+        "number": "32",
+        "name": "Seattle Kraken fans"
+      }
+    ],
+    "VGK": [
       {
-        "number": "9",
-        "name": "Bobby Hull"
-      },
-      {
-        "number": "10",
-        "name": "Dale Hawerchuk"
-      },
-      {
-        "number": "19",
-        "name": "Shane Doan"
-      },
-      {
-        "number": "25",
-        "name": "Thomas Steen"
-      },
-      {
-        "number": "27",
-        "name": "Teppo Numminen"
-      },
-      {
-        "number": "97",
-        "name": "Jeremy Roenick"
-      },
-      {
-        "number": "99",
-        "name": "Wayne Gretzky"
+        "number": "58",
+        "name": "2017 Las Vegas shooting victims"
       }
     ]
   },

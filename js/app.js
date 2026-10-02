@@ -1232,7 +1232,10 @@
   function teamTrophiesMarkup(rows = []) {
     const list = rows || [];
     if (!list.length) return '';
-    return `<section class="detail-section team-trophies-section"><div class="detail-section-title"><h3>Клубные трофеи</h3><span>${list.length}</span></div><div class="awards-list">${awardRowsMarkup(list)}</div></section>`;
+    // Team cards show Stanley Cup only — badge = total championship years.
+    const cups = list.reduce((n, row) => n + ((row.seasons || []).length), 0);
+    const badge = cups || list.length;
+    return `<section class="detail-section team-trophies-section"><div class="detail-section-title"><h3>Кубок Стэнли</h3><span>${badge}</span></div><div class="awards-list">${awardRowsMarkup(list)}</div></section>`;
   }
 
   function retiredNumbersMarkup(rows = []) {
