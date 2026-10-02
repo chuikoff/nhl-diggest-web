@@ -748,14 +748,14 @@ h2 { font-size: 29px; }
 }
 .standing-row.is-favorite,
 .leader-card.is-favorite,
-.roster-row.is-favorite,
-.game-card.has-favorite-team {
+.roster-row.is-favorite {
   border-color: var(--fav-line) !important;
   background: linear-gradient(115deg, rgba(240,180,41,0.14), rgba(17,26,39,0.92)) !important;
   box-shadow: inset 3px 0 0 var(--fav-glow);
 }
 .team-hit.is-favorite .team-name,
 .team.is-favorite .team-name,
+.team.is-favorite .team-nick,
 .detail-team.is-favorite strong,
 .player-name.is-favorite {
   color: var(--fav-glow) !important;
@@ -814,8 +814,7 @@ h2 { font-size: 29px; }
 .fav-open span { font-size: 10px; color: var(--muted); }
 :root[data-theme="light"] .standing-row.is-favorite,
 :root[data-theme="light"] .leader-card.is-favorite,
-:root[data-theme="light"] .roster-row.is-favorite,
-:root[data-theme="light"] .game-card.has-favorite-team {
+:root[data-theme="light"] .roster-row.is-favorite {
   background: linear-gradient(115deg, rgba(245,200,75,0.35), #f7fbff) !important;
 }
 
