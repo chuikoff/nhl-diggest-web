@@ -405,12 +405,12 @@
     </div>`;
   }
 
-  function detailTeamMarkup(team) {
+  function detailTeamMarkup(team, side) {
     const abbrev = escapeAttr(team.short || '');
     const fav = isFavoriteTeam(team.short) ? ' is-favorite' : '';
-    return `<button type="button" class="detail-team team-hit${fav}" data-team-abbrev="${abbrev}" aria-label="Команда ${escapeAttr(team.name)}">
+    return `<button type="button" class="detail-team ${side} team-hit${fav}" data-team-abbrev="${abbrev}" aria-label="Команда ${escapeAttr(team.name)}">
       <img class="detail-logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
-      <strong>${team.name}</strong><span>${team.nick}</span>
+      <span class="detail-team-copy"><strong>${team.name}</strong><span class="detail-team-nick">${team.nick}</span></span>
     </button>`;
   }
 
@@ -858,7 +858,7 @@
             <div class="detail-status status ${game.status === 'Live' ? 'live' : isScheduled ? (game.preseason ? 'preseason' : 'future') : 'final'}">${statusLabel(game.status, game.preseason)}</div>
             ${remindControl}
           </div>
-          <div class="detail-scoreboard">${detailTeamMarkup(game.away)}<div class="detail-score"><strong>${score}</strong><span>${isScheduled ? game.time : game.period || ''}</span></div>${detailTeamMarkup(game.home)}</div>
+          <div class="detail-scoreboard">${detailTeamMarkup(game.away, 'away')}<div class="detail-score"><strong>${score}</strong><span>${isScheduled ? game.time : game.period || ''}</span></div>${detailTeamMarkup(game.home, 'home')}</div>
           <div class="detail-venue">${detail?.venue || game.venue || 'NHL Arena'}${detail?.attendance ? ` · ${detail.attendance} зрителей` : ''}</div>
         </div>
         ${cardBody}
