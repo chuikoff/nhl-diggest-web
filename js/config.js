@@ -1,10 +1,10 @@
 // NHL Diggest — API config (static GitHub Pages, browser CORS-aware).
 // Prefer direct api-web.nhle.com; ESPN is the CORS-friendly fallback.
 window.NHL_API_BASE = 'https://api-web.nhle.com';
-// VPS finished-game cache (bot aiohttp). Prefer for FINAL details.
+// Optional VPS finished-game cache (bot aiohttp); disabled in the Mini App by default.
 // Use HTTPS (nginx/TLS) for GitHub Pages — plain http:// is mixed-content blocked.
 // Placeholder until TLS: http://31.77.11.22:8765
-window.NHL_CACHE_BASE = 'https://disciplinary-coffee.play2go.cloud';
+window.NHL_CACHE_BASE = '';
 window.NHL_STATS_BASE = 'https://api.nhle.com';
 window.ESPN_SITE_API = 'https://site.api.espn.com';
 window.ESPN_WEB_API = 'https://site.web.api.espn.com';
