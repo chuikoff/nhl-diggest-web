@@ -20,6 +20,46 @@
   const LIVE = new Set(['LIVE', 'CRIT']);
   const FINAL = new Set(['OFF', 'FINAL', 'OVER']);
 
+  const CACHE_BASE = () => String(window.NHL_CACHE_BASE || '').replace(/\/$/, '');
+
+  async function fetchCacheGamePayload(gameId) {
+    const base = CACHE_BASE();
+    if (!base || gameId == null || gameId === '') return null;
+    try {
+      return await fetchJson(`${base}/api/games/${encodeURIComponent(gameId)}`, 8000);
+    } catch (error) {
+      console.info('[NHL Diggest] VPS cache miss/unavailable', error?.message || error);
+      return null;
+    }
+  }
+
+  function detailFromCachePayload(payload) {
+    if (!payload || typeof payload !== 'object') return null;
+    // Accept either flat detail or { detail, game } wrappers.
+    const detail = payload.detail && typeof payload.detail === 'object' ? payload.detail : payload;
+    if (!detail.scoring && !detail.skaters && !detail.goalies && !detail.threeStars && !detail.boxscore) {
+      return null;
+    }
+    const { game: _gameStub, ...rest } = detail;
+    return { source: rest.source || 'nhl-cache', ...rest };
+  }
+
+  function stubFromCachePayload(payload, gameId) {
+    if (!payload || typeof payload !== 'object') return null;
+    const stub = payload.game || payload.detail?.game;
+    if (stub && (stub.id != null || stub.away || stub.home)) {
+      return { ...stub, id: stub.id != null ? stub.id : (Number(gameId) || gameId), status: stub.status || 'Final' };
+    }
+    return null;
+  }
+
+  function gameLooksFinished(game) {
+    if (!game) return false;
+    if (game.status === 'Final') return true;
+    const state = String(game.gameState || game.state || '').toUpperCase();
+    return FINAL.has(state);
+  }
+
   const cache = new Map();
 
   // --- Season resolution (current campaign, not last completed) ---
@@ -1868,6 +1908,12 @@
   async function gameDetail(game) {
     const key = `detail:${game.id}`;
     return cached(key, async () => {
+      // Prefer VPS cache for finished (or unknown-status deep-link) games.
+      if (gameLooksFinished(game) || !game.status) {
+        const cachedPayload = await fetchCacheGamePayload(game.id);
+        const fromCache = detailFromCachePayload(cachedPayload);
+        if (fromCache) return fromCache;
+      }
       if (!game.espn) {
         try {
           const [landing, box, rosterIndex] = await Promise.all([
@@ -3620,6 +3666,13 @@
   async function gameStubFromId(gameId) {
     const id = String(gameId || '').trim();
     if (!id) return null;
+    try {
+      const cachedPayload = await fetchCacheGamePayload(id);
+      const stub = stubFromCachePayload(cachedPayload, id);
+      if (stub) return stub;
+    } catch (error) {
+      console.info('[NHL Diggest] gameStubFromId cache failed', error?.message || error);
+    }
     try {
       const landing = await fetchJson(`${NHL()}/v1/gamecenter/${id}/landing`);
       if (landing && (landing.id || landing.awayTeam || landing.homeTeam)) {

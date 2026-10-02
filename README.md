@@ -57,19 +57,20 @@ nhl.example.com
 
 ### Источники (порядок)
 
-1. **NHL api-web** — `https://api-web.nhle.com` (те же пути, что у бота в `/workspace/nhl-diggest`):
+1. **VPS cache** (`window.NHL_CACHE_BASE`, bot on VPS) — finished games only (`GET /api/games/{id}`). Preferred for boxscore / scoring / three stars; headshots remain CDN URLs.
+2. **NHL api-web** — `https://api-web.nhle.com` (после cache miss; те же пути, что у бота в `/workspace/nhl-diggest`):
    - `/v1/score/{YYYY-MM-DD}`, `/v1/schedule/{YYYY-MM-DD}`
    - `/v1/standings/now` (если GP=0 — fallback на финал прошлого сезона `/v1/standings/2026-04-14`)
    - `/v1/gamecenter/{id}/landing` + `/boxscore`
    - `/v1/roster/{ABB}/current`, `/v1/club-schedule-season/{ABB}/now`, `/v1/club-stats/{ABB}/now`
    - `/v1/player/{id}/landing`
    - `/v1/skater-stats-leaders/{season}/{gameType}`, `/v1/goalie-stats-leaders/...`
-2. **ESPN** (если NHL недоступен из браузера) — CORS `Access-Control-Allow-Origin: *`:
+3. **ESPN** (если cache/NHL недоступны из браузера) — CORS `Access-Control-Allow-Origin: *`:
    - `site.api.espn.com` scoreboard / summary / standings / teams/{slug}(+roster,schedule,statistics)
    - `site.web.api.espn.com` statistics/byathlete · athletes/{id}(+overview)
    - `sports.core.api.espn.com` athlete statistics (hits / blocked shots / goalie metrics)
    - `sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/leaders` — **all-time / career** boards
-3. **Mock** (`js/mock-data.js`) — только если оба live-источника упали.
+4. **Mock** (`js/mock-data.js`) — только если cache + NHL + ESPN упали.
 
 ### CORS (проверено 2026-09-29)
 
@@ -79,7 +80,7 @@ nhl.example.com
 | `api.nhle.com` | **нет** ACAO |
 | `site.api.espn.com`, `site.web.api.espn.com`, `sports.core.api.espn.com` | **да** (`*`) |
 
-Клиент всё равно **сначала** пробует NHL (как в боте); при ошибке автоматически уходит на ESPN. Бейдж источника на экране результатов показывает `NHL` / `ESPN` / `демо`.
+Для **завершённых** матчей клиент **сначала** пробует VPS cache (`NHL_CACHE_BASE`), затем NHL, затем ESPN. Бейдж источника: `nhl-cache` / `NHL` / `ESPN` / `демо`.
 
 ### День и часовой пояс
 
@@ -169,7 +170,7 @@ python3 scripts/fetch_puckpedia_caps.py
 
 Логотипы: ESPN CDN PNG (`a.espncdn.com/i/teamlogos/nhl/500/{slug}.png`), slug-исключения как в боте (`LAK→la`, `SJS→sj`, `UTA→utah`, …).
 
-Конфиг: `js/config.js` (`NHL_API_BASE`, сезоны). Логика: `js/api.js`. UI: `js/app.js`. TG+Max bridge без изменений (`js/bridge.js`).
+Конфиг: `js/config.js` (`NHL_CACHE_BASE`, `NHL_API_BASE`, сезоны). Логика: `js/api.js`. UI: `js/app.js`. TG+Max bridge без изменений (`js/bridge.js`).
 
 **Избранное (localStorage `nhl-diggest-favorites`):**
 - на карточке игрока и странице команды — кнопка ★ / ☆
