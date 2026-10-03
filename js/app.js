@@ -501,15 +501,20 @@
   }
 
   function leaderCardMarkup(player, index, boardId, goalie = false) {
-    const initials = (player.name || '?').split(' ').map(part => part[0]).join('').slice(0, 2);
+    const initials = escapeHtml((player.name || '?').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase());
+    const headshot = player.headshot || '';
     const favCls = isFavoritePlayer(player) ? ' is-favorite' : '';
+    const photo = headshot
+      ? `<img class="player-avatar-photo" src="${escapeAttr(headshot)}" alt="" loading="lazy" onerror="const p=this.parentNode;this.remove();const s=p&&p.querySelector('.player-avatar-initials');if(s)s.hidden=false">`
+      : '';
+    const fallback = `<span class="player-avatar-initials"${headshot ? ' hidden' : ''}>${initials}</span>`;
     return `<button type="button" class="leader-card${goalie ? ' goalie-card' : ''} player-hit${favCls}"
       data-nhl-id="${escapeAttr(player.nhlId || '')}"
       data-espn-id="${escapeAttr(player.espnId || player.athleteId || '')}"
       data-player-name="${escapeAttr(player.name || '')}"
       data-team-abbrev="${escapeAttr(player.abbrev || '')}">
       <span class="player-rank">${String(index + 1).padStart(2, '0')}</span>
-      <div class="player-avatar${goalie ? ' goalie-avatar' : ''}">${initials}</div>
+      <div class="player-avatar${goalie ? ' goalie-avatar' : ''}">${photo}${fallback}</div>
       <div class="player-copy"><strong>${playerMarkup(player)}</strong><span>${player.team || 'NHL'} · ${goalie ? 'G' : (player.position || 'SK')}</span></div>
       <div class="player-stat"><strong>${player.value ?? '—'}</strong><span>${boardId}</span></div>
     </button>`;
