@@ -1331,19 +1331,28 @@ button.retired-row.player-hit:focus-visible .retired-name {
 /* Month calendar — results day jump + team schedule. Does not touch match cards. */
 .day-switcher { height: auto; min-height: 61px; }
 .selected-day {
+  position: relative;
+  min-width: 150px;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
   cursor: pointer;
   border-radius: 12px;
-  padding: 6px 8px 4px;
+  padding: 8px 36px 8px 14px;
 }
-.selected-day::after {
-  content: "▾";
+.calendar-opener {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
   color: var(--accent);
-  font-size: 10px;
+  font-size: 18px;
   line-height: 1;
+  transform: translateY(-50%);
 }
 .selected-day[aria-expanded="true"] { background: rgba(245, 200, 75, .1); }
 .month-cal {
