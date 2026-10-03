@@ -750,7 +750,7 @@ h2 { font-size: 29px; }
   font-weight: 800; font-variant-numeric: tabular-nums;
   min-width: 2.5rem; color: var(--accent, #ffd60a);
 }
-.retired-name { font-size: 0.95rem; }
+.retired-name { font-size: 0.95rem; color: #f3f6fb; }
 .team-cap-section .info-grid,
 .player-contract-section .info-grid { margin-top: 4px; }
 
