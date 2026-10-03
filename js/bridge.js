@@ -90,6 +90,14 @@
     return null;
   }
 
+  function readSavedTheme() {
+    try {
+      return normalizeTheme(window.localStorage.getItem('nhl-diggest-theme'));
+    } catch {
+      return null;
+    }
+  }
+
   function setHostColors(theme, env) {
     const dark = theme !== 'light';
     const header = dark ? '#0c111b' : '#f5f7fb';
@@ -112,7 +120,6 @@
     try {
       tg.ready();
       tg.expand?.();
-      setHostColors('dark', 'telegram');
       return true;
     } catch (err) {
       console.warn('[NHL Diggest] Telegram WebApp init failed:', err);
@@ -140,7 +147,8 @@
     let ready = false;
 
     if (env === 'telegram') {
-      // Keep Telegram path identical in spirit: ready + expand + theme colors.
+      // ready + expand. Theme colors are applied once below so a saved
+      // light preference is not first painted as Telegram's dark chrome.
       ready = initTelegram();
     } else {
       // Max (and browser soft-fail): always notify Max bridge when present.
@@ -151,12 +159,20 @@
     }
 
     const host = env === 'telegram' ? window.Telegram?.WebApp : env === 'max' ? window.WebApp : null;
-    const initialTheme = detectTheme(host) || 'dark';
+    // Saved in-app preference wins over the host colorScheme. Telegram often
+    // reports dark (or a stale colorScheme) on the next open and would
+    // otherwise repaint a Mini App the user left on light. Max usually has
+    // no dark colorScheme, so this does not change that path.
+    const hostTheme = detectTheme(host);
+    const savedTheme = readSavedTheme();
+    const initialTheme = savedTheme || hostTheme || 'dark';
     const themeListeners = new Set();
     const applyTheme = theme => {
       const nextTheme = normalizeTheme(theme) || 'dark';
       const changed = document.documentElement.dataset.theme !== nextTheme;
       document.documentElement.dataset.theme = nextTheme;
+      const meta = document.getElementById('themeColorMeta');
+      if (meta) meta.setAttribute('content', nextTheme === 'dark' ? '#0c111b' : '#f5f7fb');
       setHostColors(nextTheme, env);
       if (changed) themeListeners.forEach(listener => listener(nextTheme));
       return nextTheme;
@@ -164,11 +180,20 @@
     document.documentElement.dataset.messenger = env;
     document.documentElement.dataset.theme = initialTheme;
     if (document.body) document.body.dataset.messenger = env;
+    {
+      const meta = document.getElementById('themeColorMeta');
+      if (meta) meta.setAttribute('content', initialTheme === 'dark' ? '#0c111b' : '#f5f7fb');
+    }
     setHostColors(initialTheme, env);
 
     const subscribeToHostTheme = () => {
       ['themeChanged', 'theme_changed'].forEach(eventName => {
-        try { host?.onEvent?.(eventName, () => applyTheme(detectTheme(host) || initialTheme)); } catch { /* optional host API */ }
+        try {
+          host?.onEvent?.(eventName, () => {
+            if (readSavedTheme()) return;
+            applyTheme(detectTheme(host) || initialTheme);
+          });
+        } catch { /* optional host API */ }
       });
     };
     subscribeToHostTheme();
@@ -213,7 +238,7 @@
       isMax: env === 'max',
       isBrowser: env === 'browser',
       theme: initialTheme,
-      getTheme: () => detectTheme(host) || initialTheme,
+      getTheme: () => readSavedTheme() || detectTheme(host) || initialTheme,
       applyTheme,
       openLink,
       openBotLink,

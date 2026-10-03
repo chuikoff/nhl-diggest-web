@@ -298,8 +298,6 @@
     loading: false
   };
 
-  bridge.applyTheme?.(bridge.theme || 'dark');
-
   function formatDate(dateKey) {
     return new Intl.DateTimeFormat('ru-RU', {
       day: 'numeric',
@@ -366,6 +364,10 @@
 
   function applyTheme(theme, persist = false) {
     const nextTheme = theme === 'light' ? 'light' : 'dark';
+    // Persist before host applyTheme so a themeChanged echo sees the new choice.
+    if (persist) {
+      try { window.localStorage.setItem(themeStorageKey, nextTheme); } catch { /* private mode */ }
+    }
     document.documentElement.dataset.theme = nextTheme;
     document.body.dataset.theme = nextTheme;
     bridge.applyTheme?.(nextTheme);
@@ -374,14 +376,18 @@
     if (toggle) toggle.checked = nextTheme === 'dark';
     if (label) label.textContent = nextTheme === 'dark' ? 'Включена' : 'Выключена';
     $('#themeColorMeta')?.setAttribute('content', nextTheme === 'dark' ? '#0c111b' : '#f5f7fb');
-    if (persist) {
-      try { window.localStorage.setItem(themeStorageKey, nextTheme); } catch { /* private mode */ }
-    }
   }
 
   applyRussianHighlight(storedRussianHighlight());
   applyTheme(storedTheme() || bridge.theme || 'dark');
-  bridge.subscribeTheme?.(theme => { if (!storedTheme()) applyTheme(theme); });
+  bridge.subscribeTheme?.(theme => {
+    const saved = storedTheme();
+    if (saved) {
+      if (document.documentElement.dataset.theme !== saved) applyTheme(saved);
+      return;
+    }
+    applyTheme(theme);
+  });
 
   function mockGamesFor(dateKey) {
     return (mock.gamesByDate && mock.gamesByDate[dateKey]) || [];
