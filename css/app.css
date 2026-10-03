@@ -1301,7 +1301,7 @@ h2 { font-size: 29px; }
   .detail-team.team-hit { gap: 5px; }
 }
 
-/* Dark navy marks only (WSH wordmark, TOR leaf). Other team logos are unchanged. */
+/* Dark navy marks only (WSH wordmark, TOR leaf, TBL bolt). Other team logos are unchanged. */
 :root:not([data-theme="light"]) img.logo-plate {
   background: #f4f7fb;
   border-radius: 8px;

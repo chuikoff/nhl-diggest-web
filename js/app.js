@@ -517,9 +517,12 @@
     return { Final: 'Завершён', Live: 'LIVE', FUT: 'Запланирован', Preseason: 'Предсезон' }[status] || status;
   }
 
-  // Navy ESPN marks (Capitals wordmark, Maple Leafs leaf) vanish on the dark UI.
-  // Plate is only for those two — other crests stay untouched.
-  const DARK_LOGO_ABBREVS = new Set(['WSH', 'TOR']);
+  // Navy ESPN marks (Capitals wordmark, Maple Leafs leaf, Lightning bolt) vanish on the dark UI.
+  // Tampa may arrive as its NHL code, ESPN code, or ESPN team slug. Other crests stay untouched.
+  const DARK_LOGO_ABBREVS = new Set([
+    'WSH', 'TOR',
+    'TBL', 'TB', 'TAMPA-BAY-LIGHTNING'
+  ]);
 
   function logoPlateClass(abbrev) {
     const key = String(abbrev || '').trim().toUpperCase();
