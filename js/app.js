@@ -281,6 +281,12 @@
     selectedDate: live?.mskDateKey?.() || mock.defaultDate || '2026-09-29',
     games: [],
     gamesSource: 'mock',
+    calOpen: false,
+    calMonth: (live?.mskDateKey?.() || mock.defaultDate || '2026-09-29').slice(0, 7),
+    calMarks: {},
+    teamGames: [],
+    teamCalMonth: (live?.mskDateKey?.() || mock.defaultDate || '2026-09-29').slice(0, 7),
+    teamCalFocus: null,
     standings: mock.standings || { division: [], conference: [] },
     standingsNote: '',
     statsGroup: 'skaters',
@@ -388,6 +394,122 @@
     $('#dateLabel').textContent = formatDate(state.selectedDate);
     $('#prevDay').disabled = false;
     $('#nextDay').disabled = false;
+    const opener = $('#openCalendar');
+    if (opener) {
+      opener.setAttribute('aria-expanded', state.calOpen ? 'true' : 'false');
+      opener.setAttribute('aria-label', `Календарь, ${formatDate(state.selectedDate)}`);
+    }
+    if (state.calOpen) renderLeagueCalendar();
+  }
+
+  function todayMskKey() {
+    return live?.mskDateKey?.() || new Date().toISOString().slice(0, 10);
+  }
+
+  function shiftMonth(ym, delta) {
+    const [y, m] = String(ym || todayMskKey().slice(0, 7)).split('-').map(Number);
+    const next = new Date(Date.UTC(y, (m - 1) + delta, 1));
+    return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function formatMonthLabel(ym) {
+    const label = new Intl.DateTimeFormat('ru-RU', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Europe/Moscow'
+    }).format(new Date(`${ym}-01T12:00:00+03:00`));
+    return label ? label.charAt(0).toUpperCase() + label.slice(1) : ym;
+  }
+
+  function mskKeyFromIso(iso) {
+    if (!iso) return '';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    return live?.mskDateKey?.(date) || '';
+  }
+
+  function calendarMarkup({ ym, selectedDate, gameDates, loading, allowEmpty, focusHtml = '' }) {
+    const [y, m] = ym.split('-').map(Number);
+    const lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+    const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const marks = gameDates instanceof Set ? gameDates : new Set(gameDates || []);
+    const today = todayMskKey();
+    const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+      .map(label => `<span>${label}</span>`).join('');
+    const cells = [];
+    for (let i = 0; i < lead; i += 1) cells.push('<span class="cal-pad"></span>');
+    for (let day = 1; day <= days; day += 1) {
+      const key = `${ym}-${String(day).padStart(2, '0')}`;
+      const has = marks.has(key);
+      const cls = [
+        'cal-day',
+        key === today ? 'is-today' : '',
+        key === selectedDate ? 'is-selected' : '',
+        has ? 'has-games' : ''
+      ].filter(Boolean).join(' ');
+      const disabled = !allowEmpty && !has ? ' disabled' : '';
+      const label = has ? `${day}, есть матчи` : String(day);
+      cells.push(`<button type="button" class="${cls}" data-cal-date="${key}" aria-label="${escapeAttr(label)}"${disabled}>${day}</button>`);
+    }
+    let note = '';
+    if (loading) note = '<p class="cal-note">Отмечаем дни с матчами…</p>';
+    else if (!allowEmpty && marks.size && ![...marks].some(key => key.startsWith(ym))) note = '<p class="cal-note">В этом месяце матчей нет</p>';
+    else if (!allowEmpty && !marks.size) note = '<p class="cal-note">Нет матчей в загруженном расписании</p>';
+    return `<div class="month-cal-head">
+        <button type="button" class="day-arrow" data-cal-nav="-1" aria-label="Предыдущий месяц">‹</button>
+        <strong>${escapeHtml(formatMonthLabel(ym))}</strong>
+        <button type="button" class="day-arrow" data-cal-nav="1" aria-label="Следующий месяц">›</button>
+      </div>
+      <div class="month-cal-weekdays">${weekdays}</div>
+      <div class="month-cal-grid">${cells.join('')}</div>
+      ${note}
+      ${focusHtml}`;
+  }
+
+  let leagueCalToken = 0;
+
+  function renderLeagueCalendar() {
+    const box = $('#leagueCalendar');
+    if (!box) return;
+    box.hidden = !state.calOpen;
+    const opener = $('#openCalendar');
+    if (opener) opener.setAttribute('aria-expanded', state.calOpen ? 'true' : 'false');
+    if (!state.calOpen) return;
+    const ym = state.calMonth || state.selectedDate.slice(0, 7);
+    state.calMonth = ym;
+    const marks = state.calMarks[ym];
+    const token = ++leagueCalToken;
+    box.innerHTML = calendarMarkup({
+      ym,
+      selectedDate: state.selectedDate,
+      gameDates: marks || [],
+      loading: !marks && Boolean(live?.leagueMonthGameDates),
+      allowEmpty: true
+    });
+    if (marks || !live?.leagueMonthGameDates) return;
+    const [year, month] = ym.split('-').map(Number);
+    live.leagueMonthGameDates(year, month).then(dates => {
+      if (token !== leagueCalToken) return;
+      state.calMarks[ym] = new Set(dates || []);
+      if (!state.calOpen || state.calMonth !== ym) return;
+      box.innerHTML = calendarMarkup({
+        ym,
+        selectedDate: state.selectedDate,
+        gameDates: state.calMarks[ym],
+        loading: false,
+        allowEmpty: true
+      });
+    }).catch(error => {
+      console.warn(error);
+      if (token !== leagueCalToken || !state.calOpen) return;
+      box.innerHTML = calendarMarkup({
+        ym,
+        selectedDate: state.selectedDate,
+        gameDates: [],
+        loading: false,
+        allowEmpty: true
+      });
+    });
   }
 
   function statusLabel(status, preseason) {
@@ -1133,10 +1255,11 @@
         const prefix = game.isHome ? 'vs' : '@';
         const remind = remindable ? remindButtonMarkup(game) : '';
         const showRemind = Boolean(remind);
-        return `<div class="schedule-row${showRemind ? ' has-remind' : ''}">
+        const openable = game.id != null && game.id !== '';
+        return `<div class="schedule-row${showRemind ? ' has-remind' : ''}${openable ? ' is-openable' : ''}"${openable ? ` role="button" tabindex="0" data-schedule-game="${escapeAttr(game.id)}"` : ''}>
           <span class="schedule-date">${formatShortDate(game.startTimeUTC || '')}</span>
-          <div class="schedule-copy"><strong>${prefix} ${opp.short || opp.name || '—'}</strong><small>${statusLabel(game.status, game.preseason)}</small></div>
-          <span class="schedule-result">${game.resultLabel || game.time || ''}</span>
+          <div class="schedule-copy"><strong>${prefix} ${escapeHtml(opp.short || opp.name || '—')}</strong><small>${statusLabel(game.status, game.preseason)}</small></div>
+          <span class="schedule-result">${escapeHtml(game.resultLabel || game.time || '')}</span>
           ${remind}
         </div>`;
       }).join('')}</div></div>`;
@@ -1289,6 +1412,75 @@
     </section>`;
   }
 
+  function teamGameDateSet(games) {
+    const marks = new Set();
+    (games || []).forEach(game => {
+      const key = mskKeyFromIso(game.startTimeUTC);
+      if (key) marks.add(key);
+    });
+    return marks;
+  }
+
+  function teamGamesOn(dateKey) {
+    return (state.teamGames || [])
+      .filter(game => mskKeyFromIso(game.startTimeUTC) === dateKey)
+      .sort((a, b) => String(a.startTimeUTC || '').localeCompare(String(b.startTimeUTC || '')));
+  }
+
+  function initialTeamMonth(games) {
+    const today = todayMskKey();
+    const keys = [...teamGameDateSet(games)].sort();
+    if (keys.some(key => key.startsWith(today.slice(0, 7)))) return today.slice(0, 7);
+    const upcoming = keys.find(key => key >= today);
+    if (upcoming) return upcoming.slice(0, 7);
+    if (keys.length) return keys[keys.length - 1].slice(0, 7);
+    return today.slice(0, 7);
+  }
+
+  function teamCalendarMarkup() {
+    const games = state.teamGames || [];
+    const marks = teamGameDateSet(games);
+    const focus = state.teamCalFocus;
+    const focusGames = focus ? teamGamesOn(focus) : [];
+    const focusHtml = focusGames.length > 1
+      ? `<div class="cal-day-games"><p class="cal-note">${escapeHtml(formatDate(focus))}</p>${scheduleRowsOnly(focusGames)}</div>`
+      : '';
+    return calendarMarkup({
+      ym: state.teamCalMonth,
+      selectedDate: focus || '',
+      gameDates: marks,
+      loading: false,
+      allowEmpty: false,
+      focusHtml
+    });
+  }
+
+  function scheduleRowsOnly(games) {
+    return `<div class="team-schedule">${games.map(game => {
+      const opp = game.opponent || {};
+      const prefix = game.isHome ? 'vs' : '@';
+      const remind = remindButtonMarkup(game);
+      const openable = game.id != null && game.id !== '';
+      return `<div class="schedule-row${remind ? ' has-remind' : ''}${openable ? ' is-openable' : ''}"${openable ? ` role="button" tabindex="0" data-schedule-game="${escapeAttr(game.id)}"` : ''}>
+        <span class="schedule-date">${formatShortDate(game.startTimeUTC || '')}</span>
+        <div class="schedule-copy"><strong>${prefix} ${escapeHtml(opp.short || opp.name || '—')}</strong><small>${statusLabel(game.status, game.preseason)}</small></div>
+        <span class="schedule-result">${escapeHtml(game.resultLabel || game.time || '')}</span>
+        ${remind}
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function openScheduleGame(game) {
+    if (!game || game.id == null || game.id === '') {
+      toast('Матч недоступен');
+      return;
+    }
+    if (!state.games.some(item => String(item.id) === String(game.id))) {
+      state.games = [game, ...state.games];
+    }
+    openGameDetail(game.id);
+  }
+
   async function openTeamDetail(abbrev, seed = {}) {
     const key = String(abbrev || seed.short || '').toUpperCase();
     if (!key) return;
@@ -1303,6 +1495,12 @@
     }
     const record = team.record || {};
     const recordText = record.summary || (record.gp ? `${record.wins}-${record.losses}-${record.ot}` : '—');
+    state.teamGames = team.schedule?.all || [
+      ...(team.schedule?.recent || []).slice().reverse(),
+      ...(team.schedule?.upcoming || [])
+    ];
+    state.teamCalMonth = initialTeamMonth(state.teamGames);
+    state.teamCalFocus = null;
     const teamFavOn = isFavoriteTeam(team.abbrev);
     content.innerHTML = `
       <div class="team-hero">
@@ -1319,6 +1517,7 @@
       <p class="panel-note">${team.note || team.source || ''}${team.statsNote ? ` · ${team.statsNote}` : ''}</p>
       ${teamSalaryCapMarkup(team.salaryCap)}
       <section class="detail-section"><div class="detail-section-title"><h3>Состав</h3><span>${team.roster?.length || 0}</span></div>${rosterGroupMarkup((team.roster || []).map(p => ({ ...p, abbrev: team.abbrev })))}</section>
+      <section class="detail-section team-calendar-section"><div class="detail-section-title"><h3>Календарь</h3><span>${(state.teamGames || []).length || ''}</span></div><div id="teamCalendarHost" class="month-cal" data-cal="team">${teamCalendarMarkup()}</div></section>
       ${scheduleListMarkup('Ближайшие', team.schedule?.upcoming || [], 'Нет ближайших матчей', { remindable: true })}
       ${scheduleListMarkup('Недавние', team.schedule?.recent || [], 'Нет завершённых матчей')}
       ${statsGridMarkup('Командная статистика', team.stats || [], team.statsNote || '')}
@@ -1722,6 +1921,29 @@
       }
       return;
     }
+    const calNav = event.target.closest?.('[data-cal-nav]');
+    if (calNav && calNav.closest('[data-cal="team"]')) {
+      event.preventDefault();
+      state.teamCalMonth = shiftMonth(state.teamCalMonth, Number(calNav.getAttribute('data-cal-nav')));
+      state.teamCalFocus = null;
+      const host = $('#teamCalendarHost');
+      if (host) host.innerHTML = teamCalendarMarkup();
+      return;
+    }
+    const calDay = event.target.closest?.('[data-cal-date]');
+    if (calDay && calDay.closest('[data-cal="team"]') && !calDay.disabled) {
+      event.preventDefault();
+      const dateKey = calDay.getAttribute('data-cal-date');
+      const dayGames = teamGamesOn(dateKey);
+      if (dayGames.length <= 1) {
+        if (dayGames[0]) openScheduleGame(dayGames[0]);
+        return;
+      }
+      state.teamCalFocus = dateKey;
+      const host = $('#teamCalendarHost');
+      if (host) host.innerHTML = teamCalendarMarkup();
+      return;
+    }
     const remindBtn = event.target.closest?.('[data-remind-game]');
     if (remindBtn) {
       event.preventDefault();
@@ -1741,6 +1963,15 @@
       remindBtn.textContent = nextOn ? '🔔 Вкл' : '🔔';
       openRemindBot(gameId, nextOn, remindBtn.getAttribute('data-remind-start') || '');
       toast(nextOn ? 'Напоминание: откройте бота для подтверждения' : 'Напоминание снято — подтвердите в боте');
+      return;
+    }
+    const scheduleRow = event.target.closest?.('[data-schedule-game]');
+    if (scheduleRow) {
+      event.preventDefault();
+      const gameId = scheduleRow.getAttribute('data-schedule-game');
+      const game = (state.teamGames || []).find(item => String(item.id) === String(gameId));
+      if (game) openScheduleGame(game);
+      else openGameDetail(gameId);
       return;
     }
     const openUrl = event.target.closest?.('[data-open-url]');
@@ -1774,6 +2005,7 @@
 
   $('#refreshButton').addEventListener('click', () => {
     live?.clearCache?.();
+    state.calMarks = {};
     loadGames(state.selectedDate, { toastOnDone: true });
   });
   // Settings favorites: capture-phase so × is not swallowed by fav-open / WebView quirks.
@@ -1831,6 +2063,34 @@
   syncDonateSettingsVisibility();
   $('#prevDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, -1), { toastOnDone: true }));
   $('#nextDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, 1), { toastOnDone: true }));
+  $('#openCalendar')?.addEventListener('click', () => {
+    state.calOpen = !state.calOpen;
+    if (state.calOpen) state.calMonth = state.selectedDate.slice(0, 7);
+    renderLeagueCalendar();
+  });
+  $('#leagueCalendar')?.addEventListener('click', event => {
+    const nav = event.target.closest('[data-cal-nav]');
+    if (nav) {
+      state.calMonth = shiftMonth(state.calMonth, Number(nav.getAttribute('data-cal-nav')));
+      renderLeagueCalendar();
+      return;
+    }
+    const day = event.target.closest('[data-cal-date]');
+    if (!day || day.disabled) return;
+    state.calOpen = false;
+    const box = $('#leagueCalendar');
+    if (box) box.hidden = true;
+    const opener = $('#openCalendar');
+    if (opener) opener.setAttribute('aria-expanded', 'false');
+    loadGames(day.getAttribute('data-cal-date'), { toastOnDone: true });
+  });
+  $('#teamDetailContent')?.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const row = event.target.closest?.('[data-schedule-game]');
+    if (!row || event.target.closest?.('[data-remind-game]')) return;
+    event.preventDefault();
+    row.click();
+  });
   $('#themeToggle').addEventListener('change', event => applyTheme(event.target.checked ? 'dark' : 'light', true));
   $('#ruHighlightToggle').addEventListener('change', event => {
     applyRussianHighlight(event.target.checked, true);

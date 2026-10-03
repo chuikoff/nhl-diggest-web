@@ -2844,9 +2844,84 @@
   }
 
   function splitSchedule(games, limit = 6) {
-    const upcoming = games.filter(g => g.status === 'FUT' || g.status === 'Live').slice(0, limit);
-    const recent = games.filter(g => g.status === 'Final').slice(-limit).reverse();
-    return { upcoming, recent };
+    const ordered = (games || []).slice().sort((a, b) => String(a.startTimeUTC || '').localeCompare(String(b.startTimeUTC || '')));
+    const upcoming = ordered.filter(g => g.status === 'FUT' || g.status === 'Live').slice(0, limit);
+    const recent = ordered.filter(g => g.status === 'Final').slice(-limit).reverse();
+    // Full season list is already on the club-schedule payload — the team calendar uses it.
+    return { upcoming, recent, all: ordered };
+  }
+
+  function collectMskDatesFromNhlWeek(payload, monthPrefix, into) {
+    (payload?.gameWeek || []).forEach(day => {
+      (day.games || []).forEach(game => {
+        const iso = game?.startTimeUTC;
+        if (!iso) return;
+        const tip = new Date(iso);
+        if (Number.isNaN(tip.getTime())) return;
+        const key = mskDateKey(tip);
+        if (key && key.startsWith(monthPrefix)) into.add(key);
+      });
+    });
+  }
+
+  async function nhlMonthGameDates(year, month) {
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+    const dates = new Set();
+    const firstPayload = await scheduleNhl(`${monthPrefix}-01`);
+    collectMskDatesFromNhlWeek(firstPayload, monthPrefix, dates);
+    if (firstPayload.previousStartDate) {
+      try {
+        collectMskDatesFromNhlWeek(await scheduleNhl(firstPayload.previousStartDate), monthPrefix, dates);
+      } catch { /* previous week is only for the MSK overnight boundary */ }
+    }
+    let next = firstPayload.nextStartDate;
+    for (let step = 0; next && String(next).slice(0, 7) <= monthPrefix && step < 6; step += 1) {
+      const payload = await scheduleNhl(next);
+      collectMskDatesFromNhlWeek(payload, monthPrefix, dates);
+      next = payload.nextStartDate;
+    }
+    return [...dates];
+  }
+
+  async function espnMonthGameDates(year, month) {
+    // Same ESPN scoreboard the day view already uses. YYYYMM returns that month's events.
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+    const compact = `${year}${String(month).padStart(2, '0')}`;
+    const data = await fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/scoreboard?dates=${compact}`, 20000);
+    const dates = new Set();
+    (data.events || []).forEach(event => {
+      if (!event?.date) return;
+      const tip = new Date(event.date);
+      if (Number.isNaN(tip.getTime())) return;
+      const key = mskDateKey(tip);
+      if (key && key.startsWith(monthPrefix)) dates.add(key);
+    });
+    // Evening ET games on the last day of the previous month land on the 1st in Moscow.
+    try {
+      const edge = await scoreEspn(shiftDate(`${monthPrefix}-01`, -1));
+      (edge || []).forEach(game => {
+        if (!game?.startTimeUTC) return;
+        const key = mskDateKey(new Date(game.startTimeUTC));
+        if (key && key.startsWith(monthPrefix)) dates.add(key);
+      });
+    } catch { /* dots are optional */ }
+    return [...dates];
+  }
+
+  async function leagueMonthGameDates(year, month) {
+    const key = `month-dates:${year}-${String(month).padStart(2, '0')}`;
+    return cached(key, async () => {
+      try {
+        return await nhlMonthGameDates(year, month);
+      } catch (nhlError) {
+        try {
+          return await espnMonthGameDates(year, month);
+        } catch (espnError) {
+          console.warn('[NHL Diggest] month schedule failed', nhlError, espnError);
+          throw espnError;
+        }
+      }
+    });
   }
 
   function teamStatsFromEspnCategories(categories) {
@@ -3924,6 +3999,7 @@
     teamColorFor,
     periodHeadingLabel,
     gamesForDate,
+    leagueMonthGameDates,
     gameStubFromId,
     loadStandings,
     loadBoard,

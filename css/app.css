@@ -1327,3 +1327,106 @@ button.retired-row.player-hit:focus-visible .retired-name {
   font-size: 18px;
   line-height: 1;
 }
+
+/* Month calendar — results day jump + team schedule. Does not touch match cards. */
+.day-switcher { height: auto; min-height: 61px; }
+.selected-day {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 6px 8px 4px;
+}
+.selected-day::after {
+  content: "▾";
+  color: var(--accent);
+  font-size: 10px;
+  line-height: 1;
+}
+.selected-day[aria-expanded="true"] { background: rgba(245, 200, 75, .1); }
+.month-cal {
+  margin: 8px 0 2px;
+  border: 1px solid var(--line);
+  background: linear-gradient(105deg, #121d2b, #0f1825);
+  border-radius: 17px;
+  padding: 10px 8px 8px;
+}
+.month-cal[hidden] { display: none; }
+.month-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.month-cal-head strong {
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -.2px;
+}
+.month-cal-head .day-arrow { width: 34px; height: 34px; font-size: 22px; }
+.month-cal-weekdays,
+.month-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.month-cal-weekdays span {
+  text-align: center;
+  color: var(--dim);
+  font-size: 10px;
+  font-weight: 750;
+  padding: 3px 0 5px;
+}
+.cal-pad { height: 36px; }
+.cal-day {
+  position: relative;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 0 4px;
+}
+.cal-day.has-games::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translateX(-50%);
+}
+.cal-day.is-today { box-shadow: inset 0 0 0 1px rgba(245, 200, 75, .55); }
+.cal-day.is-selected { background: var(--accent); color: #1a1404; }
+.cal-day.is-selected.has-games::after { background: #1a1404; }
+.cal-day:disabled { color: var(--dim); cursor: default; opacity: .45; }
+.cal-day:not(:disabled):hover,
+.cal-day:not(:disabled):focus-visible { background: rgba(85, 168, 255, .14); outline: none; }
+.cal-day.is-selected:not(:disabled):hover,
+.cal-day.is-selected:not(:disabled):focus-visible { background: var(--accent); }
+.cal-note {
+  margin: 8px 4px 2px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+.cal-day-games { margin-top: 8px; }
+.cal-day-games .team-schedule { border-radius: 12px; }
+.schedule-row.is-openable { cursor: pointer; }
+.schedule-row.is-openable:hover,
+.schedule-row.is-openable:focus-visible { background: rgba(245, 200, 75, .08); outline: none; }
+:root[data-theme="light"] .month-cal { background: linear-gradient(105deg, #ffffff, #f1f5f9); }
+:root[data-theme="light"] .selected-day[aria-expanded="true"] { background: rgba(169, 112, 0, .1); }
+:root[data-theme="light"] .cal-day:not(:disabled):hover,
+:root[data-theme="light"] .cal-day:not(:disabled):focus-visible { background: rgba(29, 90, 150, .08); }
+:root[data-theme="light"] .schedule-row.is-openable:hover,
+:root[data-theme="light"] .schedule-row.is-openable:focus-visible { background: rgba(169, 112, 0, .08); }
