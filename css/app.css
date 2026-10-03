@@ -1254,3 +1254,30 @@ h2 { font-size: 29px; }
   .detail-logo { width: 32px; height: 32px; flex-basis: 32px; }
   .detail-team.team-hit { gap: 5px; }
 }
+
+/* Dark navy marks only (WSH wordmark, TOR leaf). Other team logos are unchanged. */
+:root:not([data-theme="light"]) img.logo-plate {
+  background: #f4f7fb;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.78);
+}
+:root:not([data-theme="light"]) img.player-mug-logo.logo-plate {
+  border-radius: 50%;
+  background: #f4f7fb;
+  border-color: #f4f7fb;
+}
+button.retired-row.player-hit {
+  cursor: pointer;
+}
+button.retired-row.player-hit:hover .retired-name,
+button.retired-row.player-hit:focus-visible .retired-name {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.retired-open {
+  margin-left: auto;
+  color: var(--dim);
+  font-size: 18px;
+  line-height: 1;
+}

@@ -395,13 +395,22 @@
     return { Final: 'Завершён', Live: 'LIVE', FUT: 'Запланирован', Preseason: 'Предсезон' }[status] || status;
   }
 
+  // Navy ESPN marks (Capitals wordmark, Maple Leafs leaf) vanish on the dark UI.
+  // Plate is only for those two — other crests stay untouched.
+  const DARK_LOGO_ABBREVS = new Set(['WSH', 'TOR']);
+
+  function logoPlateClass(abbrev) {
+    const key = String(abbrev || '').trim().toUpperCase();
+    return DARK_LOGO_ABBREVS.has(key) ? ' logo-plate' : '';
+  }
+
   function teamMarkup(team, side) {
     // Results row: teams are display-only. Card tap always opens match detail;
     // team pages open only from logo/name inside match detail (.match-card).
     const fav = isFavoriteTeam(team.short) ? ' is-favorite' : '';
     return `<div class="team ${side}${fav}">
       <div class="team-info"><span class="team-name">${team.name}</span><span class="team-nick">${team.nick}</span></div>
-      <img class="logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
+      <img class="logo${logoPlateClass(team.short)}" src="${team.logo}" alt="" onerror="this.style.display='none'">
     </div>`;
   }
 
@@ -409,7 +418,7 @@
     const abbrev = escapeAttr(team.short || '');
     const fav = isFavoriteTeam(team.short) ? ' is-favorite' : '';
     return `<button type="button" class="detail-team ${side} team-hit${fav}" data-team-abbrev="${abbrev}" aria-label="Команда ${escapeAttr(team.name)}">
-      <img class="detail-logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
+      <img class="detail-logo${logoPlateClass(team.short)}" src="${team.logo}" alt="" onerror="this.style.display='none'">
       <span class="detail-team-copy"><strong>${team.name}</strong><span class="detail-team-nick">${team.nick}</span></span>
     </button>`;
   }
@@ -570,7 +579,7 @@
       ? `<img class="player-mug-photo" src="${escapeAttr(headshot)}" alt="" loading="lazy" onerror="this.remove()">`
       : `<span class="player-mug-initials">${initials}</span>`;
     const badge = logo
-      ? `<img class="player-mug-logo" src="${escapeAttr(logo)}" alt="" loading="lazy">`
+      ? `<img class="player-mug-logo${logoPlateClass(abbrev)}" src="${escapeAttr(logo)}" alt="" loading="lazy">`
       : '';
     return `<div class="player-mug player-mug-${size}" style="--mug-color:${escapeAttr(color)}">${img}${badge}</div>`;
   }
@@ -831,7 +840,7 @@
             <div class="period-groups goal-period-groups">${goalsCardsMarkup(scoring, game)}</div>
           </section>
           <section class="detail-section"><div class="detail-section-title"><h3>Командная статистика</h3></div>
-            <div class="boxscore-table"><div class="boxscore-head"><span>Команда</span><span>Броски</span><span>Силовые</span><span>Вбрасывания</span><span>Большинство</span></div>${[game.away, game.home].map(team => { const stats = boxscore[team.short] || {}; return `<div class="boxscore-row"><strong><img src="${team.logo}" alt="">${team.short}</strong><span>${stats.shots ?? '—'}</span><span>${stats.hits ?? '—'}</span><span>${stats.faceoff ?? '—'}</span><span>${stats.powerPlay ?? '—'}</span></div>`; }).join('')}</div>
+            <div class="boxscore-table"><div class="boxscore-head"><span>Команда</span><span>Броски</span><span>Силовые</span><span>Вбрасывания</span><span>Большинство</span></div>${[game.away, game.home].map(team => { const stats = boxscore[team.short] || {}; return `<div class="boxscore-row"><strong><img class="${logoPlateClass(team.short).trim()}" src="${team.logo}" alt="">${team.short}</strong><span>${stats.shots ?? '—'}</span><span>${stats.hits ?? '—'}</span><span>${stats.faceoff ?? '—'}</span><span>${stats.powerPlay ?? '—'}</span></div>`; }).join('')}</div>
           </section>
           <details class="detail-section penalties-accordion"><summary>Удаления (${penalties.length})</summary><div class="period-groups">${periodGroupsMarkup(penalties, 'penalties')}</div></details>
           ${goalies.length ? `<section class="detail-section"><div class="detail-section-title"><h3>Вратари</h3></div><div class="goalie-lines">${goalies.map(goalie => `<div class="goalie-line"><span class="line-team">${teamByShort[goalie.team]?.short || goalie.team}</span><strong>${playerMarkup({ ...goalie, abbrev: goalie.team })}</strong><span>${goalie.saves}${goalie.sv ? ` · SV% ${goalie.sv}` : ''}${goalie.toi ? ` · ${goalie.toi}` : ''}</span></div>`).join('')}</div></section>` : ''}`;
@@ -1238,13 +1247,25 @@
     return `<section class="detail-section team-trophies-section"><div class="detail-section-title"><h3>Кубок Стэнли</h3><span>${badge}</span></div><div class="awards-list">${awardRowsMarkup(list)}</div></section>`;
   }
 
-  function retiredNumbersMarkup(rows = []) {
+  function retiredNumbersMarkup(rows = [], abbrev = '') {
     const list = rows || [];
     if (!list.length) return '';
     const items = list.map(row => {
       const num = escapeHtml(String(row.number ?? ''));
-      const name = escapeHtml(row.name || '');
-      return `<div class="retired-row"><span class="retired-number">#${num}</span><strong class="retired-name">${name}</strong></div>`;
+      const rawName = row.name || '';
+      const name = escapeHtml(rawName);
+      const espnId = String(row.espnId || live?.retiredEspnId?.(rawName) || '');
+      const nhlId = String(row.nhlId || '');
+      const body = `<span class="retired-number">#${num}</span><strong class="retired-name">${name}</strong>`;
+      // Only rows we can actually open (existing player id) are tappable.
+      if (!espnId && !nhlId) return `<div class="retired-row">${body}</div>`;
+      const attrs = [
+        espnId ? `data-espn-id="${escapeAttr(espnId)}"` : '',
+        nhlId ? `data-nhl-id="${escapeAttr(nhlId)}"` : '',
+        `data-player-name="${escapeAttr(rawName)}"`,
+        abbrev ? `data-team-abbrev="${escapeAttr(abbrev)}"` : ''
+      ].filter(Boolean).join(' ');
+      return `<button type="button" class="retired-row player-hit" ${attrs}>${body}<span class="retired-open" aria-hidden="true">›</span></button>`;
     }).join('');
     return `<section class="detail-section team-retired-section"><div class="detail-section-title"><h3>Закреплённые номера</h3><span>${list.length}</span></div><div class="retired-list">${items}</div></section>`;
   }
@@ -1280,7 +1301,7 @@
     const teamFavOn = isFavoriteTeam(team.abbrev);
     content.innerHTML = `
       <div class="team-hero">
-        <img class="team-hero-logo" src="${team.logo}" alt="" onerror="this.style.display='none'">
+        <img class="team-hero-logo${logoPlateClass(team.abbrev)}" src="${team.logo}" alt="" onerror="this.style.display='none'">
         <div class="team-hero-copy">
           <p class="eyebrow accent">${team.abbrev}</p>
           <h2>${team.name}</h2>
@@ -1297,7 +1318,7 @@
       ${scheduleListMarkup('Недавние', team.schedule?.recent || [], 'Нет завершённых матчей')}
       ${statsGridMarkup('Командная статистика', team.stats || [], team.statsNote || '')}
       ${teamTrophiesMarkup(team.trophies)}
-      ${retiredNumbersMarkup(team.retiredNumbers)}
+      ${retiredNumbersMarkup(team.retiredNumbers, team.abbrev)}
     `;
   }
 
@@ -1335,7 +1356,7 @@
           <p class="eyebrow accent">${player.position || 'SK'}${player.number ? ` · #${player.number}` : ''}</p>
           <h2 class="player-hero-name">${flagMarkup(flag)}<span class="player-name${russianClass}${playerFavCls}">${player.name}</span></h2>
           <button type="button" class="player-team-link team-hit${isFavoriteTeam(player.abbrev) ? ' is-favorite' : ''}" data-team-abbrev="${escapeAttr(player.abbrev || '')}">
-            ${player.logo ? `<img src="${escapeAttr(player.logo)}" alt="">` : ''}<span>${player.team || player.abbrev || 'NHL'}</span>
+            ${player.logo ? `<img class="${logoPlateClass(player.abbrev).trim()}" src="${escapeAttr(player.logo)}" alt="">` : ''}<span>${player.team || player.abbrev || 'NHL'}</span>
           </button>
           <div class="player-hero-actions">${favToggleMarkup('player', playerFavOn, `data-fav-player="1" data-nhl-id="${escapeAttr(player.nhlId || '')}" data-espn-id="${escapeAttr(player.espnId || '')}" data-player-name="${escapeAttr(player.name || '')}" data-team-abbrev="${escapeAttr(player.abbrev || '')}" data-fav-team-name="${escapeAttr(player.team || '')}"`)}</div>
         </div>
