@@ -1339,18 +1339,19 @@ button.retired-row.player-hit:focus-visible .retired-name {
   font: inherit;
   cursor: pointer;
   border-radius: 12px;
-  padding: 8px 36px 8px 14px;
+  padding: 8px 52px 8px 14px;
 }
-.calendar-opener {
+.selected-day .calendar-opener {
   position: absolute;
   top: 50%;
-  right: 10px;
+  right: 6px;
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
   place-items: center;
   color: var(--accent);
-  font-size: 18px;
+  font-size: 32px;
+  font-weight: 700;
   line-height: 1;
   transform: translateY(-50%);
 }
