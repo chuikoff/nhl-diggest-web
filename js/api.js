@@ -3261,8 +3261,23 @@
     return Number(match[1]) * 60 + Number(match[2]);
   }
 
+  function isCareerTotalsRow(row) {
+    const labels = [
+      row?.teamName,
+      row?.teamCommonName,
+      row?.teamAbbrev,
+      row?.teamTriCode,
+      row?.teamSlug,
+      row?.club,
+      row?.name
+    ].map(value => loc(value).trim().toLowerCase());
+    return labels.some(label => label === 'totals' || label === 'total' || label === 'итого');
+  }
+
   function buildCareerHistory(rows, isGoalie) {
-    const regular = (rows || []).filter(row => Number(row.gameTypeId) === 2);
+    const regular = (rows || [])
+      .filter(row => Number(row.gameTypeId) === 2)
+      .filter(row => !isCareerTotalsRow(row));
     if (!regular.length) return [];
     // NHL's landing payload also contains junior, international and playoff
     // rows. Prefer NHL regular-season clubs, while retaining a useful fallback
@@ -3349,6 +3364,7 @@
     const clubs = new Map();
     payload.categories.forEach(category => {
       (category.statistics || []).forEach(entry => {
+        if (isCareerTotalsRow(entry)) return;
         const team = payload.teams?.[entry.teamSlug] || {};
         const name = team.displayName || team.shortDisplayName || entry.teamSlug || '—';
         const key = String(entry.teamId || entry.teamSlug || name).toLowerCase();
