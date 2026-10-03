@@ -806,12 +806,17 @@
           ];
       const stats = statsPairs
         .map(([label, value]) => `<div class="three-star-stat"><strong>${escapeHtml(value)}</strong><span>${label}</span></div>`).join('');
+      // Goalies have 4 stats (5 only if they scored). A fixed 5-col grid
+      // shrinks each cell below the value width, so "25/25"+"0" and
+      // "1.000"+"60:00" paint across the next columns. Skaters stay on 5.
+      const statsClass = star.isGoalie ? 'three-star-stats is-goalie' : 'three-star-stats';
+      const statsStyle = star.isGoalie ? ` style="--star-cols:${statsPairs.length}"` : '';
       return `<div class="three-star-row">
         <div class="three-star-rank"><span>${rank}</span><span class="three-star-icon" aria-hidden="true">★</span></div>
         ${playerMugMarkup({ ...ref, team: star.team }, { size: 'lg' })}
         <div class="three-star-copy">
           <div class="three-star-name">${playerMarkup(ref)}</div>
-          <div class="three-star-stats">${stats}</div>
+          <div class="${statsClass}"${statsStyle}>${stats}</div>
         </div>
       </div>`;
     }).join('');

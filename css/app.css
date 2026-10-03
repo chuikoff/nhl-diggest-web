@@ -1092,6 +1092,26 @@ h2 { font-size: 29px; }
   font-weight: 700;
   letter-spacing: 0.2px;
 }
+/* Goalie three-star values only. Column count matches the cells rendered
+   (SV GA SV% TOI, plus G when the goalie scored) so numbers stay in their
+   own cell instead of overflowing into the next one. */
+.three-star-stats.is-goalie {
+  grid-template-columns: repeat(var(--star-cols, 4), minmax(0, 1fr));
+  gap: 6px;
+}
+.three-star-stats.is-goalie .three-star-stat {
+  overflow: hidden;
+}
+.three-star-stats.is-goalie .three-star-stat strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.35px;
+}
+@media (max-width: 370px) {
+  .three-star-stats.is-goalie .three-star-stat strong { font-size: 12px; }
+}
 :root[data-ru-highlight="on"] .three-star-name .player-name.russian-player {
   background: transparent;
   box-shadow: none;
