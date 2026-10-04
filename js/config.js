@@ -1,12 +1,11 @@
-// NHL Diggest — API config (static GitHub Pages, browser CORS-aware).
+// NHL Diggest — API config (static Mini App on hockeydigest.duckdns.org).
 // Prefer direct api-web.nhle.com; ESPN is the CORS-friendly fallback.
 window.NHL_API_BASE = 'https://api-web.nhle.com';
-// Optional VPS finished-game cache (bot aiohttp); disabled in the Mini App by default.
-// Use HTTPS (nginx/TLS) for GitHub Pages — plain http:// is mixed-content blocked.
-// Placeholder until TLS: http://31.77.11.22:8765
-window.NHL_CACHE_BASE = '';
-// Optional login + favorites API (same aiohttp as the game cache).
-// HTTPS origin so GitHub Pages (https://chuikoff.github.io) can call it.
+// Finished-game cache on the same VPS as the bot (aiohttp behind nginx TLS).
+// Same origin when the Mini App is served from hockeydigest.duckdns.org.
+// GitHub Pages (https://chuikoff.github.io) can still call it: API CORS allows that origin.
+window.NHL_CACHE_BASE = 'https://hockeydigest.duckdns.org';
+// Login + favorites API (same aiohttp as the game cache).
 // nginx on hockeydigest.duckdns.org proxies /api to 127.0.0.1:8765.
 // When this is set, NHL_AUTH.available() is true and the Telegram/Max
 // login buttons are enabled. From an http page with this empty, the client

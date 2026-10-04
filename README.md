@@ -2,16 +2,20 @@
 
 Статический фронтенд Mini App для **Telegram** и **Max**: результаты NHL, карточки команд и игроков, турнирная таблица, статистика и настройки. Один и тот же URL работает в обоих мессенджерах. Интерфейс по умолчанию на русском, названия команд и игроков — на английском.
 
-Live: <https://chuikoff.github.io/nhl-diggest-web/>
+Live: <https://hockeydigest.duckdns.org/>
+
+Репозиторий на GitHub остаётся исходником. GitHub Pages больше не канонический хост (старый URL `https://chuikoff.github.io/nhl-diggest-web/` может ещё открываться, если Pages не выключены, но ставить PWA и кнопки ботов нужно с DuckDNS).
 
 ## Домашний экран (PWA)
 
-Тот же URL можно установить на телефон без Telegram и Max. Push-уведомлений нет.
+Канонический URL: <https://hockeydigest.duckdns.org/>. Его можно поставить на телефон без Telegram и Max. Push-уведомлений нет.
 
 - **iPhone / iPad (Safari):** открыть ссылку в Safari → «Поделиться» → «На экран Домой».
 - **Android (Chrome):** открыть ссылку → меню ⋮ → «Установить приложение» или «Добавить на главный экран».
 
-GitHub Pages отдаёт сайт по HTTPS, так что критерии установки выполнены. Оболочка (index, css, js) кэшируется service worker с именем `nhl-digest-shell-<версия>`; ответы API не кэшируются. Версия кэша совпадает с `?v=` в `index.html`.
+Если на экране уже есть ярлык со старого GitHub Pages (`chuikoff.github.io/nhl-diggest-web`), удалите его и установите заново с DuckDNS: у нового манифеста `scope` и `start_url` равны `/`, это другое приложение.
+
+Сайт отдаёт nginx по HTTPS. Оболочка (index, css, js) кэшируется service worker с именем `nhl-digest-shell-<версия>`; ответы API не кэшируются. Версия кэша совпадает с `?v=` в `index.html`.
 
 ## Локальный просмотр
 
@@ -24,28 +28,15 @@ python3 -m http.server 8080
 
 Затем откройте <http://localhost:8080>. Можно открыть `index.html` напрямую, но HTTP-сервер лучше показывает поведение bridge-скриптов и локальных ресурсов.
 
-## GitHub Pages
+## Хостинг
 
-1. Создайте GitHub-репозиторий и загрузите содержимое этого каталога в корень репозитория (важно: `index.html` должен находиться в корне).
-2. Откройте **Settings → Pages**.
-3. В разделе **Build and deployment** выберите **Deploy from a branch**, ветку (например, `main`) и папку **`/ (root)`**, затем нажмите **Save**.
-4. Дождитесь URL вида `https://<username>.github.io/<repository>/`.
+Статика лежит на VPS (`/var/www/nhl-diggest-web`) и отдаётся nginx с `https://hockeydigest.duckdns.org/`. `/api/` по-прежнему проксируется на aiohttp бота (`127.0.0.1:8765`). Исходники пушатся в GitHub; деплой — `tar` по SSH, не GitHub Pages.
 
-Проект не требует Node.js, сборщика или GitHub Actions. Пути к ассетам относительные (`./css`, `./js`, `./assets`); в `index.html` выставляется `<base>` по текущему pathname, чтобы сайт открывался и с `/nhl-diggest-web`, и с `/nhl-diggest-web/`.
-
-## Свой домен
-
-Замените содержимое файла `CNAME` на домен одной строкой, например:
-
-```text
-nhl.example.com
-```
-
-После этого в настройках Pages укажите этот домен и включите **Enforce HTTPS** после выпуска сертификата. У регистратора добавьте DNS: обычно `CNAME nhl -> <username>.github.io` (точные записи зависят от корневого или поддомена).
+Проект не требует Node.js или сборщика. Пути к ассетам относительные (`./css`, `./js`, `./assets`); в `index.html` выставляется `<base>` по текущему pathname, поэтому страница открывается и с `/`, и со старого префикса `/nhl-diggest-web/`. Манифест PWA рассчитан на корень: `start_url` и `scope` равны `/`.
 
 ## Один URL для Telegram и Max
 
-Используйте **один и тот же** HTTPS URL Mini App (например `https://chuikoff.github.io/nhl-diggest-web/`) в:
+Используйте **один и тот же** HTTPS URL Mini App (`https://hockeydigest.duckdns.org/`) в:
 
 1. **Telegram** — @BotFather → бот → **Bot Settings → Menu Button → Configure menu button** (подпись + URL).
 2. **Max** — платформа партнёров → чат-бот → настройки → поле URL мини-приложения (кнопка Открыть / Старт / Играть).
@@ -62,7 +53,7 @@ nhl.example.com
 
 ## Данные и API
 
-Мини-приложение **тянет живые данные** прямо из браузера (статический GitHub Pages, без своего бэкенда).
+Мини-приложение статическое. Завершённые матчи читает из кэша на том же хосте (`NHL_CACHE_BASE`); остальное по-прежнему из браузера (NHL / ESPN).
 
 ### Источники (порядок)
 
@@ -85,7 +76,7 @@ nhl.example.com
 
 | Host | CORS из браузера |
 | --- | --- |
-| `api-web.nhle.com` | **нет** ACAO — `fetch` из GitHub Pages / TG / Max WebView обычно падает |
+| `api-web.nhle.com` | **нет** ACAO — `fetch` из браузера / TG / Max WebView обычно падает |
 | `api.nhle.com` | **нет** ACAO |
 | `site.api.espn.com`, `site.web.api.espn.com`, `sports.core.api.espn.com` | **да** (`*`) |
 

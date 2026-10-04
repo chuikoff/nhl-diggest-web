@@ -1,10 +1,10 @@
 {
-  "id": "/nhl-diggest-web/",
+  "id": "/",
   "name": "NHL Digest",
   "short_name": "NHL Digest",
   "description": "NHL results, standings, and stats",
-  "start_url": "/nhl-diggest-web/",
-  "scope": "/nhl-diggest-web/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#080d15",
   "theme_color": "#0c111b",
