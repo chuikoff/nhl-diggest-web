@@ -28,16 +28,17 @@
       } catch (e) { /* ignore */ }
     })();
   </script>
-  <link rel="stylesheet" href="./css/app.css?v=20261004h">
+  <link rel="stylesheet" href="./css/app.css?v=20261004i">
   <!-- Telegram bridge (window.Telegram.WebApp). Soft-fail so browser preview still works. -->
   <script src="https://telegram.org/js/telegram-web-app.js" onerror="console.warn('[NHL Diggest] Telegram bridge failed to load')"></script>
   <!-- Max bridge (window.WebApp). Soft-fail so browser / Telegram still work if CDN is blocked. -->
   <script src="https://st.max.ru/js/max-web-app.js" onerror="console.warn('[NHL Diggest] Max bridge failed to load')"></script>
-  <script src="./js/config.js?v=20261004h"></script>
-  <script src="./js/mock-data.js?v=20261004h"></script>
-  <script src="./js/api.js?v=20261004h"></script>
-  <script src="./js/bridge.js?v=20261004h"></script>
-  <script defer src="./js/app.js?v=20261004h"></script>
+  <script src="./js/config.js?v=20261004i"></script>
+  <script src="./js/mock-data.js?v=20261004i"></script>
+  <script src="./js/api.js?v=20261004i"></script>
+  <script src="./js/bridge.js?v=20261004i"></script>
+  <script src="./js/auth.js?v=20261004i"></script>
+  <script defer src="./js/app.js?v=20261004i"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -118,8 +119,12 @@
       </section>
 
       <section class="panel" data-panel="settings" aria-labelledby="settingsTitle">
-        <div class="section-heading"><div><p class="eyebrow accent">PERSONALIZE</p><h2 id="settingsTitle">Настройки</h2></div><span class="settings-avatar">G</span></div>
-        <div class="settings-card profile-card"><div class="profile-icon">G</div><div><strong>NHL fan</strong><span>Настройки Mini App</span></div><span class="chevron">›</span></div>
+        <div class="section-heading"><div><p class="eyebrow accent">PERSONALIZE</p><h2 id="settingsTitle">Настройки</h2></div><span class="settings-avatar" id="settingsAvatar">G</span></div>
+        <div class="settings-card profile-card"><div class="profile-icon" id="profileIcon">G</div><div><strong id="profileName">NHL fan</strong><span id="profileSub">Настройки Mini App</span></div><span class="chevron">›</span></div>
+        <div class="settings-group" id="accountGroup" hidden>
+          <p class="group-label">АККАУНТ</p>
+          <div id="accountCard" class="account-card"></div>
+        </div>
         <div class="settings-group"><p class="group-label">ОБЩИЕ</p><div class="settings-card"><div class="setting-copy"><strong>Язык интерфейса</strong><span>Русский</span></div><span class="chevron">›</span></div><div class="settings-card"><div class="setting-copy"><strong>Тёмная тема</strong><span id="themeModeLabel">Включена</span></div><label class="toggle"><input id="themeToggle" type="checkbox" checked><span></span></label></div><div class="settings-card"><div class="setting-copy"><strong>Подсветка российских игроков</strong><span>Жёлтая подсветка имён</span></div><label class="toggle"><input id="ruHighlightToggle" type="checkbox"><span></span></label></div></div>
         <div class="settings-group"><p class="group-label">ИЗБРАННОЕ</p>
           <div id="favTeamsList" class="favorites-list"></div>
@@ -145,6 +150,17 @@
     </nav>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite">Обновлено</div>
+  <div class="login-sheet" id="loginSheet" hidden>
+    <div class="login-sheet-card" role="dialog" aria-modal="true" aria-labelledby="loginSheetTitle">
+      <p class="eyebrow">ВХОД</p>
+      <h3 id="loginSheetTitle">Войти</h3>
+      <p class="login-code" id="loginCode">····</p>
+      <p class="login-hint" id="loginHint">Откройте бота и нажмите Start, или отправьте код сообщением.</p>
+      <button type="button" class="login-primary" id="loginOpenBot">Открыть бота</button>
+      <button type="button" class="login-ghost" id="loginCopyCode">Скопировать код</button>
+      <button type="button" class="login-ghost" id="loginCancel">Отмена</button>
+    </div>
+  </div>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {

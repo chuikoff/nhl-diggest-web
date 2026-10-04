@@ -1469,3 +1469,111 @@ button.retired-row.player-hit:focus-visible .retired-name {
 
 /* Detail panels hide the fixed nav and therefore do not reserve its old height. */
 .app-shell.is-detail { padding-bottom: 0; }
+
+/* Optional account login (PWA / browser). */
+.account-card { display: flex; flex-direction: column; gap: 8px; }
+.login-btn {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: linear-gradient(105deg, #131e2c, #101823);
+  color: var(--text);
+  border-radius: 15px;
+  min-height: 52px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  text-align: left;
+  padding: 12px 14px;
+}
+.login-btn small { display: block; color: var(--muted); font-size: 10px; font-weight: 600; margin-top: 3px; }
+.login-btn:disabled { opacity: .6; cursor: default; }
+.account-note { color: var(--dim); font-size: 11px; line-height: 1.45; margin: 2px 8px 0; }
+.login-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(5, 8, 14, .72);
+  display: grid;
+  place-items: end center;
+  padding: 16px;
+}
+.login-sheet[hidden] { display: none; }
+.login-sheet-card {
+  width: min(430px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px 16px 14px;
+  margin-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.login-sheet-card h3 { margin: 6px 0 0; font-size: 20px; letter-spacing: -.4px; }
+.login-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 28px;
+  letter-spacing: 3px;
+  text-align: center;
+  margin: 14px 0 8px;
+}
+.login-hint { color: var(--muted); font-size: 12px; line-height: 1.45; margin: 0 0 8px; text-align: center; }
+.login-primary, .login-ghost {
+  width: 100%;
+  border-radius: 12px;
+  min-height: 44px;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.login-primary { border: 0; background: var(--accent); color: #16202b; }
+.login-ghost { border: 1px solid var(--line); background: transparent; color: var(--muted); }
+:root[data-theme="light"] .login-btn { background: linear-gradient(115deg, #ffffff, #f5f8fb); }
+:root[data-theme="light"] .login-sheet { background: rgba(23, 34, 49, .35); }
+:root[data-theme="light"] .login-primary { color: #1a1404; }
+
+/* Installed PWA (standalone): viewport-fit=cover draws under the status bar
+   and home indicator. Pad the header by safe-area-inset-top so the logo is
+   not clipped, and let the tab bar sit on the home indicator — background
+   flush to the screen edge, no extra blank band. Not used in the Telegram sheet. */
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+  html, body {
+    height: 100%;
+    min-height: 100%;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+    padding: 0;
+  }
+  .app-shell {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding-bottom: calc(50px + max(8px, env(safe-area-inset-bottom, 0px)));
+  }
+  .topbar {
+    height: calc(80px + env(safe-area-inset-top, 0px));
+    padding-top: calc(19px + env(safe-area-inset-top, 0px));
+  }
+  .bottom-nav {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    border-radius: 0;
+    padding: 8px 6px max(8px, env(safe-area-inset-bottom, 0px));
+  }
+  .toast {
+    bottom: calc(58px + max(8px, env(safe-area-inset-bottom, 0px)));
+  }
+  .app-shell.is-detail {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}

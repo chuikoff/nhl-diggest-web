@@ -63,13 +63,230 @@
     }
   }
 
-  function saveFavorites(next) {
+  let favSyncTimer = 0;
+
+  function saveFavorites(next, { sync = true } = {}) {
     try {
       window.localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify({
         players: next.players || [],
         teams: next.teams || []
       }));
     } catch { /* private mode */ }
+    if (sync) scheduleFavoriteSync();
+  }
+
+  function scheduleFavoriteSync() {
+    const auth = window.NHL_AUTH;
+    if (!auth?.loggedIn?.()) return;
+    window.clearTimeout(favSyncTimer);
+    favSyncTimer = window.setTimeout(() => {
+      const fav = loadFavorites();
+      auth.putFavorites(fav).catch(err => {
+        console.warn('[NHL Diggest] favorites sync failed', err);
+      });
+    }, 250);
+  }
+
+  function mergeFavorites(server, local) {
+    const teams = [];
+    const seenTeams = new Set();
+    const takeTeam = (team) => {
+      const abbrev = String(team?.abbrev || '').trim().toUpperCase();
+      if (!abbrev) return;
+      if (seenTeams.has(abbrev)) {
+        const prev = teams.find(item => item.abbrev === abbrev);
+        if (prev) {
+          if ((!prev.name || prev.name === prev.abbrev) && team.name) prev.name = team.name;
+          if (!prev.logo && team.logo) prev.logo = team.logo;
+        }
+        return;
+      }
+      seenTeams.add(abbrev);
+      teams.push({
+        abbrev,
+        name: team.name || abbrev,
+        logo: team.logo || ''
+      });
+    };
+    (server?.teams || []).forEach(takeTeam);
+    (local?.teams || []).forEach(takeTeam);
+    const players = [];
+    const seenPlayers = new Set();
+    const takePlayer = (player) => {
+      const key = favPlayerKey(player) || String(player?.key || '');
+      if (!key || seenPlayers.has(key)) return;
+      seenPlayers.add(key);
+      players.push(playerFavRecord(player));
+    };
+    (server?.players || []).forEach(takePlayer);
+    (local?.players || []).forEach(takePlayer);
+    return { teams, players };
+  }
+
+  function hasMessengerUser() {
+    try {
+      if (bridge.isTelegram && window.Telegram?.WebApp?.initDataUnsafe?.user?.id) return true;
+      if (bridge.isMax) {
+        const user = window.WebApp?.initDataUnsafe?.user;
+        if (user && (user.id || user.user_id)) return true;
+      }
+    } catch { /* ignore */ }
+    return false;
+  }
+
+  function platformLabel(platform) {
+    return platform === 'max' ? 'Max' : 'Telegram';
+  }
+
+  function setProfileChrome(name, sub, mark) {
+    const profileName = document.getElementById('profileName');
+    const profileSub = document.getElementById('profileSub');
+    const profileIcon = document.getElementById('profileIcon');
+    const avatar = document.getElementById('settingsAvatar');
+    if (profileName) profileName.textContent = name;
+    if (profileSub) profileSub.textContent = sub;
+    if (profileIcon) profileIcon.textContent = mark;
+    if (avatar) avatar.textContent = mark;
+  }
+
+  function renderAccount() {
+    const group = document.getElementById('accountGroup');
+    const card = document.getElementById('accountCard');
+    if (!group || !card) return;
+    if (hasMessengerUser()) {
+      group.hidden = true;
+      return;
+    }
+    group.hidden = false;
+    const auth = window.NHL_AUTH;
+    if (auth?.loggedIn?.()) {
+      const session = auth.session?.() || {};
+      const label = platformLabel(session.platform);
+      setProfileChrome(label, 'Избранное на сервере', label === 'Max' ? 'M' : 'T');
+      card.innerHTML = `
+        <div class="settings-card">
+          <div class="setting-copy"><strong>Вы вошли через ${label}</strong><span>Избранное синхронизируется с ботом</span></div>
+        </div>
+        <button type="button" class="login-btn" data-login="logout">Выйти<small>На сервере избранное сохранится</small></button>`;
+      return;
+    }
+    setProfileChrome('NHL fan', 'Настройки Mini App', 'G');
+    if (!auth?.available?.()) {
+      card.innerHTML = `
+        <button type="button" class="login-btn" disabled>Войти через Telegram<small>Нет HTTPS до сервера</small></button>
+        <button type="button" class="login-btn" disabled>Войти через Max<small>Нет HTTPS до сервера</small></button>
+        <p class="account-note">Эта страница открыта по HTTPS, а API бота доступен только по HTTP. Браузер блокирует такой запрос, поэтому избранное остаётся на устройстве.</p>`;
+      return;
+    }
+    card.innerHTML = `
+      <button type="button" class="login-btn" data-login="telegram">Войти через Telegram<small>Тот же аккаунт, что у бота</small></button>
+      <button type="button" class="login-btn" data-login="max">Войти через Max<small>Отдельный аккаунт Max</small></button>
+      <p class="account-note">Без пароля: бот подтвердит код, избранное сохранится на сервере.</p>`;
+  }
+
+  let loginPollTimer = 0;
+  let loginDeepLink = '';
+
+  function stopLoginPoll() {
+    window.clearTimeout(loginPollTimer);
+    loginPollTimer = 0;
+  }
+
+  function closeLoginSheet() {
+    stopLoginPoll();
+    const sheet = document.getElementById('loginSheet');
+    if (sheet) sheet.hidden = true;
+    loginDeepLink = '';
+  }
+
+  async function finishLogin(payload) {
+    const auth = window.NHL_AUTH;
+    const user = payload.user || {};
+    auth.acceptToken({
+      token: payload.token,
+      platform: user.platform === 'max' ? 'max' : 'telegram',
+      platformUserId: user.platform_user_id ?? null,
+      userId: user.id ?? null
+    });
+    closeLoginSheet();
+    try {
+      const server = await auth.getFavorites();
+      const merged = mergeFavorites(server, loadFavorites());
+      saveFavorites(merged, { sync: true });
+    } catch (err) {
+      console.warn('[NHL Diggest] favorites merge failed', err);
+      toast('Вход выполнен, избранное не удалось прочитать');
+      renderAccount();
+      return;
+    }
+    renderAccount();
+    renderFavoritesSettings();
+    try { renderGames(); } catch { /* list may not be ready */ }
+    toast('Вход выполнен');
+  }
+
+  async function pollLogin(code) {
+    const auth = window.NHL_AUTH;
+    try {
+      const res = await auth.poll(code);
+      if (res?.status === 'ok' && res.token) {
+        await finishLogin(res);
+        return;
+      }
+      if (res?.status === 'expired' || res?.status === 'unknown') {
+        const hint = document.getElementById('loginHint');
+        if (hint) hint.textContent = 'Код истёк. Закройте окно и запросите новый.';
+        return;
+      }
+    } catch (err) {
+      console.warn('[NHL Diggest] login poll failed', err);
+    }
+    loginPollTimer = window.setTimeout(() => pollLogin(code), 2000);
+  }
+
+  async function beginLogin(platform) {
+    const auth = window.NHL_AUTH;
+    if (!auth?.available?.()) {
+      toast('Вход с этого адреса недоступен: нет HTTPS до сервера');
+      return;
+    }
+    const sheet = document.getElementById('loginSheet');
+    const title = document.getElementById('loginSheetTitle');
+    const codeNode = document.getElementById('loginCode');
+    const hint = document.getElementById('loginHint');
+    if (title) title.textContent = platform === 'max' ? 'Войти через Max' : 'Войти через Telegram';
+    if (codeNode) codeNode.textContent = '····';
+    if (hint) hint.textContent = 'Запрашиваем код…';
+    if (sheet) sheet.hidden = false;
+    stopLoginPoll();
+    try {
+      const started = await auth.start(platform);
+      loginDeepLink = started.deep_link || '';
+      if (codeNode) codeNode.textContent = started.display || started.code;
+      if (hint) hint.textContent = 'Откройте бота и нажмите Start или отправьте код сообщением. Ждём подтверждение…';
+      pollLogin(started.code);
+    } catch (err) {
+      console.warn('[NHL Diggest] login start failed', err);
+      if (hint) hint.textContent = 'Не удалось получить код. Проверьте, что API доступен.';
+    }
+  }
+
+  async function restoreAccountFavorites() {
+    renderAccount();
+    const auth = window.NHL_AUTH;
+    if (hasMessengerUser() || !auth?.loggedIn?.()) return;
+    try {
+      const server = await auth.getFavorites();
+      saveFavorites({
+        teams: server.teams || [],
+        players: server.players || []
+      }, { sync: false });
+      renderFavoritesSettings();
+      try { renderGames(); } catch { /* ignore */ }
+    } catch (err) {
+      if (err?.status !== 401) console.warn('[NHL Diggest] session restore failed', err);
+      renderAccount();
+    }
   }
 
   function parseFavPlayerKey(raw) {
@@ -1822,7 +2039,7 @@
       }
     }
     if (name === 'standings') loadStandingsLive();
-    if (name === 'settings') { renderFavoritesSettings(); syncDonateSettingsVisibility(); }
+    if (name === 'settings') { renderFavoritesSettings(); syncDonateSettingsVisibility(); renderAccount(); }
   }
 
   $$('.nav-item').forEach(button => button.addEventListener('click', () => {
@@ -2107,12 +2324,45 @@
   document.getElementById('favPlayersList')?.addEventListener('click', handleSettingsFavoritesEvent);
   document.getElementById('favTeamsList')?.addEventListener('click', handleSettingsFavoritesEvent);
 
-  $('#profileButton').addEventListener('click', () => { showPanel('settings'); renderFavoritesSettings(); syncDonateSettingsVisibility(); });
+  $('#profileButton').addEventListener('click', () => { showPanel('settings'); renderFavoritesSettings(); syncDonateSettingsVisibility(); renderAccount(); });
   const donateBtn = document.getElementById('tgDonateBtn');
   if (donateBtn) {
     donateBtn.addEventListener('click', () => openDonateBot());
   }
   syncDonateSettingsVisibility();
+  document.getElementById('accountCard')?.addEventListener('click', event => {
+    const btn = event.target.closest?.('[data-login]');
+    if (!btn || btn.disabled) return;
+    const kind = btn.getAttribute('data-login');
+    if (kind === 'logout') {
+      window.NHL_AUTH?.logout?.().finally(() => {
+        renderAccount();
+        toast('Вы вышли');
+      });
+      return;
+    }
+    if (kind === 'telegram' || kind === 'max') beginLogin(kind);
+  });
+  document.getElementById('loginCancel')?.addEventListener('click', () => closeLoginSheet());
+  document.getElementById('loginSheet')?.addEventListener('click', event => {
+    if (event.target?.id === 'loginSheet') closeLoginSheet();
+  });
+  document.getElementById('loginOpenBot')?.addEventListener('click', () => {
+    if (!loginDeepLink) return;
+    const opened = bridge.openBotLink?.(loginDeepLink);
+    if (!opened) window.open(loginDeepLink, '_blank', 'noopener,noreferrer');
+  });
+  document.getElementById('loginCopyCode')?.addEventListener('click', async () => {
+    const raw = (document.getElementById('loginCode')?.textContent || '').replace(/\s+/g, '');
+    if (!raw || raw.includes('·')) return;
+    try {
+      await navigator.clipboard.writeText(raw);
+      toast('Код скопирован');
+    } catch {
+      toast(raw);
+    }
+  });
+  renderAccount();
   $('#prevDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, -1), { toastOnDone: true }));
   $('#nextDay').addEventListener('click', () => loadGames(live.shiftDate(state.selectedDate, 1), { toastOnDone: true }));
   $('#openCalendar')?.addEventListener('click', () => {
@@ -2282,6 +2532,7 @@
 
   (async function boot() {
     renderDayNavigation();
+    restoreAccountFavorites();
     const deepMatchId = readDeepLinkMatchId();
     await Promise.all([
       loadGames(state.selectedDate),

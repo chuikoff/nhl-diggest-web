@@ -1,5 +1,5 @@
 /* App-shell cache only. Version must match the ?v= cache-bust in index.html. */
-const VERSION = '20261004h';
+const VERSION = '20261004i';
 const CACHE = 'nhl-digest-shell-' + VERSION;
 const SHELL = [
   './',
@@ -9,6 +9,7 @@ const SHELL = [
   './js/mock-data.js?v=' + VERSION,
   './js/api.js?v=' + VERSION,
   './js/bridge.js?v=' + VERSION,
+  './js/auth.js?v=' + VERSION,
   './js/app.js?v=' + VERSION
 ];
 
@@ -46,6 +47,7 @@ function isAppShell(url) {
   if (path === base + '/js/mock-data.js') return true;
   if (path === base + '/js/api.js') return true;
   if (path === base + '/js/bridge.js') return true;
+  if (path === base + '/js/auth.js') return true;
   if (path === base + '/js/app.js') return true;
   return false;
 }
