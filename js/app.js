@@ -1807,9 +1807,12 @@
     return true;
   }
 
-  $$('.nav-item').forEach(button => button.addEventListener('click', () => {
-    showPanel(button.dataset.nav);
-    if (button.dataset.nav === 'stats') {
+  const MAIN_TABS = ['results', 'standings', 'stats', 'settings'];
+
+  function activateMainTab(name) {
+    if (!MAIN_TABS.includes(name)) return;
+    showPanel(name);
+    if (name === 'stats') {
       if (state.statsPeriod === 'alltime') {
         loadAlltimeLive();
       } else {
@@ -1818,8 +1821,12 @@
         loadStatsLive();
       }
     }
-    if (button.dataset.nav === 'standings') loadStandingsLive();
-    if (button.dataset.nav === 'settings') { renderFavoritesSettings(); syncDonateSettingsVisibility(); }
+    if (name === 'standings') loadStandingsLive();
+    if (name === 'settings') { renderFavoritesSettings(); syncDonateSettingsVisibility(); }
+  }
+
+  $$('.nav-item').forEach(button => button.addEventListener('click', () => {
+    activateMainTab(button.dataset.nav);
   }));
 
   $$('.segment[data-standings-tab]').forEach(button => button.addEventListener('click', () => {
@@ -2179,6 +2186,95 @@
       const rtlBack = dx <= -MIN_DX && !fromHScroll;
       const edgeBack = startX <= EDGE && dx >= MIN_DX;
       if (rtlBack || edgeBack) goBack();
+    }, { passive: true });
+  })();
+
+  // Horizontal swipe on main screens:
+  // - Results list/screen: left = next day, right = previous day (same as ‹ ›).
+  //   Suppressed while the month calendar is open, and never if the gesture
+  //   starts on the calendar grid or a horizontal scroller.
+  // - Standings / Statistics / Settings (and Results chrome outside the results
+  //   panel): left = next bottom-nav tab, right = previous.
+  //   Day swipe wins over tab swipe when the gesture is on the results screen.
+  // Detail views keep the swipe-back handler above and are not tab-navigated.
+  (function bindMainSwipes() {
+    const shell = $('.app-shell');
+    if (!shell) return;
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+    let startTarget = null;
+    const MIN_DX = 50;
+
+    function isHorizontalScroller(node) {
+      let el = node?.nodeType === 1 ? node : node?.parentElement;
+      while (el && el !== document.documentElement) {
+        // .content is the vertical page scroller (overflow-x computes to auto).
+        // It is not a horizontal scroller we should yield to.
+        if (!el.classList.contains('content') && !el.classList.contains('app-shell')) {
+          if (el.scrollWidth > el.clientWidth + 4) {
+            const ox = getComputedStyle(el).overflowX;
+            if (ox === 'auto' || ox === 'scroll' || ox === 'overlay') return true;
+          }
+        }
+        el = el.parentElement;
+      }
+      return false;
+    }
+
+    function swipeExcluded(target) {
+      if (!target?.closest) return false;
+      if (target.closest('#leagueCalendar, .month-cal, [data-cal-date], .cal-day, [data-cal-nav], .player-box-scroll, .stats-boards, .boxscore-table')) {
+        return true;
+      }
+      return isHorizontalScroller(target);
+    }
+
+    shell.addEventListener('touchstart', event => {
+      if (DETAIL_PANELS.has(state.currentPanel)) return;
+      if ((event.touches?.length || 0) !== 1) {
+        tracking = false;
+        return;
+      }
+      const touch = event.changedTouches?.[0];
+      if (!touch) return;
+      startX = touch.clientX;
+      startY = touch.clientY;
+      startTarget = event.target;
+      tracking = true;
+    }, { passive: true });
+
+    shell.addEventListener('touchcancel', () => {
+      tracking = false;
+    }, { passive: true });
+
+    shell.addEventListener('touchend', event => {
+      if (!tracking || DETAIL_PANELS.has(state.currentPanel)) {
+        tracking = false;
+        return;
+      }
+      tracking = false;
+      if ((event.touches?.length || 0) > 0) return;
+      const touch = event.changedTouches?.[0];
+      if (!touch) return;
+      const dx = touch.clientX - startX;
+      const dy = touch.clientY - startY;
+      if (Math.abs(dx) < MIN_DX || Math.abs(dx) <= Math.abs(dy)) return;
+      if (swipeExcluded(startTarget)) return;
+
+      const dir = dx < 0 ? 1 : -1;
+      const onResultsScreen = state.currentPanel === 'results'
+        && Boolean(startTarget?.closest?.('[data-panel="results"]'));
+      if (onResultsScreen) {
+        if (state.calOpen) return;
+        const date = live?.shiftDate?.(state.selectedDate, dir);
+        if (date) loadGames(date, { toastOnDone: true });
+        return;
+      }
+      if (!MAIN_TABS.includes(state.currentPanel)) return;
+      const index = MAIN_TABS.indexOf(state.currentPanel);
+      const next = MAIN_TABS[index + dir];
+      if (next) activateMainTab(next);
     }, { passive: true });
   })();
 
