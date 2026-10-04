@@ -6,12 +6,12 @@ window.NHL_API_BASE = 'https://api-web.nhle.com';
 // Placeholder until TLS: http://31.77.11.22:8765
 window.NHL_CACHE_BASE = '';
 // Optional login + favorites API (same aiohttp as the game cache).
-// GitHub Pages is HTTPS. The VPS only has HTTP (nginx :80 → 127.0.0.1:8765);
-// disciplinary-coffee.play2go.cloud does not resolve publicly and there is no TLS cert.
-// Leave this empty so Pages never calls http://31.77.11.22 (mixed content).
-// Set an https origin here when one exists. From an http page, the client
-// falls back to location.origin so a host that can reach /api works.
-window.NHL_AUTH_BASE = '';
+// HTTPS origin so GitHub Pages (https://chuikoff.github.io) can call it.
+// nginx on hockeydigest.duckdns.org proxies /api to 127.0.0.1:8765.
+// When this is set, NHL_AUTH.available() is true and the Telegram/Max
+// login buttons are enabled. From an http page with this empty, the client
+// falls back to location.origin.
+window.NHL_AUTH_BASE = 'https://hockeydigest.duckdns.org';
 window.NHL_STATS_BASE = 'https://api.nhle.com';
 window.ESPN_SITE_API = 'https://site.api.espn.com';
 window.ESPN_WEB_API = 'https://site.web.api.espn.com';
