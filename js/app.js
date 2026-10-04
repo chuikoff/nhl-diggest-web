@@ -87,11 +87,20 @@
     }, 250);
   }
 
+  function teamListFrom(source) {
+    if (!source) return [];
+    if (Array.isArray(source)) return source;
+    if (Array.isArray(source.teams)) return source.teams;
+    if (Array.isArray(source.favorite_teams)) return source.favorite_teams;
+    return [];
+  }
+
   function mergeFavorites(server, local) {
     const teams = [];
     const seenTeams = new Set();
     const takeTeam = (team) => {
-      const abbrev = String(team?.abbrev || '').trim().toUpperCase();
+      if (typeof team === 'string') team = { abbrev: team };
+      const abbrev = String(team?.abbrev || team?.short || '').trim().toUpperCase();
       if (!abbrev) return;
       if (seenTeams.has(abbrev)) {
         const prev = teams.find(item => item.abbrev === abbrev);
@@ -108,8 +117,9 @@
         logo: team.logo || ''
       });
     };
-    (server?.teams || []).forEach(takeTeam);
-    (local?.teams || []).forEach(takeTeam);
+    teamListFrom(server).forEach(takeTeam);
+    (Array.isArray(server?.favorite_teams) ? server.favorite_teams : []).forEach(takeTeam);
+    teamListFrom(local).forEach(takeTeam);
     const players = [];
     const seenPlayers = new Set();
     const takePlayer = (player) => {
@@ -210,9 +220,16 @@
     });
     closeLoginSheet();
     try {
-      const server = await auth.getFavorites();
+      // Prefer favorites returned with the login poll (same users row).
+      // Do not PUT here: a follow-up write used to replace favorite_teams
+      // with whatever was already on this device and could drop the bot list.
+      const inline = payload.favorites;
+      const server = inline
+        ? inline
+        : await auth.getFavorites();
       const merged = mergeFavorites(server, loadFavorites());
-      saveFavorites(merged, { sync: true });
+      saveFavorites(merged, { sync: false });
+      renderFavoritesSettings(merged);
     } catch (err) {
       console.warn('[NHL Diggest] favorites merge failed', err);
       toast('Вход выполнен, избранное не удалось прочитать');
@@ -220,7 +237,6 @@
       return;
     }
     renderAccount();
-    renderFavoritesSettings();
     try { renderGames(); } catch { /* list may not be ready */ }
     toast('Вход выполнен');
   }
@@ -274,18 +290,21 @@
   async function restoreAccountFavorites() {
     renderAccount();
     const auth = window.NHL_AUTH;
-    if (hasMessengerUser() || !auth?.loggedIn?.()) return;
+    if (hasMessengerUser() || !auth?.loggedIn?.()) {
+      renderFavoritesSettings();
+      return;
+    }
     try {
       const server = await auth.getFavorites();
-      saveFavorites({
-        teams: server.teams || [],
-        players: server.players || []
-      }, { sync: false });
-      renderFavoritesSettings();
+      const merged = mergeFavorites(server, loadFavorites());
+      // Read-only: never replace the server row from a page load.
+      saveFavorites(merged, { sync: false });
+      renderFavoritesSettings(merged);
       try { renderGames(); } catch { /* ignore */ }
     } catch (err) {
       if (err?.status !== 401) console.warn('[NHL Diggest] session restore failed', err);
       renderAccount();
+      renderFavoritesSettings();
     }
   }
 
@@ -454,11 +473,11 @@
     return `<button type="button" class="fav-toggle${on ? ' is-on' : ''}" data-fav-kind="${kind}" ${attrs} aria-pressed="${on ? 'true' : 'false'}" title="${title}" aria-label="${title}">${label}</button>`;
   }
 
-  function renderFavoritesSettings() {
+  function renderFavoritesSettings(fav) {
     const teamsNode = document.getElementById('favTeamsList');
     const playersNode = document.getElementById('favPlayersList');
     if (!teamsNode || !playersNode) return;
-    const fav = loadFavorites();
+    if (!fav) fav = loadFavorites();
     if (!fav.teams.length) {
       teamsNode.innerHTML = `<div class="favorites-empty">Нет избранных команд — добавьте со страницы клуба.</div>`;
     } else {
@@ -2039,7 +2058,7 @@
       }
     }
     if (name === 'standings') loadStandingsLive();
-    if (name === 'settings') { renderFavoritesSettings(); syncDonateSettingsVisibility(); renderAccount(); }
+    if (name === 'settings') { restoreAccountFavorites(); syncDonateSettingsVisibility(); }
   }
 
   $$('.nav-item').forEach(button => button.addEventListener('click', () => {
@@ -2324,7 +2343,7 @@
   document.getElementById('favPlayersList')?.addEventListener('click', handleSettingsFavoritesEvent);
   document.getElementById('favTeamsList')?.addEventListener('click', handleSettingsFavoritesEvent);
 
-  $('#profileButton').addEventListener('click', () => { showPanel('settings'); renderFavoritesSettings(); syncDonateSettingsVisibility(); renderAccount(); });
+  $('#profileButton').addEventListener('click', () => { showPanel('settings'); syncDonateSettingsVisibility(); restoreAccountFavorites(); });
   const donateBtn = document.getElementById('tgDonateBtn');
   if (donateBtn) {
     donateBtn.addEventListener('click', () => openDonateBot());

@@ -119,6 +119,7 @@
       const data = await request('/api/auth/favorites');
       return {
         teams: Array.isArray(data?.teams) ? data.teams : [],
+        favorite_teams: Array.isArray(data?.favorite_teams) ? data.favorite_teams : [],
         players: Array.isArray(data?.players) ? data.players : []
       };
     },

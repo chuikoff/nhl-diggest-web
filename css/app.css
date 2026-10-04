@@ -1531,49 +1531,121 @@ button.retired-row.player-hit:focus-visible .retired-name {
 :root[data-theme="light"] .login-sheet { background: rgba(23, 34, 49, .35); }
 :root[data-theme="light"] .login-primary { color: #1a1404; }
 
-/* Installed PWA (standalone): viewport-fit=cover draws under the status bar
-   and home indicator. Pad the header by safe-area-inset-top so the logo is
-   not clipped, and let the tab bar sit on the home indicator — background
-   flush to the screen edge, no extra blank band. Not used in the Telegram sheet. */
+/* Installed PWA (standalone). On iOS the small/dynamic viewport
+   (100svh, 100dvh, 100%, inset:0, -webkit-fill-available) is short by the
+   status-bar inset, while 100vh/100lvh is the physical screen. A shell and
+   a fixed tab bar anchored to that short viewport stop above the glass,
+   leaving a blank band under the bar. Size the shell with the large
+   viewport and keep the bar as the last flex child so it is flush with
+   the bottom edge. Only the home-indicator inset is padding inside the bar.
+   Not applied in a browser tab (lvh there includes retracted toolbars)
+   or in the Telegram sheet. */
 @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
   html, body {
-    height: 100%;
-    min-height: 100%;
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
+    height: 100vh;
+    height: 100lvh;
+    min-height: 100vh;
+    min-height: 100lvh;
+    max-height: 100vh;
+    max-height: 100lvh;
+    margin: 0;
     padding: 0;
   }
   .app-shell {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
     width: 100%;
     max-width: none;
-    height: auto;
-    min-height: 0;
+    height: 100vh;
+    height: 100lvh;
+    min-height: 100vh;
+    min-height: 100lvh;
     margin: 0;
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    padding-bottom: calc(50px + max(8px, env(safe-area-inset-bottom, 0px)));
+    padding-bottom: 0;
   }
   .topbar {
     height: calc(80px + env(safe-area-inset-top, 0px));
     padding-top: calc(19px + env(safe-area-inset-top, 0px));
   }
   .bottom-nav {
-    bottom: 0;
-    left: 0;
-    right: 0;
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
     transform: none;
     width: 100%;
     max-width: none;
+    margin: 0;
+    margin-top: auto;
     border-radius: 0;
-    padding: 8px 6px max(8px, env(safe-area-inset-bottom, 0px));
+    flex: 0 0 auto;
+    padding: 8px 6px env(safe-area-inset-bottom, 0px);
   }
   .toast {
-    bottom: calc(58px + max(8px, env(safe-area-inset-bottom, 0px)));
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
   }
   .app-shell.is-detail {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+}
+html.is-standalone,
+html.is-standalone body {
+  height: 100vh;
+  height: 100lvh;
+  min-height: 100vh;
+  min-height: 100lvh;
+  max-height: 100vh;
+  max-height: 100lvh;
+  margin: 0;
+  padding: 0;
+}
+html.is-standalone .app-shell {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: auto;
+  width: 100%;
+  max-width: none;
+  height: 100vh;
+  height: 100lvh;
+  min-height: 100vh;
+  min-height: 100lvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding-bottom: 0;
+}
+html.is-standalone .topbar {
+  height: calc(80px + env(safe-area-inset-top, 0px));
+  padding-top: calc(19px + env(safe-area-inset-top, 0px));
+}
+html.is-standalone .bottom-nav {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  margin-top: auto;
+  border-radius: 0;
+  flex: 0 0 auto;
+  padding: 8px 6px env(safe-area-inset-bottom, 0px);
+}
+html.is-standalone .toast {
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+}
+html.is-standalone .app-shell.is-detail {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
