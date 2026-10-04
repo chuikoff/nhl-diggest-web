@@ -1460,3 +1460,12 @@ button.retired-row.player-hit:focus-visible .retired-name {
 :root[data-theme="light"] .cal-day:not(:disabled):focus-visible { background: rgba(29, 90, 150, .08); }
 :root[data-theme="light"] .schedule-row.is-openable:hover,
 :root[data-theme="light"] .schedule-row.is-openable:focus-visible { background: rgba(169, 112, 0, .08); }
+
+
+/* Four-item bottom navigation: distribute the remaining tabs across the full bar. */
+.bottom-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.nav-item { min-width: 0; width: 100%; }
+.nav-item span:last-child { max-width: none; white-space: nowrap; }
+
+/* Detail panels hide the fixed nav and therefore do not reserve its old height. */
+.app-shell.is-detail { padding-bottom: 0; }
