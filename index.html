@@ -21,16 +21,16 @@
       } catch (e) { /* ignore */ }
     })();
   </script>
-  <link rel="stylesheet" href="./css/app.css?v=20261004c">
+  <link rel="stylesheet" href="./css/app.css?v=20261004d">
   <!-- Telegram bridge (window.Telegram.WebApp). Soft-fail so browser preview still works. -->
   <script src="https://telegram.org/js/telegram-web-app.js" onerror="console.warn('[NHL Diggest] Telegram bridge failed to load')"></script>
   <!-- Max bridge (window.WebApp). Soft-fail so browser / Telegram still work if CDN is blocked. -->
   <script src="https://st.max.ru/js/max-web-app.js" onerror="console.warn('[NHL Diggest] Max bridge failed to load')"></script>
-  <script src="./js/config.js?v=20261004c"></script>
-  <script src="./js/mock-data.js?v=20261004c"></script>
-  <script src="./js/api.js?v=20261004c"></script>
-  <script src="./js/bridge.js?v=20261004c"></script>
-  <script defer src="./js/app.js?v=20261004c"></script>
+  <script src="./js/config.js?v=20261004d"></script>
+  <script src="./js/mock-data.js?v=20261004d"></script>
+  <script src="./js/api.js?v=20261004d"></script>
+  <script src="./js/bridge.js?v=20261004d"></script>
+  <script defer src="./js/app.js?v=20261004d"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -90,19 +90,24 @@
       </section>
 
       <section class="panel" data-panel="stats" aria-labelledby="statsTitle">
-        <div class="section-heading"><div><p class="eyebrow accent">LEAGUE LEADERS</p><h2 id="statsTitle">Статистика</h2></div><span class="pill">СЕЗОН</span></div>
-        <div class="segmented" id="statsGroupTabs" role="tablist" aria-label="Группы статистики"></div>
-        <div class="segmented stats-boards" id="statsBoardTabs" role="tablist" aria-label="Показатели"></div>
-        <p class="panel-note" id="statsNote"></p>
-        <div id="statsList" class="leader-list"></div>
-      </section>
-
-      <section class="panel" data-panel="alltime" aria-labelledby="alltimeTitle">
-        <div class="section-heading"><div><p class="eyebrow accent">ALL-TIME · CAREER</p><h2 id="alltimeTitle">За всё время</h2></div><span class="pill">КАРЬЕРА</span></div>
-        <div class="segmented" id="alltimeGroupTabs" role="tablist" aria-label="Группы карьеры"></div>
-        <div class="segmented stats-boards" id="alltimeBoardTabs" role="tablist" aria-label="Показатели карьеры"></div>
-        <p class="panel-note" id="alltimeNote"></p>
-        <div id="alltimeList" class="leader-list"></div>
+        <div class="section-heading"><div><p class="eyebrow accent">LEAGUE LEADERS</p><h2 id="statsTitle">Статистика</h2></div><span class="pill" id="statsPeriodLabel">СЕЗОН</span></div>
+        <div class="segmented stats-period-tabs" id="statsPeriodTabs" role="tablist" aria-label="Период статистики">
+          <button class="segment is-selected" data-stats-period="season" role="tab" aria-selected="true" aria-controls="statsSeasonPanel">Сезон</button>
+          <button class="segment" data-stats-period="alltime" role="tab" aria-selected="false" aria-controls="statsAlltimePanel">За всё время</button>
+        </div>
+        <div class="stats-period-panel" id="statsSeasonPanel" data-stats-period-panel="season" role="tabpanel">
+          <div class="segmented" id="statsGroupTabs" role="tablist" aria-label="Группы статистики"></div>
+          <div class="segmented stats-boards" id="statsBoardTabs" role="tablist" aria-label="Показатели"></div>
+          <p class="panel-note" id="statsNote"></p>
+          <div id="statsList" class="leader-list"></div>
+        </div>
+        <div class="stats-period-panel" id="statsAlltimePanel" data-stats-period-panel="alltime" role="tabpanel" hidden>
+          <div class="section-heading"><div><p class="eyebrow accent">ALL-TIME · CAREER</p><h2 id="alltimeTitle">За всё время</h2></div><span class="pill">КАРЬЕРА</span></div>
+          <div class="segmented" id="alltimeGroupTabs" role="tablist" aria-label="Группы карьеры"></div>
+          <div class="segmented stats-boards" id="alltimeBoardTabs" role="tablist" aria-label="Показатели карьеры"></div>
+          <p class="panel-note" id="alltimeNote"></p>
+          <div id="alltimeList" class="leader-list"></div>
+        </div>
       </section>
 
       <section class="panel" data-panel="settings" aria-labelledby="settingsTitle">
@@ -129,7 +134,6 @@
       <button class="nav-item is-active" data-nav="results"><span class="nav-icon">▣</span><span>Результаты</span></button>
       <button class="nav-item" data-nav="standings"><span class="nav-icon">☷</span><span>Турнирная</span></button>
       <button class="nav-item" data-nav="stats"><span class="nav-icon">⌁</span><span>Статистика</span></button>
-      <button class="nav-item" data-nav="alltime"><span class="nav-icon">∞</span><span>За всё время</span></button>
       <button class="nav-item" data-nav="settings"><span class="nav-icon">⚙</span><span>Настройки</span></button>
     </nav>
   </div>

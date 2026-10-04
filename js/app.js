@@ -291,6 +291,7 @@
     standingsNote: '',
     statsGroup: 'skaters',
     statsBoard: 'points',
+    statsPeriod: 'season',
     alltimeGroup: 'skaters',
     alltimeBoard: 'points',
     navStack: [],
@@ -1667,6 +1668,21 @@
     }
   }
 
+  function setStatsPeriod(period) {
+    const next = period === 'alltime' ? 'alltime' : 'season';
+    state.statsPeriod = next;
+    const periodLabel = $('#statsPeriodLabel');
+    if (periodLabel) periodLabel.textContent = next === 'alltime' ? 'КАРЬЕРА' : 'СЕЗОН';
+    $$('[data-stats-period]').forEach(button => {
+      const selected = button.dataset.statsPeriod === next;
+      button.classList.toggle('is-selected', selected);
+      button.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+    $$('[data-stats-period-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.statsPeriodPanel !== next;
+    });
+  }
+
   function renderAlltimeTabs() {
     const groupTabs = $('#alltimeGroupTabs');
     const boardTabs = $('#alltimeBoardTabs');
@@ -1794,11 +1810,14 @@
   $$('.nav-item').forEach(button => button.addEventListener('click', () => {
     showPanel(button.dataset.nav);
     if (button.dataset.nav === 'stats') {
-      // Drop only leaderboard entries so season flips / old PREV responses cannot stick.
-      live?.clearStatsCache?.();
-      loadStatsLive();
+      if (state.statsPeriod === 'alltime') {
+        loadAlltimeLive();
+      } else {
+        // Drop only leaderboard entries so season flips / old PREV responses cannot stick.
+        live?.clearStatsCache?.();
+        loadStatsLive();
+      }
     }
-    if (button.dataset.nav === 'alltime') loadAlltimeLive();
     if (button.dataset.nav === 'standings') loadStandingsLive();
     if (button.dataset.nav === 'settings') { renderFavoritesSettings(); syncDonateSettingsVisibility(); }
   }));
@@ -1807,6 +1826,18 @@
     $$('[data-standings-tab]').forEach(item => item.classList.toggle('is-selected', item === button));
     renderStandings(button.dataset.standingsTab);
   }));
+
+  $('#statsPeriodTabs')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-stats-period]');
+    if (!button) return;
+    setStatsPeriod(button.dataset.statsPeriod);
+    if (state.statsPeriod === 'alltime') {
+      loadAlltimeLive();
+    } else {
+      live?.clearStatsCache?.();
+      loadStatsLive();
+    }
+  });
 
   $('#statsGroupTabs')?.addEventListener('click', event => {
     const button = event.target.closest('[data-stats-group]');
