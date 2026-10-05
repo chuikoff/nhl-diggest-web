@@ -1938,7 +1938,7 @@
 
   async function gameDetail(game) {
     const key = `detail:${game.id}`;
-    return cached(key, async () => {
+    const detail = await cached(key, async () => {
       // Prefer VPS cache for finished (or unknown-status deep-link) games.
       if (gameLooksFinished(game) || !game.status) {
         const cachedPayload = await fetchCacheGamePayload(game.id);
@@ -1975,12 +1975,21 @@
         ]);
         const detail = { source: 'espn', ...normalizeEspnDetail(summary, game, rosterIndex) };
         detail.recap = extractEspnGameRecap(summary.videos || []) || extractNhlGameRecap(game);
+        // ESPN summaries often omit individual goal clips; fill from VPS/NHL.
+        await enrichGoalHighlights(detail, game);
         return detail;
       } catch (error) {
         console.warn('[NHL Diggest] ESPN game detail failed', error);
         return null;
       }
     });
+    // In-memory cache can keep a pre-refresh snapshot (missing late P3 clips).
+    // Re-enrich on every open until highlight.url is present for all goals.
+    if (detail?.scoring?.length && scoringMissingHighlights(detail.scoring)) {
+      vpsHighlightRefreshAttempted.delete(String(game?.id ?? ''));
+      await enrichGoalHighlights(detail, game);
+    }
+    return detail;
   }
 
 
@@ -2020,13 +2029,26 @@
     return (scoring || []).some(goal => !goal?.highlight?.url);
   }
 
+  function normalizeClock(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const m = raw.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return raw;
+    return `${Number(m[1])}:${m[2]}`;
+  }
+
   function matchHighlightPoolIndex(entry, pool) {
     const nameKey = normalizedName(entry.scorer) || normalizedName(entry.scorerShort);
     const id = entry.scorerId != null && !entry.scorerEspn ? String(entry.scorerId) : '';
-    const time = String(entry.time || '');
+    const time = normalizeClock(entry.time);
     return pool.findIndex(item => {
-      if (time && item.time && time !== item.time) return false;
-      if (id && item.playerId && id === item.playerId) return true;
+      const itemTime = normalizeClock(item.time);
+      // Player id is authoritative; do not reject on 3:15 vs 03:15 clock drift.
+      if (id && item.playerId && id === item.playerId) {
+        if (time && itemTime && time !== itemTime) return false;
+        return true;
+      }
+      if (time && itemTime && time !== itemTime) return false;
       if (nameKey && item.nameKey === nameKey) return true;
       const last = nameKey.split(' ').filter(Boolean).pop() || '';
       const itemLast = item.nameKey.split(' ').filter(Boolean).pop() || '';

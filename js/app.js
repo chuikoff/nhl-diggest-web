@@ -545,8 +545,65 @@
     alltimeBoard: 'points',
     navStack: [],
     currentPanel: 'results',
+    activeTab: 'results',
     loading: false
   };
+
+  // Per-tab place memory: scroll + optional detail overlay so switching tabs
+  // keeps the bottom bar usable and restores where the user left each tab.
+  const MAIN_TABS = ['results', 'standings', 'stats', 'settings'];
+  const tabMemory = Object.fromEntries(MAIN_TABS.map(tab => [tab, {
+    scroll: 0,
+    detail: null // { kind: 'game'|'team'|'player', id/ref, scroll }
+  }]));
+
+  function contentScroller() {
+    return document.querySelector('.content');
+  }
+
+  function saveActiveTabPlace() {
+    const tab = state.activeTab;
+    if (!MAIN_TABS.includes(tab)) return;
+    const scroller = contentScroller();
+    const mem = tabMemory[tab];
+    if (!mem) return;
+    if (DETAIL_PANELS.has(state.currentPanel)) {
+      if (mem.detail) mem.detail.scroll = scroller ? scroller.scrollTop : 0;
+    } else {
+      mem.scroll = scroller ? scroller.scrollTop : 0;
+      mem.detail = null;
+    }
+  }
+
+  function restoreScroller(top) {
+    const scroller = contentScroller();
+    if (!scroller) return;
+    const y = Number(top) || 0;
+    requestAnimationFrame(() => {
+      scroller.scrollTop = y;
+      requestAnimationFrame(() => { scroller.scrollTop = y; });
+    });
+  }
+
+  function markNavTab(tabName) {
+    const tab = MAIN_TABS.includes(tabName) ? tabName : state.activeTab;
+    $$('.nav-item').forEach(button => {
+      const active = button.dataset.nav === tab;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-current', active ? 'page' : 'false');
+    });
+  }
+
+  function rememberDetailForTab(detail) {
+    const tab = state.activeTab;
+    if (!MAIN_TABS.includes(tab)) return;
+    const scroller = contentScroller();
+    // Capture list scroll before leaving the tab root.
+    if (!DETAIL_PANELS.has(state.currentPanel)) {
+      tabMemory[tab].scroll = scroller ? scroller.scrollTop : 0;
+    }
+    tabMemory[tab].detail = { ...detail, scroll: 0 };
+  }
 
   function formatDate(dateKey) {
     return new Intl.DateTimeFormat('ru-RU', {
@@ -1116,36 +1173,38 @@
       <button type="button" class="recap-link" data-open-url="${safe}">▶ ${escapeAttr(recap.title || 'Смотреть обзор')}</button></section>`;
   }
 
-  function showPanel(name, { push = false } = {}) {
+  function showPanel(name, { push = false, restoreScroll = null } = {}) {
     if (push && state.currentPanel && state.currentPanel !== name) {
       state.navStack.push(state.currentPanel);
     }
     if (!DETAIL_PANELS.has(name)) {
       state.navStack = [];
+      if (MAIN_TABS.includes(name)) state.activeTab = name;
     }
     state.currentPanel = name;
     $$('.panel').forEach(panel => panel.classList.toggle('is-active', panel.dataset.panel === name));
-    $$('.nav-item').forEach(button => {
-      const active = button.dataset.nav === name;
-      button.classList.toggle('is-active', active);
-      button.setAttribute('aria-current', active ? 'page' : 'false');
-    });
+    // Bottom tab bar stays visible on detail; keep the originating tab highlighted.
+    markNavTab(DETAIL_PANELS.has(name) ? state.activeTab : name);
     $('.app-shell').classList.toggle('is-detail', DETAIL_PANELS.has(name));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (restoreScroll != null) {
+      restoreScroller(restoreScroll);
+    } else if (DETAIL_PANELS.has(name)) {
+      restoreScroller(0);
+    }
   }
 
   function goBack() {
     closeGoalVideos();
-    const prev = state.navStack.pop() || 'results';
+    const tab = state.activeTab || 'results';
+    const mem = tabMemory[tab];
+    if (mem) mem.detail = null;
+    const prev = state.navStack.pop() || tab || 'results';
     state.currentPanel = prev;
     $$('.panel').forEach(panel => panel.classList.toggle('is-active', panel.dataset.panel === prev));
-    $$('.nav-item').forEach(button => {
-      const active = button.dataset.nav === prev;
-      button.classList.toggle('is-active', active);
-      button.setAttribute('aria-current', active ? 'page' : 'false');
-    });
+    if (!DETAIL_PANELS.has(prev) && MAIN_TABS.includes(prev)) state.activeTab = prev;
+    markNavTab(state.activeTab);
     $('.app-shell').classList.toggle('is-detail', DETAIL_PANELS.has(prev));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    restoreScroller(DETAIL_PANELS.has(prev) ? 0 : (mem?.scroll || 0));
   }
 
 
@@ -1208,7 +1267,9 @@
       }
       return;
     }
-    showPanel('game-detail', { push: true });
+    rememberDetailForTab({ kind: 'game', id: String(game.id) });
+    state.navStack = [state.activeTab || 'results'];
+    showPanel('game-detail', { push: false });
     $('#gameDetailContent').innerHTML = `<div class="detail-notice"><strong>Загрузка матча…</strong><span>${game.away.name} — ${game.home.name}</span></div>`;
     let detail = null;
     if (live) {
@@ -1751,7 +1812,9 @@
   async function openTeamDetail(abbrev, seed = {}) {
     const key = String(abbrev || seed.short || '').toUpperCase();
     if (!key) return;
-    showPanel('team-detail', { push: true });
+    rememberDetailForTab({ kind: 'team', id: key, seed: { short: key, name: seed.name || '' } });
+    state.navStack = [state.activeTab || 'results'];
+    showPanel('team-detail', { push: false });
     const content = $('#teamDetailContent');
     content.innerHTML = `<div class="detail-notice"><strong>Загрузка команды…</strong><span>${seed.name || key}</span></div>`;
     let team = null;
@@ -1802,7 +1865,13 @@
       toast('Игрок недоступен');
       return;
     }
-    showPanel('player-detail', { push: true });
+    rememberDetailForTab({
+      kind: 'player',
+      id: String(nhlId || espnId || `${abbrev}:${name}`),
+      ref: { nhlId, espnId, name, abbrev }
+    });
+    state.navStack = [state.activeTab || 'results'];
+    showPanel('player-detail', { push: false });
     const content = $('#playerDetailContent');
     content.innerHTML = `<div class="detail-notice"><strong>Загрузка игрока…</strong><span>${name || 'NHL'}</span></div>`;
     let player = null;
@@ -2059,11 +2128,59 @@
     return true;
   }
 
-  const MAIN_TABS = ['results', 'standings', 'stats', 'settings'];
+  async function restoreTabDetail(detail) {
+    if (!detail?.kind) return false;
+    if (detail.kind === 'game' && detail.id) {
+      await openGameDetail(detail.id, { silent: true });
+      restoreScroller(detail.scroll || 0);
+      return true;
+    }
+    if (detail.kind === 'team' && detail.id) {
+      await openTeamDetail(detail.id, detail.seed || {});
+      restoreScroller(detail.scroll || 0);
+      return true;
+    }
+    if (detail.kind === 'player') {
+      await openPlayerDetail(detail.ref || {});
+      restoreScroller(detail.scroll || 0);
+      return true;
+    }
+    return false;
+  }
 
-  function activateMainTab(name) {
+  async function activateMainTab(name) {
     if (!MAIN_TABS.includes(name)) return;
-    showPanel(name);
+    // Tapping the active tab while a detail is open returns to that tab's root.
+    if (name === state.activeTab && DETAIL_PANELS.has(state.currentPanel)) {
+      goBack();
+      if (name === 'settings') { restoreAccountFavorites(); syncDonateSettingsVisibility(); syncAppCacheVersionLabel(); }
+      return;
+    }
+    if (name === state.activeTab && !DETAIL_PANELS.has(state.currentPanel)) {
+      // Same root tab: nothing to do.
+      if (name === 'settings') { restoreAccountFavorites(); syncDonateSettingsVisibility(); syncAppCacheVersionLabel(); }
+      return;
+    }
+    // Persist current tab place (list scroll or open detail) before switching.
+    saveActiveTabPlace();
+    const mem = tabMemory[name] || { scroll: 0, detail: null };
+    state.activeTab = name;
+
+    if (mem.detail) {
+      // Re-open the detail this tab left on; open* will refresh rememberDetailForTab.
+      const kept = { ...mem.detail };
+      const ok = await restoreTabDetail(kept);
+      if (ok) {
+        // open* resets detail.scroll to 0 via rememberDetailForTab — put it back.
+        if (tabMemory[name]?.detail) tabMemory[name].detail.scroll = kept.scroll || 0;
+        restoreScroller(kept.scroll || 0);
+        if (name === 'settings') { restoreAccountFavorites(); syncDonateSettingsVisibility(); syncAppCacheVersionLabel(); }
+        return;
+      }
+      mem.detail = null;
+    }
+
+    showPanel(name, { restoreScroll: mem.scroll || 0 });
     if (name === 'stats') {
       if (state.statsPeriod === 'alltime') {
         loadAlltimeLive();
@@ -2359,7 +2476,7 @@
   document.getElementById('favPlayersList')?.addEventListener('click', handleSettingsFavoritesEvent);
   document.getElementById('favTeamsList')?.addEventListener('click', handleSettingsFavoritesEvent);
 
-  $('#profileButton').addEventListener('click', () => { showPanel('settings'); syncDonateSettingsVisibility(); restoreAccountFavorites(); });
+  $('#profileButton').addEventListener('click', () => { activateMainTab('settings'); });
   const donateBtn = document.getElementById('tgDonateBtn');
   if (donateBtn) {
     donateBtn.addEventListener('click', () => openDonateBot());
