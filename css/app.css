@@ -484,33 +484,10 @@
 .schedule-row {
   grid-template-columns: 58px 1fr auto;
 }
-.schedule-row.has-view {
+.schedule-row.has-remind {
   grid-template-columns: 52px 1fr auto auto;
   gap: 6px;
 }
-.schedule-row.has-view.has-remind {
-  grid-template-columns: 48px 1fr auto auto auto;
-  gap: 5px;
-}
-.schedule-row.has-remind:not(.has-view) {
-  grid-template-columns: 52px 1fr auto auto;
-  gap: 6px;
-}
-.schedule-open {
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 800;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-.schedule-open span { font-size: 14px; line-height: 1; }
-.schedule-open.is-unavailable {
-  color: var(--dim);
-  font-weight: 700;
-}
-.schedule-row.is-unavailable { opacity: .9; }
 .remind-btn {
   border: 1px solid var(--line);
   background: var(--surface-2);
@@ -1366,33 +1343,9 @@ button.retired-row.player-hit:focus-visible .retired-name {
 }
 .retired-open {
   margin-left: auto;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.2;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-.retired-open span { font-size: 16px; line-height: 1; }
-.retired-open.is-unavailable,
-.retired-row.is-unavailable .retired-open {
   color: var(--dim);
-  font-weight: 700;
-  font-size: 10px;
-  letter-spacing: .2px;
-}
-.retired-row.is-unavailable {
-  opacity: .92;
-}
-button.retired-row {
-  width: 100%;
-  border: 0;
-  background: color-mix(in srgb, var(--card, #1c1c1e) 92%, #fff 8%);
-  color: inherit;
-  font: inherit;
-  text-align: left;
+  font-size: 18px;
+  line-height: 1;
 }
 
 /* Month calendar — results day jump + team schedule. Does not touch match cards. */
