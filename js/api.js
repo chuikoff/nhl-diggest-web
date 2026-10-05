@@ -1943,7 +1943,11 @@
       if (gameLooksFinished(game) || !game.status) {
         const cachedPayload = await fetchCacheGamePayload(game.id);
         const fromCache = detailFromCachePayload(cachedPayload);
-        if (fromCache) return fromCache;
+        if (fromCache) {
+          // Cache may have been snapshotted before late-goal clips existed.
+          await enrichGoalHighlights(fromCache, game);
+          return fromCache;
+        }
       }
       if (!game.espn) {
         try {
@@ -1958,6 +1962,7 @@
             const espnRecap = await findEspnRecapForGame(game);
             if (espnRecap) detail.recap = espnRecap;
           }
+          await enrichGoalHighlights(detail, game, { landing });
           return detail;
         } catch (error) {
           console.warn('[NHL Diggest] NHL game detail failed', error);
@@ -2001,10 +2006,74 @@
 
   function nhlGoalHighlight(goal) {
     const share = loc(goal?.highlightClipSharingUrl) || loc(goal?.highlightClipSharingUrlFr);
-    if (share) return { url: share, embed: false, source: 'nhl' };
-    const clipId = goal?.highlightClip || goal?.discreteClip;
+    if (share) {
+      const url = /^https?:/i.test(share) ? share : `https://${share}`;
+      return { url, embed: false, source: 'nhl' };
+    }
+    const clipId = goal?.highlightClip || goal?.discreteClip
+      || goal?.highlightClipFr || goal?.discreteClipFr;
     if (clipId) return { url: `https://www.nhl.com/video/c-${clipId}`, embed: false, source: 'nhl' };
     return null;
+  }
+
+  function scoringMissingHighlights(scoring) {
+    return (scoring || []).some(goal => !goal?.highlight?.url);
+  }
+
+  function applyNhlHighlightsFromLanding(scoring, landing) {
+    if (!scoring?.length || !landing) return;
+    const pool = [];
+    (landing.summary?.scoring || []).forEach(period => {
+      (period.goals || []).forEach(goal => {
+        const highlight = nhlGoalHighlight(goal);
+        if (!highlight) return;
+        pool.push({
+          time: String(goal.timeInPeriod || ''),
+          playerId: goal.playerId != null ? String(goal.playerId) : '',
+          nameKey: normalizedName(playerName(goal.firstName, goal.lastName)),
+          highlight
+        });
+      });
+    });
+    scoring.forEach(entry => {
+      if (entry.highlight?.url) return;
+      const nameKey = normalizedName(entry.scorer);
+      const id = entry.scorerId != null && !entry.scorerEspn ? String(entry.scorerId) : '';
+      const time = String(entry.time || '');
+      const idx = pool.findIndex(item => {
+        if (time && item.time && time !== item.time) return false;
+        if (id && item.playerId && id === item.playerId) return true;
+        if (nameKey && item.nameKey === nameKey) return true;
+        const last = nameKey.split(' ').filter(Boolean).pop() || '';
+        const itemLast = item.nameKey.split(' ').filter(Boolean).pop() || '';
+        return last.length > 2 && last === itemLast;
+      });
+      if (idx < 0) return;
+      const [match] = pool.splice(idx, 1);
+      entry.highlight = match.highlight;
+    });
+  }
+
+  async function enrichGoalHighlights(detail, game, { landing = null } = {}) {
+    if (!detail?.scoring?.length || !scoringMissingHighlights(detail.scoring)) return detail;
+    if (landing) {
+      applyNhlHighlightsFromLanding(detail.scoring, landing);
+    } else if (!game?.espn && game?.id) {
+      try {
+        const fresh = await fetchJson(`${NHL()}/v1/gamecenter/${game.id}/landing`);
+        applyNhlHighlightsFromLanding(detail.scoring, fresh);
+      } catch (error) {
+        console.info('[NHL Diggest] NHL highlight refresh skipped', error?.message || error);
+      }
+    }
+    if (!scoringMissingHighlights(detail.scoring)) return detail;
+    try {
+      const summary = await findEspnSummaryForGame(game);
+      if (summary?.videos?.length) attachEspnHighlights(detail.scoring, summary.videos);
+    } catch (error) {
+      console.warn('[NHL Diggest] ESPN highlight enrich failed', error);
+    }
+    return detail;
   }
 
   function isEspnPenaltyPlay(play) {
@@ -3763,19 +3832,24 @@
     return { url, embed: false, title: 'Обзор матча', source: 'nhl' };
   }
 
-  async function findEspnRecapForGame(game) {
+  async function findEspnSummaryForGame(game) {
     if (!game?.startTimeUTC && !game?.away?.short) return null;
+    const dateKey = game.startTimeUTC
+      ? new Date(game.startTimeUTC).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+      : mskDateKey();
+    const events = await scoreEspn(dateKey);
+    const away = String(game.away?.short || '').toUpperCase();
+    const home = String(game.home?.short || '').toUpperCase();
+    const match = events.find(ev => ev.away.short === away && ev.home.short === home)
+      || events.find(ev => [ev.away.short, ev.home.short].includes(away) && [ev.away.short, ev.home.short].includes(home));
+    if (!match) return null;
+    return fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/summary?event=${match.id}`);
+  }
+
+  async function findEspnRecapForGame(game) {
     try {
-      const dateKey = game.startTimeUTC
-        ? new Date(game.startTimeUTC).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-        : mskDateKey();
-      const events = await scoreEspn(dateKey);
-      const away = String(game.away?.short || '').toUpperCase();
-      const home = String(game.home?.short || '').toUpperCase();
-      const match = events.find(ev => ev.away.short === away && ev.home.short === home)
-        || events.find(ev => [ev.away.short, ev.home.short].includes(away) && [ev.away.short, ev.home.short].includes(home));
-      if (!match) return null;
-      const summary = await fetchJson(`${ESPN_SITE()}/apis/site/v2/sports/hockey/nhl/summary?event=${match.id}`);
+      const summary = await findEspnSummaryForGame(game);
+      if (!summary) return null;
       return extractEspnGameRecap(summary.videos || []);
     } catch (error) {
       console.warn('[NHL Diggest] ESPN recap lookup failed', error);
