@@ -6,6 +6,14 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
+  function syncAppCacheVersionLabel() {
+    const node = document.getElementById('appCacheVersion');
+    if (!node) return;
+    const ver = String(window.NHL_APP_VERSION || '').trim();
+    node.textContent = ver || '—';
+  }
+
+
   const DETAIL_PANELS = new Set(['game-detail', 'team-detail', 'player-detail']);
 
   function playerIsRussian(player) {
@@ -2066,7 +2074,7 @@
       }
     }
     if (name === 'standings') loadStandingsLive();
-    if (name === 'settings') { restoreAccountFavorites(); syncDonateSettingsVisibility(); }
+    if (name === 'settings') { restoreAccountFavorites(); syncDonateSettingsVisibility(); syncAppCacheVersionLabel(); }
   }
 
   $$('.nav-item').forEach(button => button.addEventListener('click', () => {
@@ -2356,6 +2364,7 @@
   if (donateBtn) {
     donateBtn.addEventListener('click', () => openDonateBot());
   }
+  syncAppCacheVersionLabel();
   syncDonateSettingsVisibility();
   document.getElementById('accountCard')?.addEventListener('click', event => {
     const btn = event.target.closest?.('[data-login]');

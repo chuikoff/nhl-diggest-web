@@ -2020,6 +2020,20 @@
     return (scoring || []).some(goal => !goal?.highlight?.url);
   }
 
+  function matchHighlightPoolIndex(entry, pool) {
+    const nameKey = normalizedName(entry.scorer) || normalizedName(entry.scorerShort);
+    const id = entry.scorerId != null && !entry.scorerEspn ? String(entry.scorerId) : '';
+    const time = String(entry.time || '');
+    return pool.findIndex(item => {
+      if (time && item.time && time !== item.time) return false;
+      if (id && item.playerId && id === item.playerId) return true;
+      if (nameKey && item.nameKey === nameKey) return true;
+      const last = nameKey.split(' ').filter(Boolean).pop() || '';
+      const itemLast = item.nameKey.split(' ').filter(Boolean).pop() || '';
+      return last.length > 2 && last === itemLast;
+    });
+  }
+
   function applyNhlHighlightsFromLanding(scoring, landing) {
     if (!scoring?.length || !landing) return;
     const pool = [];
@@ -2037,21 +2051,99 @@
     });
     scoring.forEach(entry => {
       if (entry.highlight?.url) return;
-      const nameKey = normalizedName(entry.scorer);
-      const id = entry.scorerId != null && !entry.scorerEspn ? String(entry.scorerId) : '';
-      const time = String(entry.time || '');
-      const idx = pool.findIndex(item => {
-        if (time && item.time && time !== item.time) return false;
-        if (id && item.playerId && id === item.playerId) return true;
-        if (nameKey && item.nameKey === nameKey) return true;
-        const last = nameKey.split(' ').filter(Boolean).pop() || '';
-        const itemLast = item.nameKey.split(' ').filter(Boolean).pop() || '';
-        return last.length > 2 && last === itemLast;
-      });
+      const idx = matchHighlightPoolIndex(entry, pool);
       if (idx < 0) return;
       const [match] = pool.splice(idx, 1);
       entry.highlight = match.highlight;
     });
+  }
+
+  function applyHighlightsFromCachedScoring(scoring, donorScoring) {
+    if (!scoring?.length || !donorScoring?.length) return;
+    const pool = [];
+    donorScoring.forEach(goal => {
+      if (!goal?.highlight?.url) return;
+      pool.push({
+        time: String(goal.time || ''),
+        playerId: goal.scorerId != null ? String(goal.scorerId) : '',
+        nameKey: normalizedName(goal.scorer) || normalizedName(goal.scorerShort),
+        highlight: goal.highlight
+      });
+    });
+    scoring.forEach(entry => {
+      if (entry.highlight?.url) return;
+      const idx = matchHighlightPoolIndex(entry, pool);
+      if (idx < 0) return;
+      const [match] = pool.splice(idx, 1);
+      entry.highlight = match.highlight;
+    });
+  }
+
+  // Browser cannot call api-web.nhle.com (no CORS). VPS can; refresh stale
+  // finished-game snapshots so late P3 clips (e.g. Perreault) get a real URL.
+  const vpsHighlightRefreshAttempted = new Set();
+
+  async function postJson(url, timeoutMs = 45000) {
+    const supportsAbort = typeof AbortController === 'function';
+    const controller = supportsAbort ? new AbortController() : null;
+    const timer = setTimeout(() => controller?.abort?.(), timeoutMs);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        ...(controller ? { signal: controller.signal } : {})
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const text = await response.text();
+      if (!text) return null;
+      try { return JSON.parse(text); } catch { return null; }
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function refreshHighlightsViaVpsCache(detail, game) {
+    const base = CACHE_BASE();
+    const gameId = game?.id;
+    if (!base || gameId == null || gameId === '') return false;
+
+    const mergePayload = payload => {
+      const fresh = detailFromCachePayload(payload);
+      if (!fresh?.scoring?.length) return false;
+      applyHighlightsFromCachedScoring(detail.scoring, fresh.scoring);
+      return !scoringMissingHighlights(detail.scoring);
+    };
+
+    try {
+      const cachedPayload = await fetchCacheGamePayload(gameId);
+      if (cachedPayload && mergePayload(cachedPayload)) return true;
+    } catch (error) {
+      console.info('[NHL Diggest] VPS highlight re-get skipped', error?.message || error);
+    }
+    if (!scoringMissingHighlights(detail.scoring)) return true;
+
+    const key = String(gameId);
+    if (vpsHighlightRefreshAttempted.has(key)) return false;
+    vpsHighlightRefreshAttempted.add(key);
+
+    try {
+      const refreshed = await postJson(`${base}/api/games/${encodeURIComponent(gameId)}/refresh`);
+      if (refreshed && mergePayload(refreshed)) return true;
+    } catch (error) {
+      console.info('[NHL Diggest] VPS single-game refresh skipped', error?.message || error);
+    }
+    if (!scoringMissingHighlights(detail.scoring)) return true;
+
+    try {
+      const start = game.startTimeUTC ? new Date(game.startTimeUTC) : new Date();
+      const day = Number.isNaN(start.getTime()) ? mskDateKey() : mskDateKey(start);
+      await postJson(`${base}/api/games/backfill?date=${encodeURIComponent(day)}&force=1`, 90000);
+      const again = await fetchCacheGamePayload(gameId);
+      if (again && mergePayload(again)) return true;
+    } catch (error) {
+      console.info('[NHL Diggest] VPS day backfill refresh skipped', error?.message || error);
+    }
+    return !scoringMissingHighlights(detail.scoring);
   }
 
   async function enrichGoalHighlights(detail, game, { landing = null } = {}) {
@@ -2066,6 +2158,9 @@
         console.info('[NHL Diggest] NHL highlight refresh skipped', error?.message || error);
       }
     }
+    if (!scoringMissingHighlights(detail.scoring)) return detail;
+    // Stale VPS snapshot + no browser CORS to NHL: refresh via VPS (server-side NHL).
+    await refreshHighlightsViaVpsCache(detail, game);
     if (!scoringMissingHighlights(detail.scoring)) return detail;
     try {
       const summary = await findEspnSummaryForGame(game);
@@ -2123,18 +2218,19 @@
       })
       .filter(Boolean);
     scoring.forEach(goal => {
-      if (goal.highlight) return;
-      const scorerKey = normalizedName(goal.scorer);
-      if (!scorerKey) return;
-      const parts = scorerKey.split(' ').filter(Boolean);
-      const last = parts[parts.length - 1] || '';
-      const idx = pool.findIndex(item => {
+      if (goal.highlight?.url) return;
+      const keys = [normalizedName(goal.scorer), normalizedName(goal.scorerShort)].filter(Boolean);
+      if (!keys.length) return;
+      const idx = pool.findIndex(item => keys.some(scorerKey => {
         if (item.nameKey.includes(scorerKey)) return true;
+        const parts = scorerKey.split(' ').filter(Boolean);
+        const last = parts[parts.length - 1] || '';
+        // "G. Perreault" / "Gabe Perreault" → last token "perreault"
         if (last.length > 2 && item.nameKey.includes(last) && parts.every(part => part.length < 3 || item.nameKey.includes(part))) {
           return true;
         }
         return last.length > 3 && item.nameKey.includes(last);
-      });
+      }));
       if (idx < 0) return;
       const [match] = pool.splice(idx, 1);
       goal.highlight = { url: match.url, embed: match.embed, source: match.source };
