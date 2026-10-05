@@ -1,14 +1,14 @@
 {
   "source": "puckpedia.com",
-  "scrapedAt": "2026-09-30T04:52:00Z",
+  "scrapedAt": "2026-10-05T06:02:11Z",
   "notes": "Public HTML scrape for Mini App offline asset. Team capHit/capSpace = PuckPedia projected figures. Player capHit = current-season roster cap hit; expiry = UFA/RFA year when present. Refresh: python3 scripts/fetch_puckpedia_caps.py",
   "teams": {
     "ANA": {
       "abbrev": "ANA",
       "slug": "anaheim-ducks",
-      "capHit": 103999939,
-      "capSpace": 61,
-      "currentSpace": 0,
+      "capHit": 104452594,
+      "capSpace": 453000,
+      "currentSpace": 3520000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/anaheim-ducks"
     },
@@ -17,25 +17,25 @@
       "slug": "boston-bruins",
       "capHit": 97953073,
       "capSpace": 6046927,
-      "currentSpace": 6050000,
+      "currentSpace": 6210000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/boston-bruins"
     },
     "BUF": {
       "abbrev": "BUF",
       "slug": "buffalo-sabres",
-      "capHit": 102416764,
-      "capSpace": 1583236,
-      "currentSpace": 1580000,
+      "capHit": 101575527,
+      "capSpace": 2424473,
+      "currentSpace": 2490000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/buffalo-sabres"
     },
     "CAR": {
       "abbrev": "CAR",
       "slug": "carolina-hurricanes",
-      "capHit": 95573151,
-      "capSpace": 8426849,
-      "currentSpace": 8430000,
+      "capHit": 93773108,
+      "capSpace": 10226892,
+      "currentSpace": 10500000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/carolina-hurricanes"
     },
@@ -53,7 +53,7 @@
       "slug": "calgary-flames",
       "capHit": 90091666,
       "capSpace": 13908334,
-      "currentSpace": 13910000,
+      "currentSpace": 14280000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/calgary-flames"
     },
@@ -62,25 +62,25 @@
       "slug": "chicago-blackhawks",
       "capHit": 102547907,
       "capSpace": 1452093,
-      "currentSpace": 1450000,
+      "currentSpace": 1490000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/chicago-blackhawks"
     },
     "COL": {
       "abbrev": "COL",
       "slug": "colorado-avalanche",
-      "capHit": 103950684,
-      "capSpace": 49316,
-      "currentSpace": 49000,
+      "capHit": 103851458,
+      "capSpace": 148542,
+      "currentSpace": 152000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/colorado-avalanche"
     },
     "DAL": {
       "abbrev": "DAL",
       "slug": "dallas-stars",
-      "capHit": 103697442,
-      "capSpace": 302558,
-      "currentSpace": 303000,
+      "capHit": 105404659,
+      "capSpace": 1400000,
+      "currentSpace": 2250000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/dallas-stars"
     },
@@ -89,25 +89,25 @@
       "slug": "detroit-red-wings",
       "capHit": 87232082,
       "capSpace": 16767918,
-      "currentSpace": 16770000,
+      "currentSpace": 17210000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/detroit-red-wings"
     },
     "EDM": {
       "abbrev": "EDM",
       "slug": "edmonton-oilers",
-      "capHit": 103696666,
-      "capSpace": 303334,
-      "currentSpace": 303000,
+      "capHit": 104661615,
+      "capSpace": 662000,
+      "currentSpace": 762000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/edmonton-oilers"
     },
     "FLA": {
       "abbrev": "FLA",
       "slug": "florida-panthers",
-      "capHit": 104870714,
-      "capSpace": 871000,
-      "currentSpace": 0,
+      "capHit": 106560147,
+      "capSpace": 2560000,
+      "currentSpace": 2250000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/florida-panthers"
     },
@@ -116,7 +116,7 @@
       "slug": "los-angeles-kings",
       "capHit": 102200000,
       "capSpace": 1800000,
-      "currentSpace": 1800000,
+      "currentSpace": 1850000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/los-angeles-kings"
     },
@@ -125,7 +125,7 @@
       "slug": "minnesota-wild",
       "capHit": 102847499,
       "capSpace": 1152501,
-      "currentSpace": 1150000,
+      "currentSpace": 1180000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/minnesota-wild"
     },
@@ -134,7 +134,7 @@
       "slug": "montreal-canadiens",
       "capHit": 102108577,
       "capSpace": 1891423,
-      "currentSpace": 1890000,
+      "currentSpace": 1940000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/montreal-canadiens"
     },
@@ -143,16 +143,16 @@
       "slug": "new-jersey-devils",
       "capHit": 103944271,
       "capSpace": 55729,
-      "currentSpace": 56000,
+      "currentSpace": 57000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/new-jersey-devils"
     },
     "NSH": {
       "abbrev": "NSH",
       "slug": "nashville-predators",
-      "capHit": 93433722,
-      "capSpace": 10566278,
-      "currentSpace": 10570000,
+      "capHit": 93508761,
+      "capSpace": 10491239,
+      "currentSpace": 10770000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/nashville-predators"
     },
@@ -161,25 +161,25 @@
       "slug": "new-york-islanders",
       "capHit": 101251250,
       "capSpace": 2748750,
-      "currentSpace": 2750000,
+      "currentSpace": 2820000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/new-york-islanders"
     },
     "NYR": {
       "abbrev": "NYR",
       "slug": "new-york-rangers",
-      "capHit": 103532232,
-      "capSpace": 467768,
-      "currentSpace": 468000,
+      "capHit": 103552593,
+      "capSpace": 447407,
+      "currentSpace": 459000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/new-york-rangers"
     },
     "OTT": {
       "abbrev": "OTT",
       "slug": "ottawa-senators",
-      "capHit": 102616667,
-      "capSpace": 1383333,
-      "currentSpace": 1380000,
+      "capHit": 101558290,
+      "capSpace": 2441710,
+      "currentSpace": 2510000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/ottawa-senators"
     },
@@ -188,16 +188,16 @@
       "slug": "philadelphia-flyers",
       "capHit": 91548586,
       "capSpace": 12451414,
-      "currentSpace": 12450000,
+      "currentSpace": 12780000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/philadelphia-flyers"
     },
     "PIT": {
       "abbrev": "PIT",
       "slug": "pittsburgh-penguins",
-      "capHit": 97861631,
-      "capSpace": 6138369,
-      "currentSpace": 6140000,
+      "capHit": 96054668,
+      "capSpace": 7945332,
+      "currentSpace": 8160000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/pittsburgh-penguins"
     },
@@ -206,16 +206,16 @@
       "slug": "seattle-kraken",
       "capHit": 87002797,
       "capSpace": 16997203,
-      "currentSpace": 17000000,
+      "currentSpace": 17450000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/seattle-kraken"
     },
     "SJS": {
       "abbrev": "SJS",
       "slug": "san-jose-sharks",
-      "capHit": 101293993,
-      "capSpace": 2706007,
-      "currentSpace": 2710000,
+      "capHit": 101249595,
+      "capSpace": 2750405,
+      "currentSpace": 2820000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/san-jose-sharks"
     },
@@ -224,7 +224,7 @@
       "slug": "st-louis-blues",
       "capHit": 102109999,
       "capSpace": 1890001,
-      "currentSpace": 1890000,
+      "currentSpace": 1940000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/st-louis-blues"
     },
@@ -233,7 +233,7 @@
       "slug": "tampa-bay-lightning",
       "capHit": 102096666,
       "capSpace": 1903334,
-      "currentSpace": 1900000,
+      "currentSpace": 1950000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/tampa-bay-lightning"
     },
@@ -242,7 +242,7 @@
       "slug": "toronto-maple-leafs",
       "capHit": 108692882,
       "capSpace": 4690000,
-      "currentSpace": 0,
+      "currentSpace": 7000000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/toronto-maple-leafs"
     },
@@ -251,7 +251,7 @@
       "slug": "utah-mammoth",
       "capHit": 99222892,
       "capSpace": 4777108,
-      "currentSpace": 4780000,
+      "currentSpace": 4900000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/utah-mammoth"
     },
@@ -260,7 +260,7 @@
       "slug": "vancouver-canucks",
       "capHit": 88074947,
       "capSpace": 15925053,
-      "currentSpace": 15930000,
+      "currentSpace": 16350000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/vancouver-canucks"
     },
@@ -278,7 +278,7 @@
       "slug": "winnipeg-jets",
       "capHit": 91105806,
       "capSpace": 12894194,
-      "currentSpace": 12890000,
+      "currentSpace": 13240000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/winnipeg-jets"
     },
@@ -287,7 +287,7 @@
       "slug": "washington-capitals",
       "capHit": 103874583,
       "capSpace": 125417,
-      "currentSpace": 125000,
+      "currentSpace": 129000,
       "source": "puckpedia",
       "url": "https://puckpedia.com/team/washington-capitals"
     }
@@ -392,17 +392,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/jeff-malott"
     },
-    "8485400": {
-      "nhlId": "8485400",
-      "name": "Roger McQueen",
-      "slug": "roger-mcqueen",
-      "abbrev": "ANA",
-      "capHit": 1075000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/roger-mcqueen"
-    },
     "8486052": {
       "nhlId": "8486052",
       "name": "Nikita Klepov",
@@ -413,17 +402,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/nikita-klepov"
-    },
-    "8483479": {
-      "nhlId": "8483479",
-      "name": "Cruz Lucius",
-      "slug": "cruz-lucius",
-      "abbrev": "ANA",
-      "capHit": 1050000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/cruz-lucius"
     },
     "8484762": {
       "nhlId": "8484762",
@@ -546,6 +524,39 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/tyson-hinds"
     },
+    "8483482": {
+      "nhlId": "8483482",
+      "name": "Tristan Luneau",
+      "slug": "tristan-luneau",
+      "abbrev": "ANA",
+      "capHit": 865000,
+      "expiryYear": "2033",
+      "expiryStatus": "UFA",
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/tristan-luneau"
+    },
+    "8483521": {
+      "nhlId": "8483521",
+      "name": "Noah Warren",
+      "slug": "noah-warren",
+      "abbrev": "ANA",
+      "capHit": 865000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/noah-warren"
+    },
+    "8484262": {
+      "nhlId": "8484262",
+      "name": "Travis Mitchell",
+      "slug": "travis-mitchell",
+      "abbrev": "ANA",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/travis-mitchell"
+    },
     "8480843": {
       "nhlId": "8480843",
       "name": "Lukas Dostal",
@@ -568,6 +579,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/ville-husso"
     },
+    "8485400": {
+      "nhlId": "8485400",
+      "name": "Roger McQueen",
+      "slug": "roger-mcqueen",
+      "abbrev": "ANA",
+      "capHit": 1075000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/roger-mcqueen"
+    },
     "8486072": {
       "nhlId": "8486072",
       "name": "Marcus Nordmark",
@@ -578,6 +600,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/marcus-nordmark"
+    },
+    "8483479": {
+      "nhlId": "8483479",
+      "name": "Cruz Lucius",
+      "slug": "cruz-lucius",
+      "abbrev": "ANA",
+      "capHit": 1050000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/cruz-lucius"
     },
     "8484867": {
       "nhlId": "8484867",
@@ -732,39 +765,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/corey-schueneman"
-    },
-    "8483482": {
-      "nhlId": "8483482",
-      "name": "Tristan Luneau",
-      "slug": "tristan-luneau",
-      "abbrev": "ANA",
-      "capHit": 865000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/tristan-luneau"
-    },
-    "8483521": {
-      "nhlId": "8483521",
-      "name": "Noah Warren",
-      "slug": "noah-warren",
-      "abbrev": "ANA",
-      "capHit": 865000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/noah-warren"
-    },
-    "8484262": {
-      "nhlId": "8484262",
-      "name": "Travis Mitchell",
-      "slug": "travis-mitchell",
-      "abbrev": "ANA",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/travis-mitchell"
     },
     "8476316": {
       "nhlId": "8476316",
@@ -1459,17 +1459,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/tyson-kozak"
     },
-    "8477839": {
-      "nhlId": "8477839",
-      "name": "Conor Sheary",
-      "slug": "conor-sheary",
-      "abbrev": "BUF",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/conor-sheary"
-    },
     "8480839": {
       "nhlId": "8480839",
       "name": "Rasmus Dahlin",
@@ -1531,8 +1520,8 @@
       "slug": "louis-crevier",
       "abbrev": "BUF",
       "capHit": 900000,
-      "expiryYear": null,
-      "expiryStatus": null,
+      "expiryYear": "2031",
+      "expiryStatus": "UFA",
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/louis-crevier"
     },
@@ -1645,6 +1634,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/mason-geertsen"
+    },
+    "8477839": {
+      "nhlId": "8477839",
+      "name": "Conor Sheary",
+      "slug": "conor-sheary",
+      "abbrev": "BUF",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/conor-sheary"
     },
     "8480292": {
       "nhlId": "8480292",
@@ -1998,17 +1998,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/jalen-chatfield"
     },
-    "8484428": {
-      "nhlId": "8484428",
-      "name": "Charles Alexis Legault",
-      "slug": "charles-alexis-legault",
-      "abbrev": "CAR",
-      "capHit": 915833,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/charles-alexis-legault"
-    },
     "8476422": {
       "nhlId": "8476422",
       "name": "Mike Reilly",
@@ -2052,17 +2041,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/brandon-bussi"
-    },
-    "8480051": {
-      "nhlId": "8480051",
-      "name": "Cayden Primeau",
-      "slug": "cayden-primeau",
-      "abbrev": "CAR",
-      "capHit": 912500,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/cayden-primeau"
     },
     "8485368": {
       "nhlId": "8485368",
@@ -2218,6 +2196,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/dominik-badinka"
     },
+    "8484428": {
+      "nhlId": "8484428",
+      "name": "Charles Alexis Legault",
+      "slug": "charles-alexis-legault",
+      "abbrev": "CAR",
+      "capHit": 915833,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/charles-alexis-legault"
+    },
     "8479976": {
       "nhlId": "8479976",
       "name": "Juuso Valimaki",
@@ -2283,6 +2272,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/ruslan-khazheyev"
+    },
+    "8480051": {
+      "nhlId": "8480051",
+      "name": "Cayden Primeau",
+      "slug": "cayden-primeau",
+      "abbrev": "CAR",
+      "capHit": 912500,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/cayden-primeau"
     },
     "8479313": {
       "nhlId": "8479313",
@@ -4429,6 +4429,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/justin-hryckowian"
     },
+    "8484938": {
+      "nhlId": "8484938",
+      "name": "Arttu Hyry",
+      "slug": "arttu-hyry",
+      "abbrev": "DAL",
+      "capHit": 875000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/arttu-hyry"
+    },
     "8473994": {
       "nhlId": "8473994",
       "name": "Jamie Benn",
@@ -4439,6 +4450,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/jamie-benn"
+    },
+    "8476278": {
+      "nhlId": "8476278",
+      "name": "Colin Blackwell",
+      "slug": "colin-blackwell",
+      "abbrev": "DAL",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/colin-blackwell"
     },
     "8480840": {
       "nhlId": "8480840",
@@ -4649,17 +4671,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/matthew-seminoff"
     },
-    "8484938": {
-      "nhlId": "8484938",
-      "name": "Arttu Hyry",
-      "slug": "arttu-hyry",
-      "abbrev": "DAL",
-      "capHit": 875000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/arttu-hyry"
-    },
     "8485485": {
       "nhlId": "8485485",
       "name": "Harrison Scott",
@@ -4681,17 +4692,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/cameron-hughes"
-    },
-    "8476278": {
-      "nhlId": "8476278",
-      "name": "Colin Blackwell",
-      "slug": "colin-blackwell",
-      "abbrev": "DAL",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/colin-blackwell"
     },
     "8484194": {
       "nhlId": "8484194",
@@ -5452,6 +5452,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/mathieu-joseph"
     },
+    "8484509": {
+      "nhlId": "8484509",
+      "name": "Josh Samanski",
+      "slug": "josh-samanski",
+      "abbrev": "EDM",
+      "capHit": 975000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/josh-samanski"
+    },
     "8483455": {
       "nhlId": "8483455",
       "name": "Isaac Howard",
@@ -5649,17 +5660,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/william-nicholl"
-    },
-    "8484509": {
-      "nhlId": "8484509",
-      "name": "Josh Samanski",
-      "slug": "josh-samanski",
-      "abbrev": "EDM",
-      "capHit": 975000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/josh-samanski"
     },
     "8482759": {
       "nhlId": "8482759",
@@ -6002,6 +6002,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/lars-eller"
     },
+    "8478043": {
+      "nhlId": "8478043",
+      "name": "Sam Lafferty",
+      "slug": "sam-lafferty",
+      "abbrev": "FLA",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/sam-lafferty"
+    },
     "8478147": {
       "nhlId": "8478147",
       "name": "Bokondji Imama",
@@ -6078,6 +6089,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/dmitry-kulikov"
+    },
+    "8475755": {
+      "nhlId": "8475755",
+      "name": "Alexander Petrovic",
+      "slug": "alexander-petrovic",
+      "abbrev": "FLA",
+      "capHit": 875000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/alexander-petrovic"
     },
     "8484304": {
       "nhlId": "8484304",
@@ -6178,17 +6200,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/kai-schwindt"
     },
-    "8478043": {
-      "nhlId": "8478043",
-      "name": "Sam Lafferty",
-      "slug": "sam-lafferty",
-      "abbrev": "FLA",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/sam-lafferty"
-    },
     "8479414": {
       "nhlId": "8479414",
       "name": "Nathan Bastian",
@@ -6276,17 +6287,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/emil-pieniniemi"
-    },
-    "8475755": {
-      "nhlId": "8475755",
-      "name": "Alexander Petrovic",
-      "slug": "alexander-petrovic",
-      "abbrev": "FLA",
-      "capHit": 875000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/alexander-petrovic"
     },
     "8483687": {
       "nhlId": "8483687",
@@ -8499,6 +8499,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/nils-hoglander"
     },
+    "8486189": {
+      "nhlId": "8486189",
+      "name": "Vitali Pinchuk",
+      "slug": "vitali-pinchuk",
+      "abbrev": "NSH",
+      "capHit": 1025000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/vitali-pinchuk"
+    },
     "8481726": {
       "nhlId": "8481726",
       "name": "Adam Edstrom",
@@ -8587,17 +8598,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/nicklaus-perbix"
     },
-    "8482715": {
-      "nhlId": "8482715",
-      "name": "Ryan Ufko",
-      "slug": "ryan-ufko",
-      "abbrev": "NSH",
-      "capHit": 942500,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/ryan-ufko"
-    },
     "8482072": {
       "nhlId": "8482072",
       "name": "Jack Ahcan",
@@ -8663,17 +8663,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/felix-nilsson"
-    },
-    "8486189": {
-      "nhlId": "8486189",
-      "name": "Vitali Pinchuk",
-      "slug": "vitali-pinchuk",
-      "abbrev": "NSH",
-      "capHit": 1025000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/vitali-pinchuk"
     },
     "8485405": {
       "nhlId": "8485405",
@@ -8839,6 +8828,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/daniel-nieminen"
+    },
+    "8482715": {
+      "nhlId": "8482715",
+      "name": "Ryan Ufko",
+      "slug": "ryan-ufko",
+      "abbrev": "NSH",
+      "capHit": 942500,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/ryan-ufko"
     },
     "8484174": {
       "nhlId": "8484174",
@@ -9632,17 +9632,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/matthew-robertson"
     },
-    "8482861": {
-      "nhlId": "8482861",
-      "name": "Vincent Iorio",
-      "slug": "vincent-iorio",
-      "abbrev": "NYR",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/vincent-iorio"
-    },
     "8482666": {
       "nhlId": "8482666",
       "name": "Scott Morrow",
@@ -9675,6 +9664,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/joonas-korpisalo"
+    },
+    "8482193": {
+      "nhlId": "8482193",
+      "name": "Dylan Garand",
+      "slug": "dylan-garand",
+      "abbrev": "NYR",
+      "capHit": 875000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/dylan-garand"
     },
     "8480001": {
       "nhlId": "8480001",
@@ -9918,6 +9918,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/marc-del-gaizo"
     },
+    "8482861": {
+      "nhlId": "8482861",
+      "name": "Vincent Iorio",
+      "slug": "vincent-iorio",
+      "abbrev": "NYR",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/vincent-iorio"
+    },
     "8485489": {
       "nhlId": "8485489",
       "name": "Callum Tung",
@@ -9928,17 +9939,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/callum-tung"
-    },
-    "8482193": {
-      "nhlId": "8482193",
-      "name": "Dylan Garand",
-      "slug": "dylan-garand",
-      "abbrev": "NYR",
-      "capHit": 875000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/dylan-garand"
     },
     "8477484": {
       "nhlId": "8477484",
@@ -10171,17 +10171,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/tyler-kleven"
     },
-    "8484409": {
-      "nhlId": "8484409",
-      "name": "Hoyt Stanley",
-      "slug": "hoyt-stanley",
-      "abbrev": "OTT",
-      "capHit": 1075000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/hoyt-stanley"
-    },
     "8484759": {
       "nhlId": "8484759",
       "name": "Carter Yakemchuk",
@@ -10368,6 +10357,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/tyler-boucher"
+    },
+    "8484409": {
+      "nhlId": "8484409",
+      "name": "Hoyt Stanley",
+      "slug": "hoyt-stanley",
+      "abbrev": "OTT",
+      "capHit": 1075000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/hoyt-stanley"
     },
     "8484847": {
       "nhlId": "8484847",
@@ -10809,17 +10809,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/cole-knuble"
     },
-    "8483461": {
-      "nhlId": "8483461",
-      "name": "Devin Kaplan",
-      "slug": "devin-kaplan",
-      "abbrev": "PHI",
-      "capHit": 946667,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/devin-kaplan"
-    },
     "8484779": {
       "nhlId": "8484779",
       "name": "Jett Luchanko",
@@ -10841,6 +10830,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/denver-barkey"
+    },
+    "8483449": {
+      "nhlId": "8483449",
+      "name": "David Goyette",
+      "slug": "david-goyette",
+      "abbrev": "PHI",
+      "capHit": 891666,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/david-goyette"
     },
     "8479944": {
       "nhlId": "8479944",
@@ -11150,17 +11150,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/benjamin-kindel"
     },
-    "8483487": {
-      "nhlId": "8483487",
-      "name": "Rutger McGroarty",
-      "slug": "rutger-mcgroarty",
-      "abbrev": "PIT",
-      "capHit": 950000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/rutger-mcgroarty"
-    },
     "8480842": {
       "nhlId": "8480842",
       "name": "Filip Hallander",
@@ -11171,17 +11160,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/filip-hallander"
-    },
-    "8481019": {
-      "nhlId": "8481019",
-      "name": "David Gustafsson",
-      "slug": "david-gustafsson",
-      "abbrev": "PIT",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/david-gustafsson"
     },
     "8474578": {
       "nhlId": "8474578",
@@ -11326,6 +11304,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/mikhail-ye-ilyin"
     },
+    "8483487": {
+      "nhlId": "8483487",
+      "name": "Rutger McGroarty",
+      "slug": "rutger-mcgroarty",
+      "abbrev": "PIT",
+      "capHit": 950000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/rutger-mcgroarty"
+    },
     "8482698": {
       "nhlId": "8482698",
       "name": "Tristan Broz",
@@ -11369,6 +11358,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/avery-hayes"
+    },
+    "8481019": {
+      "nhlId": "8481019",
+      "name": "David Gustafsson",
+      "slug": "david-gustafsson",
+      "abbrev": "PIT",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/david-gustafsson"
     },
     "8484935": {
       "nhlId": "8484935",
@@ -11865,6 +11865,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/julius-miettinen"
     },
+    "8483461": {
+      "nhlId": "8483461",
+      "name": "Devin Kaplan",
+      "slug": "devin-kaplan",
+      "abbrev": "SEA",
+      "capHit": 946667,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/devin-kaplan"
+    },
     "8484219": {
       "nhlId": "8484219",
       "name": "Carson Rehkopf",
@@ -11908,17 +11919,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/jagger-firkus"
-    },
-    "8483449": {
-      "nhlId": "8483449",
-      "name": "David Goyette",
-      "slug": "david-goyette",
-      "abbrev": "SEA",
-      "capHit": 891666,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/david-goyette"
     },
     "8483497": {
       "nhlId": "8483497",
@@ -16982,17 +16982,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/jeff-malott"
     },
-    "rogermcqueen": {
-      "nhlId": "8485400",
-      "name": "Roger McQueen",
-      "slug": "roger-mcqueen",
-      "abbrev": "ANA",
-      "capHit": 1075000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/roger-mcqueen"
-    },
     "nikitaklepov": {
       "nhlId": "8486052",
       "name": "Nikita Klepov",
@@ -17003,17 +16992,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/nikita-klepov"
-    },
-    "cruzlucius": {
-      "nhlId": "8483479",
-      "name": "Cruz Lucius",
-      "slug": "cruz-lucius",
-      "abbrev": "ANA",
-      "capHit": 1050000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/cruz-lucius"
     },
     "beckettsennecke": {
       "nhlId": "8484762",
@@ -17136,6 +17114,39 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/tyson-hinds"
     },
+    "tristanluneau": {
+      "nhlId": "8483482",
+      "name": "Tristan Luneau",
+      "slug": "tristan-luneau",
+      "abbrev": "ANA",
+      "capHit": 865000,
+      "expiryYear": "2033",
+      "expiryStatus": "UFA",
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/tristan-luneau"
+    },
+    "noahwarren": {
+      "nhlId": "8483521",
+      "name": "Noah Warren",
+      "slug": "noah-warren",
+      "abbrev": "ANA",
+      "capHit": 865000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/noah-warren"
+    },
+    "travismitchell": {
+      "nhlId": "8484262",
+      "name": "Travis Mitchell",
+      "slug": "travis-mitchell",
+      "abbrev": "ANA",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/travis-mitchell"
+    },
     "lukasdostal": {
       "nhlId": "8480843",
       "name": "Lukas Dostal",
@@ -17158,6 +17169,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/ville-husso"
     },
+    "rogermcqueen": {
+      "nhlId": "8485400",
+      "name": "Roger McQueen",
+      "slug": "roger-mcqueen",
+      "abbrev": "ANA",
+      "capHit": 1075000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/roger-mcqueen"
+    },
     "marcusnordmark": {
       "nhlId": "8486072",
       "name": "Marcus Nordmark",
@@ -17168,6 +17190,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/marcus-nordmark"
+    },
+    "cruzlucius": {
+      "nhlId": "8483479",
+      "name": "Cruz Lucius",
+      "slug": "cruz-lucius",
+      "abbrev": "ANA",
+      "capHit": 1050000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/cruz-lucius"
     },
     "ethanprocyszyn": {
       "nhlId": "8484867",
@@ -17322,39 +17355,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/corey-schueneman"
-    },
-    "tristanluneau": {
-      "nhlId": "8483482",
-      "name": "Tristan Luneau",
-      "slug": "tristan-luneau",
-      "abbrev": "ANA",
-      "capHit": 865000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/tristan-luneau"
-    },
-    "noahwarren": {
-      "nhlId": "8483521",
-      "name": "Noah Warren",
-      "slug": "noah-warren",
-      "abbrev": "ANA",
-      "capHit": 865000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/noah-warren"
-    },
-    "travismitchell": {
-      "nhlId": "8484262",
-      "name": "Travis Mitchell",
-      "slug": "travis-mitchell",
-      "abbrev": "ANA",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/travis-mitchell"
     },
     "laurentbrossoit": {
       "nhlId": "8476316",
@@ -18060,17 +18060,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/tyson-kozak"
     },
-    "conorsheary": {
-      "nhlId": "8477839",
-      "name": "Conor Sheary",
-      "slug": "conor-sheary",
-      "abbrev": "BUF",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/conor-sheary"
-    },
     "rasmusdahlin": {
       "nhlId": "8480839",
       "name": "Rasmus Dahlin",
@@ -18132,8 +18121,8 @@
       "slug": "louis-crevier",
       "abbrev": "BUF",
       "capHit": 900000,
-      "expiryYear": null,
-      "expiryStatus": null,
+      "expiryYear": "2031",
+      "expiryStatus": "UFA",
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/louis-crevier"
     },
@@ -18257,6 +18246,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/mason-geertsen"
+    },
+    "conorsheary": {
+      "nhlId": "8477839",
+      "name": "Conor Sheary",
+      "slug": "conor-sheary",
+      "abbrev": "BUF",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/conor-sheary"
     },
     "carsonmeyer": {
       "nhlId": "8480292",
@@ -18610,17 +18610,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/jalen-chatfield"
     },
-    "charlesalexislegault": {
-      "nhlId": "8484428",
-      "name": "Charles Alexis Legault",
-      "slug": "charles-alexis-legault",
-      "abbrev": "CAR",
-      "capHit": 915833,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/charles-alexis-legault"
-    },
     "mikereilly": {
       "nhlId": "8476422",
       "name": "Mike Reilly",
@@ -18664,17 +18653,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/brandon-bussi"
-    },
-    "caydenprimeau": {
-      "nhlId": "8480051",
-      "name": "Cayden Primeau",
-      "slug": "cayden-primeau",
-      "abbrev": "CAR",
-      "capHit": 912500,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/cayden-primeau"
     },
     "ivanryabkin": {
       "nhlId": "8485368",
@@ -18830,6 +18808,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/dominik-badinka"
     },
+    "charlesalexislegault": {
+      "nhlId": "8484428",
+      "name": "Charles Alexis Legault",
+      "slug": "charles-alexis-legault",
+      "abbrev": "CAR",
+      "capHit": 915833,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/charles-alexis-legault"
+    },
     "juusovalimaki": {
       "nhlId": "8479976",
       "name": "Juuso Valimaki",
@@ -18895,6 +18884,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/ruslan-khazheyev"
+    },
+    "caydenprimeau": {
+      "nhlId": "8480051",
+      "name": "Cayden Primeau",
+      "slug": "cayden-primeau",
+      "abbrev": "CAR",
+      "capHit": 912500,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/cayden-primeau"
     },
     "zacharysawchenko": {
       "nhlId": "8479313",
@@ -21085,6 +21085,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/justin-hryckowian"
     },
+    "arttuhyry": {
+      "nhlId": "8484938",
+      "name": "Arttu Hyry",
+      "slug": "arttu-hyry",
+      "abbrev": "DAL",
+      "capHit": 875000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/arttu-hyry"
+    },
     "jamiebenn": {
       "nhlId": "8473994",
       "name": "Jamie Benn",
@@ -21095,6 +21106,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/jamie-benn"
+    },
+    "colinblackwell": {
+      "nhlId": "8476278",
+      "name": "Colin Blackwell",
+      "slug": "colin-blackwell",
+      "abbrev": "DAL",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/colin-blackwell"
     },
     "oskarback": {
       "nhlId": "8480840",
@@ -21305,17 +21327,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/matthew-seminoff"
     },
-    "arttuhyry": {
-      "nhlId": "8484938",
-      "name": "Arttu Hyry",
-      "slug": "arttu-hyry",
-      "abbrev": "DAL",
-      "capHit": 875000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/arttu-hyry"
-    },
     "harrisonscott": {
       "nhlId": "8485485",
       "name": "Harrison Scott",
@@ -21337,17 +21348,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/cameron-hughes"
-    },
-    "colinblackwell": {
-      "nhlId": "8476278",
-      "name": "Colin Blackwell",
-      "slug": "colin-blackwell",
-      "abbrev": "DAL",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/colin-blackwell"
     },
     "aramminnetian": {
       "nhlId": "8484194",
@@ -22108,6 +22108,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/mathieu-joseph"
     },
+    "joshsamanski": {
+      "nhlId": "8484509",
+      "name": "Josh Samanski",
+      "slug": "josh-samanski",
+      "abbrev": "EDM",
+      "capHit": 975000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/josh-samanski"
+    },
     "isaachoward": {
       "nhlId": "8483455",
       "name": "Isaac Howard",
@@ -22316,17 +22327,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/william-nicholl"
-    },
-    "joshsamanski": {
-      "nhlId": "8484509",
-      "name": "Josh Samanski",
-      "slug": "josh-samanski",
-      "abbrev": "EDM",
-      "capHit": 975000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/josh-samanski"
     },
     "viljamimarjala": {
       "nhlId": "8482759",
@@ -22669,6 +22669,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/lars-eller"
     },
+    "samlafferty": {
+      "nhlId": "8478043",
+      "name": "Sam Lafferty",
+      "slug": "sam-lafferty",
+      "abbrev": "FLA",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/sam-lafferty"
+    },
     "bokondjiimama": {
       "nhlId": "8478147",
       "name": "Bokondji Imama",
@@ -22734,6 +22745,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/dmitry-kulikov"
+    },
+    "alexanderpetrovic": {
+      "nhlId": "8475755",
+      "name": "Alexander Petrovic",
+      "slug": "alexander-petrovic",
+      "abbrev": "FLA",
+      "capHit": 875000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/alexander-petrovic"
     },
     "uvisbalinskis": {
       "nhlId": "8484304",
@@ -22834,17 +22856,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/kai-schwindt"
     },
-    "samlafferty": {
-      "nhlId": "8478043",
-      "name": "Sam Lafferty",
-      "slug": "sam-lafferty",
-      "abbrev": "FLA",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/sam-lafferty"
-    },
     "nathanbastian": {
       "nhlId": "8479414",
       "name": "Nathan Bastian",
@@ -22932,17 +22943,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/emil-pieniniemi"
-    },
-    "alexanderpetrovic": {
-      "nhlId": "8475755",
-      "name": "Alexander Petrovic",
-      "slug": "alexander-petrovic",
-      "abbrev": "FLA",
-      "capHit": 875000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/alexander-petrovic"
     },
     "marekalscher": {
       "nhlId": "8483687",
@@ -25188,6 +25188,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/nils-hoglander"
     },
+    "vitalipinchuk": {
+      "nhlId": "8486189",
+      "name": "Vitali Pinchuk",
+      "slug": "vitali-pinchuk",
+      "abbrev": "NSH",
+      "capHit": 1025000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/vitali-pinchuk"
+    },
     "adamedstrom": {
       "nhlId": "8481726",
       "name": "Adam Edstrom",
@@ -25276,17 +25287,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/nicklaus-perbix"
     },
-    "ryanufko": {
-      "nhlId": "8482715",
-      "name": "Ryan Ufko",
-      "slug": "ryan-ufko",
-      "abbrev": "NSH",
-      "capHit": 942500,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/ryan-ufko"
-    },
     "jackahcan": {
       "nhlId": "8482072",
       "name": "Jack Ahcan",
@@ -25363,17 +25363,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/felix-nilsson"
-    },
-    "vitalipinchuk": {
-      "nhlId": "8486189",
-      "name": "Vitali Pinchuk",
-      "slug": "vitali-pinchuk",
-      "abbrev": "NSH",
-      "capHit": 1025000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/vitali-pinchuk"
     },
     "bradymartin": {
       "nhlId": "8485405",
@@ -25539,6 +25528,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/daniel-nieminen"
+    },
+    "ryanufko": {
+      "nhlId": "8482715",
+      "name": "Ryan Ufko",
+      "slug": "ryan-ufko",
+      "abbrev": "NSH",
+      "capHit": 942500,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/ryan-ufko"
     },
     "andrewgibson": {
       "nhlId": "8484174",
@@ -26332,17 +26332,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/matthew-robertson"
     },
-    "vincentiorio": {
-      "nhlId": "8482861",
-      "name": "Vincent Iorio",
-      "slug": "vincent-iorio",
-      "abbrev": "NYR",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/vincent-iorio"
-    },
     "scottmorrow": {
       "nhlId": "8482666",
       "name": "Scott Morrow",
@@ -26375,6 +26364,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/joonas-korpisalo"
+    },
+    "dylangarand": {
+      "nhlId": "8482193",
+      "name": "Dylan Garand",
+      "slug": "dylan-garand",
+      "abbrev": "NYR",
+      "capHit": 875000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/dylan-garand"
     },
     "urhovaakanainen": {
       "nhlId": "8480001",
@@ -26618,6 +26618,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/marc-del-gaizo"
     },
+    "vincentiorio": {
+      "nhlId": "8482861",
+      "name": "Vincent Iorio",
+      "slug": "vincent-iorio",
+      "abbrev": "NYR",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/vincent-iorio"
+    },
     "callumtung": {
       "nhlId": "8485489",
       "name": "Callum Tung",
@@ -26628,17 +26639,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/callum-tung"
-    },
-    "dylangarand": {
-      "nhlId": "8482193",
-      "name": "Dylan Garand",
-      "slug": "dylan-garand",
-      "abbrev": "NYR",
-      "capHit": 875000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/dylan-garand"
     },
     "spencermartin": {
       "nhlId": "8477484",
@@ -26871,17 +26871,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/tyler-kleven"
     },
-    "hoytstanley": {
-      "nhlId": "8484409",
-      "name": "Hoyt Stanley",
-      "slug": "hoyt-stanley",
-      "abbrev": "OTT",
-      "capHit": 1075000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/hoyt-stanley"
-    },
     "carteryakemchuk": {
       "nhlId": "8484759",
       "name": "Carter Yakemchuk",
@@ -27068,6 +27057,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/tyler-boucher"
+    },
+    "hoytstanley": {
+      "nhlId": "8484409",
+      "name": "Hoyt Stanley",
+      "slug": "hoyt-stanley",
+      "abbrev": "OTT",
+      "capHit": 1075000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/hoyt-stanley"
     },
     "gabrieleliasson": {
       "nhlId": "8484847",
@@ -27509,17 +27509,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/cole-knuble"
     },
-    "devinkaplan": {
-      "nhlId": "8483461",
-      "name": "Devin Kaplan",
-      "slug": "devin-kaplan",
-      "abbrev": "PHI",
-      "capHit": 946667,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/devin-kaplan"
-    },
     "jettluchanko": {
       "nhlId": "8484779",
       "name": "Jett Luchanko",
@@ -27541,6 +27530,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/denver-barkey"
+    },
+    "davidgoyette": {
+      "nhlId": "8483449",
+      "name": "David Goyette",
+      "slug": "david-goyette",
+      "abbrev": "PHI",
+      "capHit": 891666,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/david-goyette"
     },
     "zachastonreese": {
       "nhlId": "8479944",
@@ -27850,17 +27850,6 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/benjamin-kindel"
     },
-    "rutgermcgroarty": {
-      "nhlId": "8483487",
-      "name": "Rutger McGroarty",
-      "slug": "rutger-mcgroarty",
-      "abbrev": "PIT",
-      "capHit": 950000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/rutger-mcgroarty"
-    },
     "filiphallander": {
       "nhlId": "8480842",
       "name": "Filip Hallander",
@@ -27871,17 +27860,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/filip-hallander"
-    },
-    "davidgustafsson": {
-      "nhlId": "8481019",
-      "name": "David Gustafsson",
-      "slug": "david-gustafsson",
-      "abbrev": "PIT",
-      "capHit": 850000,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/david-gustafsson"
     },
     "erikkarlsson": {
       "nhlId": null,
@@ -28037,6 +28015,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/mikhail-ye-ilyin"
     },
+    "rutgermcgroarty": {
+      "nhlId": "8483487",
+      "name": "Rutger McGroarty",
+      "slug": "rutger-mcgroarty",
+      "abbrev": "PIT",
+      "capHit": 950000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/rutger-mcgroarty"
+    },
     "tristanbroz": {
       "nhlId": "8482698",
       "name": "Tristan Broz",
@@ -28080,6 +28069,17 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/avery-hayes"
+    },
+    "davidgustafsson": {
+      "nhlId": "8481019",
+      "name": "David Gustafsson",
+      "slug": "david-gustafsson",
+      "abbrev": "PIT",
+      "capHit": 850000,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/david-gustafsson"
     },
     "oliverokuliar": {
       "nhlId": "8484935",
@@ -28576,6 +28576,17 @@
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/julius-miettinen"
     },
+    "devinkaplan": {
+      "nhlId": "8483461",
+      "name": "Devin Kaplan",
+      "slug": "devin-kaplan",
+      "abbrev": "SEA",
+      "capHit": 946667,
+      "expiryYear": null,
+      "expiryStatus": null,
+      "source": "puckpedia",
+      "url": "https://puckpedia.com/player/devin-kaplan"
+    },
     "carsonrehkopf": {
       "nhlId": "8484219",
       "name": "Carson Rehkopf",
@@ -28619,17 +28630,6 @@
       "expiryStatus": null,
       "source": "puckpedia",
       "url": "https://puckpedia.com/player/jagger-firkus"
-    },
-    "davidgoyette": {
-      "nhlId": "8483449",
-      "name": "David Goyette",
-      "slug": "david-goyette",
-      "abbrev": "SEA",
-      "capHit": 891666,
-      "expiryYear": null,
-      "expiryStatus": null,
-      "source": "puckpedia",
-      "url": "https://puckpedia.com/player/david-goyette"
     },
     "janinyman": {
       "nhlId": "8483497",
