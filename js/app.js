@@ -25,10 +25,15 @@
   function playerMarkup(player, fallbackName = '', attrs = {}) {
     const name = typeof player === 'string' ? player : (player?.name || fallbackName || '');
     const russian = typeof player === 'object' ? playerIsRussian(player) : playerIsRussian(name);
-    const nhlId = typeof player === 'object' ? (player.nhlId || player.scorerId && !player.scorerEspn ? player.scorerId : player.id) : '';
+    // Parentheses required: bare `a || b ? c : d` binds as `(a || b) ? c : d`, which
+    // dropped player.nhlId and returned undefined scorerId on goal / assist refs.
+    const nhlId = typeof player === 'object'
+      ? (player.nhlId || (player.scorerId && !player.scorerEspn ? player.scorerId : player.id) || '')
+      : '';
     const espnId = typeof player === 'object' ? (player.espnId || player.athleteId || (player.scorerEspn ? player.scorerId : '') || '') : '';
     const abbrev = typeof player === 'object' ? (player.abbrev || player.teamAbbrev || attrs.abbrev || '') : (attrs.abbrev || '');
-    const clickable = Boolean(nhlId || espnId || (name && abbrev));
+    const requireId = Boolean(attrs.requireId);
+    const clickable = Boolean(nhlId || espnId || (!requireId && name && abbrev));
     const data = [
       nhlId ? `data-nhl-id="${escapeAttr(nhlId)}"` : '',
       espnId ? `data-espn-id="${escapeAttr(espnId)}"` : '',
@@ -992,19 +997,21 @@
         const short = event.scorerShort || event.scorer || '';
         const ytd = event.goalsToDate != null ? Number(event.goalsToDate) : null;
         const ytdSuffix = ytd != null && ytd > 1 ? ` <span class="goal-ytd">(${ytd})</span>` : '';
+        const hasScorerId = event.scorerId != null && event.scorerId !== '';
         const scorerRef = {
           name: short || event.scorer || '',
           isRussian: event.scorerRussian,
           nhlId: event.scorerEspn ? null : event.scorerId,
           espnId: event.scorerEspn ? event.scorerId : null,
-          abbrev: event.team,
+          // Without a player id keep the row non-clickable (short names fail roster match).
+          abbrev: hasScorerId ? event.team : '',
           headshot: event.headshot || ''
         };
         return `<article class="goal-card">
           <div class="goal-card-top">
             ${playerMugMarkup({ ...scorerRef, team: event.team, name: event.scorer || short })}
             <div class="goal-card-copy">
-              <div class="goal-card-name">${playerMarkup(scorerRef)}${ytdSuffix}${highlightButtonMarkup(event)}</div>
+              <div class="goal-card-name">${playerMarkup(scorerRef, '', { requireId: true })}${ytdSuffix}${highlightButtonMarkup(event)}</div>
               <div class="goal-card-nth">${goalOrdinalLabel(nth)}</div>
             </div>
           </div>
@@ -1074,14 +1081,15 @@
     return groups.map(group => {
       const rows = kind === 'goals'
         ? group.events.map(event => {
+            const hasScorerId = event.scorerId != null && event.scorerId !== '';
             const scorerRef = {
               name: event.scorer,
               isRussian: event.scorerRussian,
               nhlId: event.scorerEspn ? null : event.scorerId,
               espnId: event.scorerEspn ? event.scorerId : null,
-              abbrev: event.team || teamAbbrevHint
+              abbrev: hasScorerId ? (event.team || teamAbbrevHint) : ''
             };
-            return `<div class="scoring-row"><span class="event-time"><strong>${event.time || ''}</strong></span><span class="event-team">${event.team || ''}</span><div class="scoring-copy"><div class="scoring-main"><strong>${playerMarkup(scorerRef)}</strong>${highlightButtonMarkup(event)}</div><small>${event.assists?.length ? `ассисты: ${assistsMarkup(event.assists, event.team)}` : 'без ассистов'}${event.strength ? ` · ${event.strength}` : ''}</small><div class="goal-video-slot" hidden></div></div></div>`;
+            return `<div class="scoring-row"><span class="event-time"><strong>${event.time || ''}</strong></span><span class="event-team">${event.team || ''}</span><div class="scoring-copy"><div class="scoring-main"><strong>${playerMarkup(scorerRef, '', { requireId: true })}</strong>${highlightButtonMarkup(event)}</div><small>${event.assists?.length ? `ассисты: ${assistsMarkup(event.assists, event.team)}` : 'без ассистов'}${event.strength ? ` · ${event.strength}` : ''}</small><div class="goal-video-slot" hidden></div></div></div>`;
           }).join('')
         : group.events.map(item => `<div class="penalty-row"><span>${item.time || ''}</span><strong>${item.team} · ${playerMarkup({ name: item.player || '', isRussian: item.playerRussian, nhlId: item.nhlId, espnId: item.espnId, abbrev: item.team })}</strong><small>${item.minutes ? `${item.minutes} мин · ` : ''}${item.infraction || ''}</small></div>`).join('');
       return `<div class="period-block"><div class="period-heading">${periodHeadingText(group.period)}</div><div class="${kind === 'goals' ? 'scoring-list' : 'penalty-list'} period-events">${rows}</div></div>`;
