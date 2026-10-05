@@ -1498,6 +1498,13 @@
     return `<button type="button" class="remind-btn${on ? ' is-on' : ''}" data-remind-game="${escapeAttr(String(game.id))}" data-remind-on="${on ? '1' : '0'}" data-remind-start="${escapeAttr(game.startTimeUTC || '')}" data-remind-away="${escapeAttr(game.away?.short || '')}" data-remind-home="${escapeAttr(game.home?.short || '')}" aria-pressed="${on ? 'true' : 'false'}" aria-label="${on ? 'Отключить напоминание' : 'Напомнить о начале матча'}">${on ? labelOn : labelOff}</button>`;
   }
 
+  function scheduleViewControl(openable) {
+    if (openable) {
+      return `<span class="schedule-open">Просмотр <span aria-hidden="true">›</span></span>`;
+    }
+    return `<span class="schedule-open is-unavailable" title="Нет данных матча">Нет данных</span>`;
+  }
+
   function scheduleListMarkup(title, games, emptyText, { remindable = false } = {}) {
     if (!games?.length) return `<div class="detail-section"><div class="detail-section-title"><h3>${title}</h3></div><p class="empty-detail">${emptyText}</p></div>`;
     return `<div class="detail-section"><div class="detail-section-title"><h3>${title}</h3><span>${games.length}</span></div>
@@ -1507,10 +1514,11 @@
         const remind = remindable ? remindButtonMarkup(game) : '';
         const showRemind = Boolean(remind);
         const openable = game.id != null && game.id !== '';
-        return `<div class="schedule-row${showRemind ? ' has-remind' : ''}${openable ? ' is-openable' : ''}"${openable ? ` role="button" tabindex="0" data-schedule-game="${escapeAttr(game.id)}"` : ''}>
+        return `<div class="schedule-row has-view${showRemind ? ' has-remind' : ''}${openable ? ' is-openable' : ' is-unavailable'}"${openable ? ` role="button" tabindex="0" data-schedule-game="${escapeAttr(game.id)}" aria-label="Просмотр матча"` : ''}>
           <span class="schedule-date">${formatShortDate(game.startTimeUTC || '')}</span>
           <div class="schedule-copy"><strong>${prefix} ${escapeHtml(opp.short || opp.name || '—')}</strong><small>${statusLabel(game.status, game.preseason)}</small></div>
           <span class="schedule-result">${escapeHtml(game.resultLabel || game.time || '')}</span>
+          ${scheduleViewControl(openable)}
           ${remind}
         </div>`;
       }).join('')}</div></div>`;
@@ -1636,15 +1644,19 @@
       const espnId = String(row.espnId || live?.retiredEspnId?.(rawName) || '');
       const nhlId = String(row.nhlId || '');
       const body = `<span class="retired-number">#${num}</span><strong class="retired-name">${name}</strong>`;
-      // Only rows we can actually open (existing player id) are tappable.
-      if (!espnId && !nhlId) return `<div class="retired-row">${body}</div>`;
+      // Always show the same trailing control. Openable rows get «Просмотр»;
+      // names without an ESPN/NHL id stay non-clickable with an explicit reason
+      // so a missing chevron does not look like a broken row.
+      if (!espnId && !nhlId) {
+        return `<div class="retired-row is-unavailable">${body}<span class="retired-open is-unavailable" title="Профиль игрока недоступен">Нет профиля</span></div>`;
+      }
       const attrs = [
         espnId ? `data-espn-id="${escapeAttr(espnId)}"` : '',
         nhlId ? `data-nhl-id="${escapeAttr(nhlId)}"` : '',
         `data-player-name="${escapeAttr(rawName)}"`,
         abbrev ? `data-team-abbrev="${escapeAttr(abbrev)}"` : ''
       ].filter(Boolean).join(' ');
-      return `<button type="button" class="retired-row player-hit" ${attrs}>${body}<span class="retired-open" aria-hidden="true">›</span></button>`;
+      return `<button type="button" class="retired-row player-hit" ${attrs} aria-label="Просмотр: ${escapeAttr(rawName)}">${body}<span class="retired-open">Просмотр <span aria-hidden="true">›</span></span></button>`;
     }).join('');
     return `<section class="detail-section team-retired-section"><div class="detail-section-title"><h3>Закреплённые номера</h3><span>${list.length}</span></div><div class="retired-list">${items}</div></section>`;
   }
@@ -1712,10 +1724,11 @@
       const prefix = game.isHome ? 'vs' : '@';
       const remind = remindButtonMarkup(game);
       const openable = game.id != null && game.id !== '';
-      return `<div class="schedule-row${remind ? ' has-remind' : ''}${openable ? ' is-openable' : ''}"${openable ? ` role="button" tabindex="0" data-schedule-game="${escapeAttr(game.id)}"` : ''}>
+      return `<div class="schedule-row has-view${remind ? ' has-remind' : ''}${openable ? ' is-openable' : ' is-unavailable'}"${openable ? ` role="button" tabindex="0" data-schedule-game="${escapeAttr(game.id)}" aria-label="Просмотр матча"` : ''}>
         <span class="schedule-date">${formatShortDate(game.startTimeUTC || '')}</span>
         <div class="schedule-copy"><strong>${prefix} ${escapeHtml(opp.short || opp.name || '—')}</strong><small>${statusLabel(game.status, game.preseason)}</small></div>
         <span class="schedule-result">${escapeHtml(game.resultLabel || game.time || '')}</span>
+        ${scheduleViewControl(openable)}
         ${remind}
       </div>`;
     }).join('')}</div>`;
