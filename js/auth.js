@@ -115,6 +115,13 @@
       writeSession(null);
     },
     me() { return request('/api/auth/me'); },
+    miniappLogin({ platform, init_data }) {
+      return request('/api/auth/miniapp', {
+        method: 'POST',
+        body: { platform, init_data },
+        auth: false
+      });
+    },
     async getFavorites() {
       const data = await request('/api/auth/favorites');
       return {
@@ -124,9 +131,13 @@
       };
     },
     putFavorites(fav) {
+      const teams = Array.isArray(fav?.teams) ? fav.teams : [];
+      const players = Array.isArray(fav?.players) ? fav.players : [];
+      // Server refuses empty overwrites unless clear=true (intentional wipe).
+      const clear = !teams.length && !players.length;
       return request('/api/auth/favorites', {
         method: 'PUT',
-        body: { teams: fav?.teams || [], players: fav?.players || [] }
+        body: { teams, players, clear }
       });
     }
   };

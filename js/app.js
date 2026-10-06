@@ -146,6 +146,80 @@
     return { teams, players };
   }
 
+  function normalizeServerFavorites(server) {
+    return {
+      teams: teamListFrom(server).map(team => {
+        if (typeof team === 'string') {
+          const abbrev = team.trim().toUpperCase();
+          return { abbrev, name: abbrev, logo: '' };
+        }
+        const abbrev = String(team?.abbrev || team?.short || '').trim().toUpperCase();
+        return {
+          abbrev,
+          name: team?.name || abbrev,
+          logo: team?.logo || ''
+        };
+      }).filter(t => t.abbrev),
+      players: (Array.isArray(server?.players) ? server.players : []).map(playerFavRecord)
+    };
+  }
+
+  function favoritesEmpty(fav) {
+    return !(fav?.teams?.length) && !(fav?.players?.length);
+  }
+
+  /**
+   * Sync rules:
+   * - serverWins: replace local with server (bot/PWA account is source of truth).
+   * - On first login: server-wins when server has data; if server empty and local
+   *   has offline picks, keep local and push once. Never PUT empty over server.
+   */
+  function adoptServerFavorites(server, { mode = 'serverWins' } = {}) {
+    const remote = normalizeServerFavorites(server);
+    const local = loadFavorites();
+    let next = remote;
+    let sync = false;
+    if (mode === 'login') {
+      if (favoritesEmpty(remote) && !favoritesEmpty(local)) {
+        // Seed empty account from offline local picks (explicit non-empty).
+        next = local;
+        sync = true;
+      } else if (!favoritesEmpty(remote) && !favoritesEmpty(local)) {
+        // First paint after login: prefer server, keep local-only extras.
+        next = mergeFavorites(remote, local);
+        sync = false;
+      } else {
+        next = remote;
+        sync = false;
+      }
+    }
+    saveFavorites(next, { sync });
+    return next;
+  }
+
+  function hostInitData() {
+    try {
+      if (bridge.isTelegram) return String(window.Telegram?.WebApp?.initData || '');
+      if (bridge.isMax) return String(window.WebApp?.initData || '');
+    } catch { /* ignore */ }
+    return '';
+  }
+
+  function hostPlatformUserId() {
+    try {
+      if (bridge.isTelegram) {
+        const id = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+        return id != null ? Number(id) : null;
+      }
+      if (bridge.isMax) {
+        const user = window.WebApp?.initDataUnsafe?.user;
+        const id = user?.id ?? user?.user_id;
+        return id != null ? Number(id) : null;
+      }
+    } catch { /* ignore */ }
+    return null;
+  }
+
   function hasMessengerUser() {
     try {
       if (bridge.isTelegram && window.Telegram?.WebApp?.initDataUnsafe?.user?.id) return true;
@@ -155,6 +229,42 @@
       }
     } catch { /* ignore */ }
     return false;
+  }
+
+  let messengerSessionPromise = null;
+
+  async function ensureMessengerSession() {
+    if (!hasMessengerUser()) return false;
+    const auth = window.NHL_AUTH;
+    if (!auth?.available?.()) return false;
+    const platform = bridge.isMax ? 'max' : 'telegram';
+    const hostId = hostPlatformUserId();
+    const session = auth.session?.();
+    if (
+      auth.loggedIn?.()
+      && session?.platform === platform
+      && (hostId == null || session.platformUserId == null || Number(session.platformUserId) === hostId)
+    ) {
+      return true;
+    }
+    const initData = hostInitData();
+    if (!initData) return false;
+    if (!messengerSessionPromise) {
+      messengerSessionPromise = (async () => {
+        const res = await auth.miniappLogin({ platform, init_data: initData });
+        if (!res?.token) return false;
+        const user = res.user || {};
+        auth.acceptToken({
+          token: res.token,
+          platform: user.platform === 'max' ? 'max' : 'telegram',
+          platformUserId: user.platform_user_id ?? hostId,
+          userId: user.id ?? null
+        });
+        return res;
+      })().finally(() => { messengerSessionPromise = null; });
+    }
+    const res = await messengerSessionPromise;
+    return Boolean(res?.token || auth.loggedIn?.());
   }
 
   function platformLabel(platform) {
@@ -234,15 +344,14 @@
     closeLoginSheet();
     try {
       // Prefer favorites returned with the login poll (same users row).
-      // Do not PUT here: a follow-up write used to replace favorite_teams
-      // with whatever was already on this device and could drop the bot list.
+      // Do not PUT empty over the server: adoptServerFavorites seeds only when
+      // the account is empty and this device already has non-empty local picks.
       const inline = payload.favorites;
       const server = inline
         ? inline
         : await auth.getFavorites();
-      const merged = mergeFavorites(server, loadFavorites());
-      saveFavorites(merged, { sync: false });
-      renderFavoritesSettings(merged);
+      const next = adoptServerFavorites(server, { mode: 'login' });
+      renderFavoritesSettings(next);
     } catch (err) {
       console.warn('[NHL Diggest] favorites merge failed', err);
       toast('Вход выполнен, избранное не удалось прочитать');
@@ -300,25 +409,60 @@
     }
   }
 
+  let favPullTimer = 0;
+  let favPullInFlight = null;
+
+  async function pullFavoritesFromServer({ mode = 'serverWins', silent = true } = {}) {
+    const auth = window.NHL_AUTH;
+    try {
+      if (hasMessengerUser()) {
+        const ok = await ensureMessengerSession();
+        if (!ok) {
+          renderFavoritesSettings();
+          return null;
+        }
+      } else if (!auth?.loggedIn?.()) {
+        renderFavoritesSettings();
+        return null;
+      }
+      const server = await auth.getFavorites();
+      const next = adoptServerFavorites(server, { mode });
+      renderFavoritesSettings(next);
+      try { renderGames(); } catch { /* ignore */ }
+      return next;
+    } catch (err) {
+      if (err?.status !== 401 && !silent) console.warn('[NHL Diggest] favorites pull failed', err);
+      if (err?.status === 401) renderAccount();
+      renderFavoritesSettings();
+      return null;
+    }
+  }
+
+  function scheduleFavoritesPull(options) {
+    window.clearTimeout(favPullTimer);
+    favPullTimer = window.setTimeout(() => {
+      if (favPullInFlight) return;
+      favPullInFlight = pullFavoritesFromServer(options).finally(() => {
+        favPullInFlight = null;
+      });
+    }, 300);
+  }
+
   async function restoreAccountFavorites() {
     renderAccount();
+    // Inside Telegram/Max: auto-session via initData, then server-wins pull.
+    // Browser PWA with stored login: same pull so bot changes appear.
+    if (hasMessengerUser()) {
+      await pullFavoritesFromServer({ mode: 'serverWins' });
+      renderAccount();
+      return;
+    }
     const auth = window.NHL_AUTH;
-    if (hasMessengerUser() || !auth?.loggedIn?.()) {
+    if (!auth?.loggedIn?.()) {
       renderFavoritesSettings();
       return;
     }
-    try {
-      const server = await auth.getFavorites();
-      const merged = mergeFavorites(server, loadFavorites());
-      // Read-only: never replace the server row from a page load.
-      saveFavorites(merged, { sync: false });
-      renderFavoritesSettings(merged);
-      try { renderGames(); } catch { /* ignore */ }
-    } catch (err) {
-      if (err?.status !== 401) console.warn('[NHL Diggest] session restore failed', err);
-      renderAccount();
-      renderFavoritesSettings();
-    }
+    await pullFavoritesFromServer({ mode: 'serverWins' });
   }
 
   function parseFavPlayerKey(raw) {
@@ -2738,6 +2882,15 @@
   })();
 
   const DEEPLINK_HANDLED_KEY = 'nhl-diggest-deeplink-handled';
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      scheduleFavoritesPull({ mode: 'serverWins' });
+    }
+  });
+  window.addEventListener('focus', () => {
+    scheduleFavoritesPull({ mode: 'serverWins' });
+  });
 
   (async function boot() {
     renderDayNavigation();
