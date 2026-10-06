@@ -889,9 +889,58 @@
     if (sourceHint) sourceHint.textContent = state.gamesSource === 'mock' ? 'демо' : state.gamesSource.toUpperCase();
   }
 
-  function standingsTuple(team) {
-    if (Array.isArray(team)) return team;
-    return [team.name, team.abbrev || team.short || '', team.wins || 0, team.losses || 0, team.ot || 0, team.points || 0];
+  function standingsTeam(team) {
+    if (Array.isArray(team)) {
+      const wins = Number(team[2] || 0);
+      const losses = Number(team[3] || 0);
+      const ot = Number(team[4] || 0);
+      return {
+        name: team[0] || '',
+        abbrev: team[1] || '',
+        wins,
+        losses,
+        ot,
+        points: Number(team[5] || 0),
+        gp: wins + losses + ot,
+        gf: null,
+        ga: null,
+        diff: null,
+        streak: null
+      };
+    }
+    const wins = Number(team.wins || 0);
+    const losses = Number(team.losses || 0);
+    const ot = Number(team.ot || 0);
+    const gp = Number(team.gp != null ? team.gp : wins + losses + ot);
+    const gf = team.gf != null ? Number(team.gf) : null;
+    const ga = team.ga != null ? Number(team.ga) : null;
+    let diff = team.diff != null ? Number(team.diff) : null;
+    if (diff == null && gf != null && ga != null) diff = gf - ga;
+    return {
+      name: team.name || '',
+      abbrev: team.abbrev || team.short || '',
+      wins,
+      losses,
+      ot,
+      points: Number(team.points || 0),
+      gp,
+      gf,
+      ga,
+      diff,
+      streak: team.streak || null
+    };
+  }
+
+  function formatDiff(diff) {
+    if (diff == null || Number.isNaN(diff)) return '—';
+    const n = Number(diff);
+    if (n > 0) return `+${n}`;
+    return String(n);
+  }
+
+  function formatGoals(gf, ga) {
+    if (gf == null || ga == null || Number.isNaN(gf) || Number.isNaN(ga)) return '—';
+    return `${gf}-${ga}`;
   }
 
   function renderStandings(type = 'division') {
@@ -902,14 +951,21 @@
     }
     $('#standingsList').innerHTML = groups.map(group => `<div class="division-block">
       <div class="division-title"><span>${group.title}</span><span>${group.code || ''}</span></div>
-      <div class="standing-head"><span>#</span><span>Команда</span><span>И</span><span>О</span></div>
+      <div class="standing-head"><span>#</span><span>Команда</span><span title="Игры">И</span><span title="Победы">В</span><span title="Поражения">П</span><span title="Поражения в ОТ">ОТ</span><span title="Очки">О</span><span title="Шайбы за-против">Ш</span><span title="Разница">±</span></div>
       ${group.teams.map((team, index) => {
-        const row = standingsTuple(team);
-        const gamesPlayed = Number(row[2]) + Number(row[3]) + Number(row[4]);
-        const abbrev = escapeAttr(row[1] || '');
-        const favCls = isFavoriteTeam(row[1]) ? ' is-favorite' : '';
+        const row = standingsTeam(team);
+        const abbrev = escapeAttr(row.abbrev || '');
+        const favCls = isFavoriteTeam(row.abbrev) ? ' is-favorite' : '';
+        const diffCls = row.diff == null || Number.isNaN(row.diff)
+          ? ''
+          : Number(row.diff) > 0 ? ' is-pos' : Number(row.diff) < 0 ? ' is-neg' : '';
         return `<button type="button" class="standing-row team-hit${favCls}" data-team-abbrev="${abbrev}">
-          <span class="rank">${index + 1}</span><strong>${row[0]} <small>${row[1]}</small></strong><em>${gamesPlayed}</em><em>${row[5]}</em>
+          <span class="rank">${index + 1}</span>
+          <strong class="standing-team" title="${escapeAttr(row.name)}"><span class="standing-abbrev">${escapeHtml(row.abbrev)}</span><small>${escapeHtml(row.name)}</small></strong>
+          <em>${row.gp}</em><em>${row.wins}</em><em>${row.losses}</em><em>${row.ot}</em>
+          <em class="standing-pts">${row.points}</em>
+          <em class="standing-goals">${formatGoals(row.gf, row.ga)}</em>
+          <em class="standing-diff${diffCls}">${formatDiff(row.diff)}</em>
         </button>`;
       }).join('')}
     </div>`).join('');

@@ -207,15 +207,55 @@
 .player-name.is-clickable { cursor: pointer; }
 .standing-row.team-hit {
   display: grid;
-  grid-template-columns: 23px 1fr 35px 35px;
-  gap: 6px;
+  grid-template-columns: 18px minmax(0,1fr) 20px 20px 20px 22px 24px 40px 26px;
+  gap: 3px;
   align-items: center;
-  padding: 11px 13px;
+  padding: 10px 8px;
   border-top: 1px solid #253243;
   color: var(--muted);
   font-size: 11px;
   width: 100%;
 }
+.standing-head {
+  display: grid;
+  grid-template-columns: 18px minmax(0,1fr) 20px 20px 20px 22px 24px 40px 26px;
+  gap: 3px;
+  padding: 8px 8px 5px;
+  color: var(--dim);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .2px;
+}
+.standing-team {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.15;
+}
+.standing-abbrev {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+}
+.standing-team small {
+  font-size: 9px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.standing-pts {
+  color: var(--accent) !important;
+  font-weight: 800;
+}
+.standing-goals {
+  font-size: 10px;
+  letter-spacing: -0.2px;
+}
+.standing-diff.is-pos { color: var(--green); }
+.standing-diff.is-neg { color: var(--danger); }
 .leader-card.player-hit {
   display: grid;
   grid-template-columns: 28px 40px minmax(0, 1fr) auto;
@@ -548,9 +588,10 @@ h2 { font-size: 29px; }
 .segment { font-size: 12px; }
 .division-title { font-size: 12px; }
 .division-title span { font-size: 10px; }
-.standing-row { font-size: 12px; }
-.standing-row strong { font-size: 13px; }
-.standing-head { font-size: 10px; }
+.standing-row { font-size: 11px; }
+.standing-row strong { font-size: 12px; }
+.standing-head { font-size: 9px; }
+.standing-abbrev { font-size: 12px; }
 .player-rank { font-size: 12px; }
 .player-copy strong { font-size: 14px; }
 .player-copy span { font-size: 11px; }

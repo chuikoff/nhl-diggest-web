@@ -1485,7 +1485,25 @@
     const losses = Number(team.losses || 0);
     const ot = Number(team.otLosses || 0);
     const points = Number(team.points || 0);
-    return { name, abbrev, wins, losses, ot, points, gp: Number(team.gamesPlayed || 0) };
+    const gf = Number(team.goalFor ?? 0);
+    const ga = Number(team.goalAgainst ?? 0);
+    const diff = Number(team.goalDifferential ?? (gf - ga));
+    const streak = team.streakCode && team.streakCount
+      ? `${team.streakCode}${team.streakCount}`
+      : null;
+    return {
+      name,
+      abbrev,
+      wins,
+      losses,
+      ot,
+      points,
+      gp: Number(team.gamesPlayed || 0),
+      gf,
+      ga,
+      diff,
+      streak
+    };
   }
 
   function groupStandings(rows) {
@@ -1538,6 +1556,15 @@
           const stats = Object.fromEntries((entry.stats || []).map(stat => [stat.name, stat.value]));
           const team = entry.team || {};
           const abbrev = canonicalNhlAbbrev(team.abbreviation);
+          const gf = Number(stats.pointsFor || 0);
+          const ga = Number(stats.pointsAgainst || 0);
+          const diff = Number(
+            stats.pointDifferential ?? stats.pointsDiff ?? stats.differential ?? (gf - ga)
+          );
+          const streakStat = (entry.stats || []).find(s => s.name === 'streak');
+          const streak = streakStat && streakStat.displayValue
+            ? String(streakStat.displayValue)
+            : null;
           rows.push({
             name: team.displayName || team.name || abbrev,
             abbrev,
@@ -1546,6 +1573,10 @@
             ot: Number(stats.otLosses ?? stats.overtimeLosses ?? 0),
             points: Number(stats.points || 0),
             gp: Number(stats.gamesPlayed || 0),
+            gf,
+            ga,
+            diff,
+            streak,
             division,
             conference
           });
