@@ -91,18 +91,23 @@
     if (sync) scheduleFavoriteSync({ allowClear });
   }
 
-  function scheduleFavoriteSync({ allowClear = false } = {}) {
+  function scheduleFavoriteSync({ allowClear = false, immediate = false } = {}) {
     const auth = window.NHL_AUTH;
     if (!auth?.loggedIn?.()) return;
     if (!favoritesHydrated) return;
     window.clearTimeout(favSyncTimer);
-    favSyncTimer = window.setTimeout(() => {
+    const run = () => {
       const fav = loadFavorites();
       const wipe = allowClear && favoritesEmpty(fav);
-      auth.putFavorites(fav, { clear: wipe }).catch(err => {
+      return auth.putFavorites(fav, { clear: wipe }).catch(err => {
         console.warn('[NHL Diggest] favorites sync failed', err);
       });
-    }, 250);
+    };
+    if (immediate) {
+      favSyncTimer = 0;
+      return run();
+    }
+    favSyncTimer = window.setTimeout(run, 250);
   }
 
   function markFavoritesHydrated() {
@@ -189,23 +194,11 @@
     let next = remote;
     let sync = false;
     if (mode === 'login') {
-      if (favoritesEmpty(remote) && !favoritesEmpty(local)) {
-        // Seed empty account from offline local picks (explicit non-empty).
-        next = local;
+      if (!favoritesEmpty(local)) {
+        // Always union + PUT when this device has local teams/players so
+        // Telegram/GitHub-Pages WebView favorites (incl. players) become server truth.
+        next = favoritesEmpty(remote) ? local : mergeFavorites(remote, local);
         sync = true;
-      } else if (!favoritesEmpty(remote) && !favoritesEmpty(local)) {
-        // Union: keep server + Telegram-WebView/local-only extras, then PUT
-        // so PWA and bot favorite_teams see the full list (not WSH-only).
-        next = mergeFavorites(remote, local);
-        const remoteKeys = new Set(
-          (remote.teams || []).map(t => String(t.abbrev || '').toUpperCase()).filter(Boolean)
-        );
-        const localExtra = (local.teams || []).some(
-          t => !remoteKeys.has(String(t.abbrev || '').toUpperCase())
-        );
-        const localPlayerExtra = (local.players || []).length > (remote.players || []).length;
-        sync = localExtra || localPlayerExtra
-          || (local.players || []).some(p => !(remote.players || []).some(r => favPlayerKey(r) === favPlayerKey(p)));
       } else {
         next = remote;
         sync = false;
@@ -213,7 +206,19 @@
     }
     // Hydrate before optional sync so the union PUT is not gated out.
     markFavoritesHydrated();
-    saveFavorites(next, { sync });
+    if (sync) {
+      // Persist locally, then PUT immediately (teams + players) so a quick
+      // navigation / origin switch cannot drop the upload.
+      try {
+        window.localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify({
+          players: next.players || [],
+          teams: next.teams || []
+        }));
+      } catch { /* private mode */ }
+      scheduleFavoriteSync({ immediate: true });
+    } else {
+      saveFavorites(next, { sync: false });
+    }
     return next;
   }
 
@@ -497,15 +502,22 @@
 
   async function restoreAccountFavorites() {
     renderAccount();
-    // Inside Telegram/Max: auto-session via initData, then server-wins pull.
-    // Browser PWA with stored login: same pull so bot changes appear.
+    // Inside Telegram/Max: auto-session via initData, then union+upload pull.
+    // Browser PWA with stored login: server-wins so bot changes appear.
+    const auth = window.NHL_AUTH;
     if (hasMessengerUser()) {
-      // Union on first open so Telegram WebView local favorites are not discarded.
       await pullFavoritesFromServer({ mode: 'login' });
       renderAccount();
+      // Guarantee teams+players hit the API before any origin redirect.
+      if (auth?.loggedIn?.() && !favoritesEmpty(loadFavorites())) {
+        try {
+          await auth.putFavorites(loadFavorites());
+        } catch (err) {
+          console.warn('[NHL Diggest] favorites force-upload failed', err);
+        }
+      }
       return;
     }
-    const auth = window.NHL_AUTH;
     if (!auth?.loggedIn?.()) {
       renderFavoritesSettings();
       return;
@@ -2940,9 +2952,42 @@
     scheduleFavoritesPull({ mode: 'serverWins' });
   });
 
+  function isLegacyGithubPages() {
+    try {
+      return /chuikoff\.github\.io$/i.test(location.hostname || '');
+    } catch { return false; }
+  }
+
+  function showOriginMigrateBanner() {
+    const banner = document.getElementById('originMigrateBanner');
+    if (!banner) return;
+    banner.hidden = false;
+    banner.style.display = 'block';
+    const link = document.getElementById('originMigrateLink');
+    if (link) {
+      const q = location.search || '';
+      const h = location.hash || '';
+      link.href = 'https://hockeydigest.duckdns.org/' + q + h;
+    }
+  }
+
   (async function boot() {
+    if (isLegacyGithubPages()) showOriginMigrateBanner();
     renderDayNavigation();
-    restoreAccountFavorites();
+    // Await first hydrate so GitHub Pages local teams+players can PUT before user leaves.
+    try {
+      await restoreAccountFavorites();
+    } catch (err) {
+      console.warn('[NHL Diggest] favorites restore failed', err);
+    }
+    if (isLegacyGithubPages() && window.NHL_AUTH?.loggedIn?.() && !favoritesEmpty(loadFavorites())) {
+      // After a successful upload to the shared API, send user to the canonical host.
+      window.setTimeout(() => {
+        const q = location.search || '';
+        const h = location.hash || '';
+        location.replace('https://hockeydigest.duckdns.org/' + q + h);
+      }, 1200);
+    }
     const deepMatchId = readDeepLinkMatchId();
     await Promise.all([
       loadGames(state.selectedDate),

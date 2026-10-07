@@ -6,7 +6,7 @@ window.NHL_API_BASE = 'https://api-web.nhle.com';
 // GitHub Pages (https://chuikoff.github.io) can still call it: API CORS allows that origin.
 window.NHL_CACHE_BASE = 'https://hockeydigest.duckdns.org';
 // Shell/service-worker cache-bust (?v= in index.html / sw.js VERSION).
-window.NHL_APP_VERSION = '20261007c';
+window.NHL_APP_VERSION = '20261007d';
 // Login + favorites API (same aiohttp as the game cache).
 // nginx on hockeydigest.duckdns.org proxies /api to 127.0.0.1:8765.
 // When this is set, NHL_AUTH.available() is true and the Telegram/Max

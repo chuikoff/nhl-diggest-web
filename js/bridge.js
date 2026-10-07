@@ -31,17 +31,19 @@
 
   function isMaxHost() {
     const max = window.WebApp;
-    // Max bridge always installs window.WebApp when the script loads; require host signals.
+    // Max CDN always installs window.WebApp — do NOT treat that alone as Max.
+    // Prefer hard signals so Telegram WebViews are not mis-labeled as Max
+    // (wrong platform → invalid_init_data → favorites never upload).
     if (!max || typeof max.ready !== 'function') return false;
     if (typeof max.initData === 'string' && max.initData.length > 0) return true;
     if (max.initDataUnsafe && max.initDataUnsafe.user) return true;
-    if (typeof max.platform === 'string' && MAX_PLATFORMS.has(max.platform)) return true;
     if (typeof window.WebViewHandler !== 'undefined') return true;
     if (hasHashParam('WebAppData') || hasHashParam('WebAppPlatform')) return true;
     try {
       const ref = document.referrer || '';
       if (/max\.ru|oneme\.ru/i.test(ref)) return true;
     } catch { /* ignore */ }
+    // platform alone is too weak (Max SDK may set ios/android inside Telegram).
     return false;
   }
 
@@ -54,11 +56,15 @@
     if (tg && max) {
       const tgData = window.Telegram?.WebApp?.initData || '';
       const maxData = window.WebApp?.initData || '';
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const maxUser = window.WebApp?.initDataUnsafe?.user;
       if (tgData && !maxData) return 'telegram';
       if (maxData && !tgData) return 'max';
-      // Both present: Max uses window.WebApp; Telegram uses Telegram.WebApp — prefer Telegram
-      // only when its platform is a real client (Max iframe heuristic is weaker).
+      if (tgUser && !maxUser) return 'telegram';
+      if (maxUser && !tgUser) return 'max';
+      // Prefer Telegram when its client platform is known; otherwise Max.
       if (TG_PLATFORMS.has(window.Telegram?.WebApp?.platform || '')) return 'telegram';
+      if (typeof navigator !== 'undefined' && /Telegram/i.test(navigator.userAgent || '')) return 'telegram';
       return 'max';
     }
     return 'browser';
