@@ -533,6 +533,12 @@
       const next = adoptServerFavorites(server, { mode });
       renderFavoritesSettings(next);
       try { renderGames(); } catch { /* ignore */ }
+      try {
+        renderStandings(
+          document.querySelector('.segment[data-standings-tab].is-selected')?.dataset.standingsTab
+            || 'division'
+        );
+      } catch { /* standings not ready yet */ }
       return next;
     } catch (err) {
       if (err?.status !== 401 && !silent) console.warn('[NHL Diggest] favorites pull failed', err);
