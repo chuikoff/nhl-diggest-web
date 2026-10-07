@@ -245,6 +245,10 @@
     return null;
   }
 
+  function isMessengerHost() {
+    return Boolean(bridge.isTelegram || bridge.isMax);
+  }
+
   function hasMessengerUser() {
     try {
       if (bridge.isTelegram && window.Telegram?.WebApp?.initDataUnsafe?.user?.id) return true;
@@ -253,13 +257,19 @@
         if (user && (user.id || user.user_id)) return true;
       }
     } catch { /* ignore */ }
-    return false;
+    // Inside TG/Max WebView treat host as messenger even before user object appears.
+    return isMessengerHost();
   }
 
   let messengerSessionPromise = null;
+  let messengerAuthError = '';
 
-  async function waitForInitData({ attempts = 12, delayMs = 150 } = {}) {
+  async function waitForInitData({ attempts = 25, delayMs = 120 } = {}) {
     for (let i = 0; i < attempts; i += 1) {
+      try {
+        if (bridge.isTelegram) window.Telegram?.WebApp?.ready?.();
+        if (bridge.isMax) window.WebApp?.ready?.();
+      } catch { /* ignore */ }
       const data = hostInitData();
       if (data) return data;
       await new Promise(resolve => window.setTimeout(resolve, delayMs));
@@ -268,9 +278,12 @@
   }
 
   async function ensureMessengerSession() {
-    if (!hasMessengerUser()) return null;
+    if (!isMessengerHost()) return null;
     const auth = window.NHL_AUTH;
-    if (!auth?.available?.()) return null;
+    if (!auth?.available?.()) {
+      messengerAuthError = 'Нет связи с сервером избранного.';
+      return null;
+    }
     const platform = bridge.isMax ? 'max' : 'telegram';
     const hostId = hostPlatformUserId();
     const session = auth.session?.();
@@ -279,25 +292,38 @@
       && session?.platform === platform
       && (hostId == null || session.platformUserId == null || Number(session.platformUserId) === hostId)
     ) {
+      messengerAuthError = '';
       return { token: auth.token?.(), reused: true };
     }
     const initData = await waitForInitData();
     if (!initData) {
-      console.warn('[NHL Diggest] messenger user present but initData empty');
+      messengerAuthError = 'Нет initData. Закройте Mini App и откройте снова из бота.';
+      console.warn('[NHL Diggest] messenger host but initData empty');
       return null;
     }
     if (!messengerSessionPromise) {
       messengerSessionPromise = (async () => {
-        const res = await auth.miniappLogin({ platform, init_data: initData });
-        if (!res?.token) return null;
-        const user = res.user || {};
-        auth.acceptToken({
-          token: res.token,
-          platform: user.platform === 'max' ? 'max' : 'telegram',
-          platformUserId: user.platform_user_id ?? hostId,
-          userId: user.id ?? null
-        });
-        return res;
+        try {
+          const res = await auth.miniappLogin({ platform, init_data: initData });
+          if (!res?.token) {
+            messengerAuthError = 'Автовход не удался. Откройте Mini App ещё раз.';
+            return null;
+          }
+          const user = res.user || {};
+          auth.acceptToken({
+            token: res.token,
+            platform: user.platform === 'max' ? 'max' : 'telegram',
+            platformUserId: user.platform_user_id ?? hostId,
+            userId: user.id ?? null
+          });
+          messengerAuthError = '';
+          return res;
+        } catch (err) {
+          const code = err?.data?.error || err?.message || err?.status || 'error';
+          messengerAuthError = 'Автовход не удался (' + code + '). Откройте Mini App ещё раз.';
+          console.warn('[NHL Diggest] miniappLogin failed', err);
+          return null;
+        }
       })().finally(() => { messengerSessionPromise = null; });
     }
     return messengerSessionPromise;
@@ -322,18 +348,24 @@
     const group = document.getElementById('accountGroup');
     const card = document.getElementById('accountCard');
     if (!group || !card) return;
-    if (hasMessengerUser()) {
+    // Inside Telegram/Max: never show code-login or "waiting for Mini App auth".
+    // Auth is silent via initData; only a short error if it fails.
+    if (isMessengerHost()) {
       const auth = window.NHL_AUTH;
+      const label = platformLabel(bridge.isMax ? 'max' : 'telegram');
+      const mark = label === 'Max' ? 'M' : 'T';
+      group.hidden = true;
+      card.innerHTML = '';
       if (auth?.loggedIn?.()) {
-        group.hidden = true;
-        const session = auth.session?.() || {};
-        const label = platformLabel(session.platform);
-        setProfileChrome(label, 'Избранное синхронизируется', label === 'Max' ? 'M' : 'T');
+        setProfileChrome(label, 'Избранное синхронизируется', mark);
         return;
       }
-      // Host detected but session not ready (empty initData): keep chrome, hide login buttons.
-      group.hidden = true;
-      setProfileChrome(platformLabel(bridge.isMax ? 'max' : 'telegram'), 'Ждём авторизацию Mini App…', bridge.isMax ? 'M' : 'T');
+      if (messengerAuthError) {
+        setProfileChrome(label, messengerAuthError, mark);
+        return;
+      }
+      // Still authenticating or about to — neutral chrome, no waiting copy.
+      setProfileChrome(label, 'Избранное с аккаунтом бота', mark);
       return;
     }
     group.hidden = false;
@@ -462,10 +494,10 @@
     const auth = window.NHL_AUTH;
     try {
       let inline = null;
-      if (hasMessengerUser()) {
+      if (isMessengerHost()) {
         const sessionRes = await ensureMessengerSession();
+        renderAccount();
         if (!sessionRes || !(sessionRes.token || auth.loggedIn?.())) {
-          // Keep login chrome available if initData never arrived.
           renderFavoritesSettings();
           return null;
         }
@@ -501,14 +533,11 @@
   }
 
   async function restoreAccountFavorites() {
-    renderAccount();
-    // Inside Telegram/Max: auto-session via initData, then union+upload pull.
-    // Browser PWA with stored login: server-wins so bot changes appear.
     const auth = window.NHL_AUTH;
-    if (hasMessengerUser()) {
+    // Telegram/Max: silent initData login first, then paint account chrome.
+    if (isMessengerHost()) {
       await pullFavoritesFromServer({ mode: 'login' });
       renderAccount();
-      // Guarantee teams+players hit the API before any origin redirect.
       if (auth?.loggedIn?.() && !favoritesEmpty(loadFavorites())) {
         try {
           await auth.putFavorites(loadFavorites());
@@ -518,6 +547,7 @@
       }
       return;
     }
+    renderAccount();
     if (!auth?.loggedIn?.()) {
       renderFavoritesSettings();
       return;
