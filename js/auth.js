@@ -130,14 +130,22 @@
         players: Array.isArray(data?.players) ? data.players : []
       };
     },
-    putFavorites(fav) {
+    putFavorites(fav, { clear = false } = {}) {
       const teams = Array.isArray(fav?.teams) ? fav.teams : [];
       const players = Array.isArray(fav?.players) ? fav.players : [];
-      // Server refuses empty overwrites unless clear=true (intentional wipe).
-      const clear = !teams.length && !players.length;
+      // Never auto-send clear:true — that defeated the server empty-PUT guard and
+      // could wipe bot favorite_teams when localStorage was still empty on boot.
+      // Only an explicit clear (user removed the last favorite) may wipe.
+      const body = { teams, players };
+      if (!teams.length && !players.length) {
+        if (!clear) {
+          return Promise.resolve({ teams: [], players: [], skipped: true });
+        }
+        body.clear = true;
+      }
       return request('/api/auth/favorites', {
         method: 'PUT',
-        body: { teams, players, clear }
+        body
       });
     }
   };

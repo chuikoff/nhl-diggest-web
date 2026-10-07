@@ -77,27 +77,36 @@
   }
 
   let favSyncTimer = 0;
+  // Block outbound PUTs until the first server pull/login adopt finishes.
+  // Otherwise an empty localStorage can race ahead of GET and wipe the bot row.
+  let favoritesHydrated = false;
 
-  function saveFavorites(next, { sync = true } = {}) {
+  function saveFavorites(next, { sync = true, allowClear = false } = {}) {
     try {
       window.localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify({
         players: next.players || [],
         teams: next.teams || []
       }));
     } catch { /* private mode */ }
-    if (sync) scheduleFavoriteSync();
+    if (sync) scheduleFavoriteSync({ allowClear });
   }
 
-  function scheduleFavoriteSync() {
+  function scheduleFavoriteSync({ allowClear = false } = {}) {
     const auth = window.NHL_AUTH;
     if (!auth?.loggedIn?.()) return;
+    if (!favoritesHydrated) return;
     window.clearTimeout(favSyncTimer);
     favSyncTimer = window.setTimeout(() => {
       const fav = loadFavorites();
-      auth.putFavorites(fav).catch(err => {
+      const wipe = allowClear && favoritesEmpty(fav);
+      auth.putFavorites(fav, { clear: wipe }).catch(err => {
         console.warn('[NHL Diggest] favorites sync failed', err);
       });
     }, 250);
+  }
+
+  function markFavoritesHydrated() {
+    favoritesHydrated = true;
   }
 
   function teamListFrom(source) {
@@ -194,6 +203,7 @@
       }
     }
     saveFavorites(next, { sync });
+    markFavoritesHydrated();
     return next;
   }
 
@@ -233,10 +243,19 @@
 
   let messengerSessionPromise = null;
 
+  async function waitForInitData({ attempts = 12, delayMs = 150 } = {}) {
+    for (let i = 0; i < attempts; i += 1) {
+      const data = hostInitData();
+      if (data) return data;
+      await new Promise(resolve => window.setTimeout(resolve, delayMs));
+    }
+    return hostInitData();
+  }
+
   async function ensureMessengerSession() {
-    if (!hasMessengerUser()) return false;
+    if (!hasMessengerUser()) return null;
     const auth = window.NHL_AUTH;
-    if (!auth?.available?.()) return false;
+    if (!auth?.available?.()) return null;
     const platform = bridge.isMax ? 'max' : 'telegram';
     const hostId = hostPlatformUserId();
     const session = auth.session?.();
@@ -245,14 +264,17 @@
       && session?.platform === platform
       && (hostId == null || session.platformUserId == null || Number(session.platformUserId) === hostId)
     ) {
-      return true;
+      return { token: auth.token?.(), reused: true };
     }
-    const initData = hostInitData();
-    if (!initData) return false;
+    const initData = await waitForInitData();
+    if (!initData) {
+      console.warn('[NHL Diggest] messenger user present but initData empty');
+      return null;
+    }
     if (!messengerSessionPromise) {
       messengerSessionPromise = (async () => {
         const res = await auth.miniappLogin({ platform, init_data: initData });
-        if (!res?.token) return false;
+        if (!res?.token) return null;
         const user = res.user || {};
         auth.acceptToken({
           token: res.token,
@@ -263,8 +285,7 @@
         return res;
       })().finally(() => { messengerSessionPromise = null; });
     }
-    const res = await messengerSessionPromise;
-    return Boolean(res?.token || auth.loggedIn?.());
+    return messengerSessionPromise;
   }
 
   function platformLabel(platform) {
@@ -287,7 +308,17 @@
     const card = document.getElementById('accountCard');
     if (!group || !card) return;
     if (hasMessengerUser()) {
+      const auth = window.NHL_AUTH;
+      if (auth?.loggedIn?.()) {
+        group.hidden = true;
+        const session = auth.session?.() || {};
+        const label = platformLabel(session.platform);
+        setProfileChrome(label, 'Избранное синхронизируется', label === 'Max' ? 'M' : 'T');
+        return;
+      }
+      // Host detected but session not ready (empty initData): keep chrome, hide login buttons.
       group.hidden = true;
+      setProfileChrome(platformLabel(bridge.isMax ? 'max' : 'telegram'), 'Ждём авторизацию Mini App…', bridge.isMax ? 'M' : 'T');
       return;
     }
     group.hidden = false;
@@ -415,17 +446,21 @@
   async function pullFavoritesFromServer({ mode = 'serverWins', silent = true } = {}) {
     const auth = window.NHL_AUTH;
     try {
+      let inline = null;
       if (hasMessengerUser()) {
-        const ok = await ensureMessengerSession();
-        if (!ok) {
+        const sessionRes = await ensureMessengerSession();
+        if (!sessionRes || !(sessionRes.token || auth.loggedIn?.())) {
+          // Keep login chrome available if initData never arrived.
           renderFavoritesSettings();
           return null;
         }
+        if (sessionRes.favorites) inline = sessionRes.favorites;
       } else if (!auth?.loggedIn?.()) {
+        markFavoritesHydrated();
         renderFavoritesSettings();
         return null;
       }
-      const server = await auth.getFavorites();
+      const server = inline || await auth.getFavorites();
       const next = adoptServerFavorites(server, { mode });
       renderFavoritesSettings(next);
       try { renderGames(); } catch { /* ignore */ }
@@ -433,6 +468,8 @@
     } catch (err) {
       if (err?.status !== 401 && !silent) console.warn('[NHL Diggest] favorites pull failed', err);
       if (err?.status === 401) renderAccount();
+      // Allow later toggles to sync even if this pull failed (network blip).
+      markFavoritesHydrated();
       renderFavoritesSettings();
       return null;
     }
@@ -580,7 +617,7 @@
     const matched = fav.players.filter(item => favoritePlayerMatches(record, item));
     if (forceRemove || matched.length) {
       fav.players = fav.players.filter(item => !favoritePlayerMatches(record, item));
-      saveFavorites(fav);
+      saveFavorites(fav, { allowClear: favoritesEmpty(fav) });
       return false;
     }
     fav.players.unshift(record);
@@ -595,7 +632,7 @@
     const idx = fav.teams.findIndex(item => String(item.abbrev || '').toUpperCase() === abbrev);
     if (forceRemove || idx >= 0) {
       fav.teams = fav.teams.filter(item => String(item.abbrev || '').toUpperCase() !== abbrev);
-      saveFavorites(fav);
+      saveFavorites(fav, { allowClear: favoritesEmpty(fav) });
       return false;
     }
     fav.teams.unshift({
