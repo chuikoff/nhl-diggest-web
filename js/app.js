@@ -194,16 +194,26 @@
         next = local;
         sync = true;
       } else if (!favoritesEmpty(remote) && !favoritesEmpty(local)) {
-        // First paint after login: prefer server, keep local-only extras.
+        // Union: keep server + Telegram-WebView/local-only extras, then PUT
+        // so PWA and bot favorite_teams see the full list (not WSH-only).
         next = mergeFavorites(remote, local);
-        sync = false;
+        const remoteKeys = new Set(
+          (remote.teams || []).map(t => String(t.abbrev || '').toUpperCase()).filter(Boolean)
+        );
+        const localExtra = (local.teams || []).some(
+          t => !remoteKeys.has(String(t.abbrev || '').toUpperCase())
+        );
+        const localPlayerExtra = (local.players || []).length > (remote.players || []).length;
+        sync = localExtra || localPlayerExtra
+          || (local.players || []).some(p => !(remote.players || []).some(r => favPlayerKey(r) === favPlayerKey(p)));
       } else {
         next = remote;
         sync = false;
       }
     }
-    saveFavorites(next, { sync });
+    // Hydrate before optional sync so the union PUT is not gated out.
     markFavoritesHydrated();
+    saveFavorites(next, { sync });
     return next;
   }
 
@@ -490,7 +500,8 @@
     // Inside Telegram/Max: auto-session via initData, then server-wins pull.
     // Browser PWA with stored login: same pull so bot changes appear.
     if (hasMessengerUser()) {
-      await pullFavoritesFromServer({ mode: 'serverWins' });
+      // Union on first open so Telegram WebView local favorites are not discarded.
+      await pullFavoritesFromServer({ mode: 'login' });
       renderAccount();
       return;
     }
