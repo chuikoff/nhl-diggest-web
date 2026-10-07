@@ -1,5 +1,5 @@
 /* App-shell cache only. Version must match the ?v= cache-bust in index.html. */
-const VERSION = '20261007f';
+const VERSION = '20261007g';
 const CACHE = 'nhl-digest-shell-' + VERSION;
 const SHELL = [
   './',

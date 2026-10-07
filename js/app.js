@@ -224,8 +224,19 @@
 
   function hostInitData() {
     try {
-      if (bridge.isTelegram) return String(window.Telegram?.WebApp?.initData || '');
-      if (bridge.isMax) return String(window.WebApp?.initData || '');
+      // Prefer real Telegram initData whenever the TG SDK has it, even if Max
+      // SDK also loaded (mixed WebView). Max hash fallback last.
+      const tg = String(window.Telegram?.WebApp?.initData || '');
+      if (tg) return tg;
+      const max = String(window.WebApp?.initData || '');
+      if (max) return max;
+      // Max may also put WebAppData in the URL fragment.
+      const hash = String(location.hash || '').replace(/^#/, '');
+      if (hash) {
+        const params = new URLSearchParams(hash);
+        const fromHash = params.get('WebAppData') || params.get('tgWebAppData') || '';
+        if (fromHash) return fromHash;
+      }
     } catch { /* ignore */ }
     return '';
   }
@@ -284,7 +295,9 @@
       messengerAuthError = 'Нет связи с сервером избранного.';
       return null;
     }
-    const platform = bridge.isMax ? 'max' : 'telegram';
+    // Prefer telegram if TG initData is present (mixed Max+TG SDKs).
+    const hasTgInit = Boolean(String(window.Telegram?.WebApp?.initData || ''));
+    const platform = (bridge.isMax && !hasTgInit) ? 'max' : 'telegram';
     const hostId = hostPlatformUserId();
     const session = auth.session?.();
     if (
@@ -317,11 +330,20 @@
             userId: user.id ?? null
           });
           messengerAuthError = '';
+          // One-shot force sync: push whatever is local right after session mint.
+          try {
+            const fav = loadFavorites();
+            if (!favoritesEmpty(fav)) {
+              await auth.putFavorites(fav);
+            }
+          } catch (syncErr) {
+            console.warn('[NHL Diggest] post-login force sync failed', syncErr);
+          }
           return res;
         } catch (err) {
-          const code = err?.data?.error || err?.message || err?.status || 'error';
-          messengerAuthError = 'Автовход не удался (' + code + '). Откройте Mini App ещё раз.';
-          console.warn('[NHL Diggest] miniappLogin failed', err);
+          const reason = err?.data?.reason || err?.data?.error || err?.message || err?.status || 'error';
+          messengerAuthError = 'Автовход не удался (' + reason + '). Закройте Mini App и откройте из меню бота.';
+          console.warn('[NHL Diggest] miniappLogin failed', reason, err);
           return null;
         }
       })().finally(() => { messengerSessionPromise = null; });

@@ -74,9 +74,12 @@
     let data = null;
     try { data = await res.json(); } catch { data = null; }
     if (res.status === 401) {
-      writeSession(null);
-      const err = new Error('unauthorized');
+      // Only drop a stored session when this request actually used it.
+      // Mini App /api/auth/miniapp 401 must keep err.data.reason for diagnostics.
+      if (auth) writeSession(null);
+      const err = new Error((data && data.error) || 'unauthorized');
       err.status = 401;
+      err.data = data;
       throw err;
     }
     if (!res.ok) {

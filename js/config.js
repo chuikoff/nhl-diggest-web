@@ -5,7 +5,7 @@ window.NHL_API_BASE = 'https://api-web.nhle.com';
 // Same origin when the Mini App is served from hockeydigest.duckdns.org.
 window.NHL_CACHE_BASE = 'https://hockeydigest.duckdns.org';
 // Shell/service-worker cache-bust (?v= in index.html / sw.js VERSION).
-window.NHL_APP_VERSION = '20261007f';
+window.NHL_APP_VERSION = '20261007g';
 // Login + favorites API (same aiohttp as the game cache).
 // nginx on hockeydigest.duckdns.org proxies /api to 127.0.0.1:8765.
 // When this is set, NHL_AUTH.available() is true and the Telegram/Max
