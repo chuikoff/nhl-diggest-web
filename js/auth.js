@@ -42,7 +42,7 @@
   function base() {
     const raw = configuredBase();
     if (raw) {
-      // GitHub Pages is HTTPS. Never call plain HTTP from it.
+      // Never call plain HTTP from an HTTPS page (mixed content).
       if (location.protocol === 'https:' && /^http:/i.test(raw)) return '';
       return raw;
     }

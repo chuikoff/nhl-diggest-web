@@ -4,7 +4,7 @@
 
 Live: <https://hockeydigest.duckdns.org/>
 
-Репозиторий на GitHub остаётся исходником. GitHub Pages больше не канонический хост (старый URL `https://chuikoff.github.io/nhl-diggest-web/` может ещё открываться, если Pages не выключены, но ставить PWA и кнопки ботов нужно с DuckDNS).
+Репозиторий на GitHub — только исходники. **Хостинг только на VPS:** <https://hockeydigest.duckdns.org/>. GitHub Pages для этого проекта выключен.
 
 ## Домашний экран (PWA)
 
@@ -13,7 +13,7 @@ Live: <https://hockeydigest.duckdns.org/>
 - **iPhone / iPad (Safari):** открыть ссылку в Safari → «Поделиться» → «На экран Домой».
 - **Android (Chrome):** открыть ссылку → меню ⋮ → «Установить приложение» или «Добавить на главный экран».
 
-Если на экране уже есть ярлык со старого GitHub Pages (`chuikoff.github.io/nhl-diggest-web`), удалите его и установите заново с DuckDNS: у нового манифеста `scope` и `start_url` равны `/`, это другое приложение.
+Если остался ярлык со старого GitHub Pages — удалите его и установите PWA заново с DuckDNS (`scope` / `start_url` = `/`).
 
 Сайт отдаёт nginx по HTTPS. Оболочка (index, css, js) кэшируется service worker с именем `nhl-digest-shell-<версия>`; ответы API не кэшируются. Версия кэша совпадает с `?v=` в `index.html`.
 
@@ -143,7 +143,7 @@ Endpoints (NHL → ESPN fallback, CORS `*` у ESPN):
 
 ### Cap hits (PuckPedia)
 
-Публичный API PuckPedia платный; Mini App на GitHub Pages не ходит на puckpedia.com из браузера (CORS). Вместо этого:
+Публичный API PuckPedia платный; браузерный Mini App не ходит на puckpedia.com (CORS). Вместо этого:
 
 1. Скрипт `scripts/fetch_puckpedia_caps.py` скрейпит HTML homepage + `/team/{slug}` (roster `data-extract_ch` + `nhl_id` из embed).
 2. Пишет `assets/cap-hits.json` (`teams` по abbrev, `playersByNhlId`).

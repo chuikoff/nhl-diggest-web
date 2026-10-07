@@ -196,7 +196,7 @@
     if (mode === 'login') {
       if (!favoritesEmpty(local)) {
         // Always union + PUT when this device has local teams/players so
-        // Telegram/GitHub-Pages WebView favorites (incl. players) become server truth.
+        // Telegram/Max Mini App local favorites (incl. players) become server truth.
         next = favoritesEmpty(remote) ? local : mergeFavorites(remote, local);
         sync = true;
       } else {
@@ -2952,41 +2952,12 @@
     scheduleFavoritesPull({ mode: 'serverWins' });
   });
 
-  function isLegacyGithubPages() {
-    try {
-      return /chuikoff\.github\.io$/i.test(location.hostname || '');
-    } catch { return false; }
-  }
-
-  function showOriginMigrateBanner() {
-    const banner = document.getElementById('originMigrateBanner');
-    if (!banner) return;
-    banner.hidden = false;
-    banner.style.display = 'block';
-    const link = document.getElementById('originMigrateLink');
-    if (link) {
-      const q = location.search || '';
-      const h = location.hash || '';
-      link.href = 'https://hockeydigest.duckdns.org/' + q + h;
-    }
-  }
-
   (async function boot() {
-    if (isLegacyGithubPages()) showOriginMigrateBanner();
     renderDayNavigation();
-    // Await first hydrate so GitHub Pages local teams+players can PUT before user leaves.
     try {
       await restoreAccountFavorites();
     } catch (err) {
       console.warn('[NHL Diggest] favorites restore failed', err);
-    }
-    if (isLegacyGithubPages() && window.NHL_AUTH?.loggedIn?.() && !favoritesEmpty(loadFavorites())) {
-      // After a successful upload to the shared API, send user to the canonical host.
-      window.setTimeout(() => {
-        const q = location.search || '';
-        const h = location.hash || '';
-        location.replace('https://hockeydigest.duckdns.org/' + q + h);
-      }, 1200);
     }
     const deepMatchId = readDeepLinkMatchId();
     await Promise.all([
