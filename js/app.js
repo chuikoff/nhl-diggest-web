@@ -81,6 +81,9 @@
   // Otherwise an empty localStorage can race ahead of GET and wipe the bot row.
   let favoritesHydrated = false;
 
+  // Android WebView wrapper (RuStore): local-guest only, no login / account UI / server sync.
+  const IS_ANDROID_APP = /NHLDiggestApp\//.test(navigator.userAgent || '');
+
   function saveFavorites(next, { sync = true, allowClear = false } = {}) {
     try {
       window.localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify({
@@ -92,6 +95,7 @@
   }
 
   function scheduleFavoriteSync({ allowClear = false, immediate = false } = {}) {
+    if (IS_ANDROID_APP) return;
     const auth = window.NHL_AUTH;
     if (!auth?.loggedIn?.()) return;
     if (!favoritesHydrated) return;
@@ -289,6 +293,7 @@
   }
 
   async function ensureMessengerSession() {
+    if (IS_ANDROID_APP) return null;
     if (!isMessengerHost()) return null;
     const auth = window.NHL_AUTH;
     if (!auth?.available?.()) {
@@ -370,6 +375,12 @@
     const group = document.getElementById('accountGroup');
     const card = document.getElementById('accountCard');
     if (!group || !card) return;
+    if (IS_ANDROID_APP) {
+      group.hidden = true;
+      card.innerHTML = '';
+      setProfileChrome('NHL fan', 'Избранное на устройстве', 'G');
+      return;
+    }
     // Inside Telegram/Max: never show code-login or "waiting for Mini App auth".
     // Auth is silent via initData; only a short error if it fails.
     if (isMessengerHost()) {
@@ -483,6 +494,7 @@
   }
 
   async function beginLogin(platform) {
+    if (IS_ANDROID_APP) return;
     const auth = window.NHL_AUTH;
     if (!auth?.available?.()) {
       toast('Вход с этого адреса недоступен: нет HTTPS до сервера');
@@ -514,6 +526,11 @@
 
   async function pullFavoritesFromServer({ mode = 'serverWins', silent = true } = {}) {
     const auth = window.NHL_AUTH;
+    if (IS_ANDROID_APP) {
+      markFavoritesHydrated();
+      renderFavoritesSettings();
+      return null;
+    }
     try {
       let inline = null;
       if (isMessengerHost()) {
@@ -562,6 +579,12 @@
 
   async function restoreAccountFavorites() {
     const auth = window.NHL_AUTH;
+    if (IS_ANDROID_APP) {
+      markFavoritesHydrated();
+      renderAccount();
+      renderFavoritesSettings();
+      return;
+    }
     // Telegram/Max: silent initData login first, then paint account chrome.
     if (isMessengerHost()) {
       await pullFavoritesFromServer({ mode: 'login' });
